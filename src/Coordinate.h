@@ -58,6 +58,26 @@ public:
     return (*this);
   }
 
+  Coordinate& north(const unsigned count = 1) {
+    y = (y >= count) ? (y - count) : 0;
+    return (*this);
+  }
+
+  Coordinate& east(const unsigned count = 1) {
+    x += count;
+    return (*this);
+  }
+
+  Coordinate& south(const unsigned count = 1) {
+    y += count;
+    return (*this);
+  }
+
+  Coordinate& west(const unsigned count = 1) {
+    x = (x >= count) ? (x - count) : 0;
+    return (*this);
+  }
+
   bool operator==(const Coordinate& other) const {
     return ((x == other.x) && (y == other. y));
   }

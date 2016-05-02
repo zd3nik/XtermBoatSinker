@@ -23,7 +23,47 @@ const CommandArgs& CommandArgs::getInstance() {
 }
 
 //-----------------------------------------------------------------------------
-const char* CommandArgs::getValueOf(const char* a, const char* b) const {
+int CommandArgs::count() const  {
+  return argc;
+}
+
+//-----------------------------------------------------------------------------
+const char* CommandArgs::get(const int index) const {
+  if ((index < 0) || (index >= argc) || !argv) {
+    return NULL;
+  } else {
+    return argv[index];
+  }
+}
+
+//-----------------------------------------------------------------------------
+bool CommandArgs::match(const int i, const char* a, const char* b) const {
+  const char* val = get(i);
+  return (!empty(val) &&
+          ((!empty(a) && (strcmp(a, val) == 0)) ||
+           (!empty(b) && (strcmp(b, val) == 0))));
+}
+
+//-----------------------------------------------------------------------------
+int CommandArgs::indexOf(const char* a, const char* b) const {
+  if (argc && argv && !(empty(a) && empty(b))) {
+    for (int i = 0; i < argc; ++i) {
+      if (match(i, a, b)) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+//-----------------------------------------------------------------------------
+bool CommandArgs::hasValue(const int i) const {
+  return ((i >= 0) && ((i + 1) < argc) && argv && !empty(argv[i + 1]));
+}
+
+//-----------------------------------------------------------------------------
+const char* CommandArgs::CommandArgs::getValueOf(const char* a, const char* b)
+const {
   const char* param = NULL;
   int idx = -1;
   if (argc && argv && !(empty(a) && empty(b))) {

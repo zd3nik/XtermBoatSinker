@@ -5,92 +5,44 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include <stdio.h>
-#include <ctype.h>
 #include <vector>
+#include <set>
 
 //-----------------------------------------------------------------------------
 class Input
 {
 public:
-  Input(const unsigned bufSize)
-    : bufSize(bufSize),
-      buffer(new char[bufSize])
-  { }
+  static const unsigned DEFAULT_BUF_SIZE = 4096;
 
-  virtual ~Input() {
-    delete[] buffer;
-    buffer = NULL;
-  }
+  Input(const int fd, const unsigned bufSize = DEFAULT_BUF_SIZE);
 
-  int readln(FILE* stream) {
-    if (!stream) {
-      return -1;
-    }
-    if (!fgets(buffer, sizeof(buffer), stream)) {
-      if (ferror(stream)) {
-        return -1;
-      } else {
-        return 0;
-      }
-    }
-    fields.clear();
-    char* begin = buffer;
-    char* end = buffer;
-    for (; (*end) && ((*end) != '\r') && ((*end) != '\n'); ++end) {
-      if ((*end) == '|') {
-        (*end) = 0;
-        fields.push_back(begin);
-        begin = (end + 1);
-      }
-    }
-    if (end > begin) {
-      (*end) = 0;
-      fields.push_back(begin);
-    }
-    return fields.size();
-  }
+  virtual ~Input();
 
-  unsigned getFieldCount() const {
-    return fields.size();
-  }
+  // timeout_ms: if not 0 only wait up to this many milliseconds for data
+  // watch: if not NULL stop waiting if activity on any of these descriptors
+  // returns number of fields read from input or -1 on error
+  int readln(const unsigned timeout_ms = 0, std::set<int>* watch = NULL);
 
-  const char* getString(const unsigned index, const char* def = NULL) const {
-    return (index >= fields.size()) ? def : fields.at(index);
-  }
+  // wait up to timeout_ms for a keystroke, wait indefinitely if timeout_ms = 0
+  // return first byte of keystroke, 0 if none, -1 if error
+  char getKeystroke(const unsigned timeout_ms = 0);
 
-  const int getInt(const unsigned index, const int def = -1) const {
-    const char* value = getString(index, NULL);
-    if (value) {
-      if (isdigit(*value)) {
-        return atoi(value);
-      } else if (((*value) == '-') && isdigit(value[1])) {
-        return atoi(value);
-      } else if (((*value) == '+') && isdigit(value[1])) {
-        return atoi(value + 1);
-      }
-    }
-    return def;
-  }
-
-  const int getUnsigned(const unsigned index, const unsigned def = 0) const {
-    const char* value = getString(index, NULL);
-    if (value) {
-      const char* p = ((*value) == '+') ? (value + 1) : value;
-      if (isdigit(*p)) {
-        unsigned i = 0;
-        for (; isdigit(*p); ++p) {
-          i = ((10 * i) + (i - '0'));
-        }
-        return i;
-      }
-    }
-    return def;
-  }
+  unsigned getFieldCount() const;
+  const int getInt(const unsigned index = 0, const int def = -1) const;
+  const int getUnsigned(const unsigned index = 0, const unsigned def = 0) const;
+  const char* getString(const unsigned index = 0, const char* def = NULL) const;
 
 private:
+  int waitForData(const unsigned timeout_ms, std::set<int>* watch);
+  int bufferData(const unsigned timeout_ms, std::set<int>* watch);
+  bool readline(const unsigned timeout_ms, std::set<int>* watch);
+
+  const int fd;
   const unsigned bufSize;
   char* buffer;
+  char* line;
+  unsigned pos;
+  unsigned len;
   std::vector<const char*> fields;
 };
 
