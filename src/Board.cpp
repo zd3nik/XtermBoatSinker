@@ -2,10 +2,9 @@
 // Board.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <stdio.h>
-#include <assert.h>
 #include "Board.h"
 #include "Screen.h"
+#include "Logger.h"
 
 //-----------------------------------------------------------------------------
 Board::Board(const std::string playerName,
@@ -230,14 +229,14 @@ bool Board::addBoat(const Boat& boat, Coordinate coord,
   }
 
   if (boatIndex.size() != boat.getLength()) {
-    assert(false); // we should never get here
+    Logger::error() << "boat index count doesn't match boat index";
     return false;
   }
 
   for (unsigned i = 0; i < boatIndex.size(); ++i) {
     unsigned offset = (getStartOffset() + boatIndex[i]);
     if (offset >= descriptorLength) {
-      assert(false); // we should never get here
+      Logger::error() << "boat offset exceeds descriptor length";
       return false;
     }
     descriptor[offset] = boat.getID();
@@ -259,7 +258,7 @@ bool Board::shootAt(const Coordinate& coord, char& previous) {
 
   unsigned i = (getStartOffset() + getBoatIndex(coord));
   if (i >= descriptorLength) {
-    assert(false); // we should never get here
+    Logger::error() << "boat offset exceeds descriptor length";
     return false;
   }
 

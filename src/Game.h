@@ -5,11 +5,8 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include <string>
-#include <vector>
 #include "Board.h"
 #include "DBObject.h"
-#include "Configuration.h"
 
 //-----------------------------------------------------------------------------
 class Game : public DBObject

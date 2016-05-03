@@ -5,7 +5,6 @@
 #ifndef SCREEN_H
 #define SCREEN_H
 
-#include "Coordinate.h"
 #include "Container.h"
 
 //-----------------------------------------------------------------------------

@@ -3,7 +3,6 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Screen.h"
-#include <stdio.h>
 #include <sys/ioctl.h>
 
 //-----------------------------------------------------------------------------

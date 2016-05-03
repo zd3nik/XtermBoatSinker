@@ -5,14 +5,9 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#include <string.h>
 #include <string>
-#include <vector>
-
 #include "Boat.h"
 #include "Container.h"
-#include "Coordinate.h"
-#include "Movement.h"
 #include "DBObject.h"
 
 //-----------------------------------------------------------------------------
