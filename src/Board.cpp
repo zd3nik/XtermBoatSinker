@@ -11,7 +11,7 @@
 Board::Board(const std::string playerName,
              const unsigned boatAreaWidth,
              const unsigned boatAreaHeight)
-  : Container(Coordinate(0, 0),
+  : Container(Coordinate(1, 1),
               Coordinate((3 + (2 * boatAreaWidth)), (3 + boatAreaHeight))),
     playerName(playerName),
     boatAreaWidth(boatAreaWidth),
@@ -55,7 +55,7 @@ std::string Board::getMaskedDescriptor() const {
 
 //-----------------------------------------------------------------------------
 Container Board::getBoatArea() const {
-  Coordinate topLeft(0, 0);
+  Coordinate topLeft(1, 1);
   Coordinate bottomRight(boatAreaWidth, boatAreaHeight);
   return Container(topLeft, bottomRight);
 }
@@ -120,7 +120,7 @@ bool Board::print(const PlayerState state, const bool masked) const {
     return false;
   }
 
-  Coordinate position;
+  Coordinate coord;
   char row[1024];
   const unsigned ROW_WIDTH = std::min<unsigned>((sizeof(row) - 1), getWidth());
 
@@ -142,8 +142,8 @@ bool Board::print(const PlayerState state, const bool masked) const {
     }
   }
   row[ROW_WIDTH] = 0;
-  position.set((getMinX() + 3), (getMinY() + 1));
-  if (!screen.printAt(position, row, false)) {
+  coord.set((getMinX() + 3), (getMinY() + 1));
+  if (!screen.printAt(coord, row, false)) {
     return false;
   }
 
@@ -163,8 +163,8 @@ bool Board::print(const PlayerState state, const bool masked) const {
       }
     }
     row[ROW_WIDTH] = 0;
-    position.set(getMinX(), (getMinY() + 1 + y));
-    if (!screen.printAt(position, row, false)) {
+    coord.set(getMinX(), (getMinY() + 1 + y));
+    if (!screen.printAt(coord, row, false)) {
       return false;
     }
   }
@@ -172,8 +172,8 @@ bool Board::print(const PlayerState state, const bool masked) const {
   // print blank line below boat area (final row)
   memset(row, ' ', ROW_WIDTH);
   row[ROW_WIDTH] = 0;
-  position.set(getMinX(), getMaxY());
-  return screen.printAt(position, row, true);
+  coord.set(getMinX(), getMaxY());
+  return screen.printAt(coord, row, true);
 }
 
 //-----------------------------------------------------------------------------
@@ -246,18 +246,18 @@ bool Board::addBoat(const Boat& boat, Coordinate coord,
 }
 
 //-----------------------------------------------------------------------------
-bool Board::shootAt(const Coordinate& coordinate, char& previous) {
+bool Board::shootAt(const Coordinate& coord, char& previous) {
   previous = 0;
   if (!isValid()) {
     return false;
   }
 
   Container boatArea = getBoatArea();
-  if (!boatArea.contains(coordinate)) {
+  if (!boatArea.contains(coord)) {
     return false;
   }
 
-  unsigned i = (getStartOffset() + getBoatIndex(coordinate));
+  unsigned i = (getStartOffset() + getBoatIndex(coord));
   if (i >= descriptorLength) {
     assert(false); // we should never get here
     return false;
@@ -282,5 +282,5 @@ unsigned Board::getStartOffset() const {
 
 //-----------------------------------------------------------------------------
 unsigned Board::getBoatIndex(const Coordinate& coord) const {
-  return (coord.getX() + (boatAreaWidth * coord.getY()));
+  return (coord.getX() - 1 + (boatAreaWidth * (coord.getY() - 1)));
 }

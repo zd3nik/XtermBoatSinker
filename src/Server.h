@@ -8,6 +8,7 @@
 #include <string>
 #include <netdb.h>
 #include "Configuration.h"
+#include "Input.h"
 #include "Game.h"
 
 //-----------------------------------------------------------------------------
@@ -22,6 +23,11 @@ public:
 
   Server();
   virtual ~Server();
+  bool init();
+  void closeSocket();
+  bool openSocket();
+  bool startListening(const int backlog = 10);
+  bool run();
 
   std::string getBindAddress() const {
     return bindAddress;
@@ -35,17 +41,12 @@ public:
     return (sock >= 0);
   }
 
-  bool init();
-  void closeSocket();
-  bool openSocket();
-  bool startListening(const int backlog = 10);
-  bool run();
-
 private:
   bool getGameTitle(std::string& title);
   char waitForPlayers(Game& game);
   Configuration getGameConfig();
 
+  Input input;
   std::string bindAddress;
   int port;
   int sock;

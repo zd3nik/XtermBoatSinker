@@ -5,7 +5,6 @@
 #ifndef COORDINATE_H
 #define COORDINATE_H
 
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -90,6 +89,18 @@ public:
     return ((y < other.y) || ((y == other.y) && (x < other.x)));
   }
 
+  operator bool() const {
+    return isValid();
+  }
+
+  bool operator!() const {
+    return !isValid();
+  }
+
+  bool isValid() const {
+    return (x && y);
+  }
+
   unsigned getX() const {
     return x;
   }
@@ -100,8 +111,8 @@ public:
 
   std::string toString() const {
     char sbuf[32];
-    if (x <= ('Z' - 'A')) {
-      snprintf(sbuf, sizeof(sbuf), "%c%u", (char)('A' + x), y);
+    if (x <= ('Z' - 'A' + 1)) {
+      snprintf(sbuf, sizeof(sbuf), "%c%u", (char)('A' + x - 1), y);
     } else {
       snprintf(sbuf, sizeof(sbuf), "%u,%u", x, y);
     }
@@ -114,7 +125,7 @@ public:
         int newX = (toupper(str[0]) - 'A');
         int newY = (unsigned)atoi(str + 1);
         if ((newX >= 0) && (newY >= 0)) {
-          x = (unsigned)newX;
+          x = (unsigned)(newX + 1);
           y = (unsigned)newY;
           return true;
         }

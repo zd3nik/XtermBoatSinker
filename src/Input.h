@@ -5,6 +5,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include <string.h>
 #include <vector>
 #include <set>
 
@@ -14,35 +15,42 @@ class Input
 public:
   static const unsigned DEFAULT_BUF_SIZE = 4096;
 
-  Input(const int fd, const unsigned bufSize = DEFAULT_BUF_SIZE);
+  Input(const unsigned bufSize = DEFAULT_BUF_SIZE);
 
   virtual ~Input();
 
-  // timeout_ms: if not 0 only wait up to this many milliseconds for data
-  // watch: if not NULL stop waiting if activity on any of these descriptors
-  // returns number of fields read from input or -1 on error
-  int readln(const unsigned timeout_ms = 0, std::set<int>* watch = NULL);
+  // block execution until data available on one or more handles
+  // if timeout_ms = 0 wait indefinitely
+  // returns -2 if error, -1 if timeout, otherwise a handle with data available
+  int waitForData(const unsigned timeout_ms = 0);
 
-  // wait up to timeout_ms for a keystroke, wait indefinitely if timeout_ms = 0
-  // return first byte of keystroke, 0 if none, -1 if error
-  char getKeystroke(const unsigned timeout_ms = 0);
+  // read one line (up to first \n or buffer full) from given handle
+  // returns -1 if error, otherwise number of fields in the line that is read
+  int readln(const int handle);
 
+  // get next keystroke
+  // if timeout_ms = 0 wait indefinitely
+  // return -1 if error, 0 if timeout, otherwise first byte of keystroke
+  char getKeystroke(const int fd, const unsigned timeout_ms = 0);
+
+  void addHandle(const int handle);
+  void removeHandle(const int handle);
+  bool containsHandle(const int handle);
+  unsigned getHandleCount() const;
   unsigned getFieldCount() const;
   const int getInt(const unsigned index = 0, const int def = -1) const;
   const int getUnsigned(const unsigned index = 0, const unsigned def = 0) const;
   const char* getString(const unsigned index = 0, const char* def = NULL) const;
 
 private:
-  int waitForData(const unsigned timeout_ms, std::set<int>* watch);
-  int bufferData(const unsigned timeout_ms, std::set<int>* watch);
-  bool readline(const unsigned timeout_ms, std::set<int>* watch);
+  bool bufferData(const int fd);
 
-  const int fd;
   const unsigned bufSize;
   char* buffer;
   char* line;
   unsigned pos;
   unsigned len;
+  std::set<int> handles;
   std::vector<const char*> fields;
 };
 

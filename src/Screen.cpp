@@ -14,7 +14,7 @@ static const char* CSI = "\033[";
 static Container GetScreenDimensions() {
   struct winsize max;
   ioctl(0, TIOCGWINSZ , &max);
-  Coordinate topLeft(0, 0);
+  Coordinate topLeft(1, 1);
   Coordinate bottomRight((unsigned)max.ws_col, (unsigned)max.ws_row);
   return Container(topLeft, bottomRight);
 }
@@ -35,13 +35,13 @@ const Screen& Screen::getInstance(const bool update) {
 bool Screen::moveCursor(const unsigned x, const unsigned y, const bool flush)
 const {
   return (contains(x, y) &&
-          (fprintf(stdout, "%s%u;%uH", CSI, (y + 1), (x + 1)) > 0) &&
+          (fprintf(stdout, "%s%u;%uH", CSI, y, x) > 0) &&
           (!flush || (fflush(stdout) == 0)));
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::moveCursor(const Coordinate& coordinate, const bool flush) const {
-  return moveCursor(coordinate.getX(), coordinate.getY(), flush);
+bool Screen::moveCursor(const Coordinate& coord, const bool flush) const {
+  return moveCursor(coord.getX(), coord.getY(), flush);
 }
 
 //-----------------------------------------------------------------------------
@@ -90,21 +90,21 @@ bool Screen::clear() const {
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::printAt(const Coordinate& coordinate,
+bool Screen::printAt(const Coordinate& coord,
                      const char* str,
                      const bool flush) const
 {
-  return (moveCursor(coordinate, false) &&
+  return (moveCursor(coord, false) &&
           print(str, flush));
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::printAt(const Coordinate& coordinate,
+bool Screen::printAt(const Coordinate& coord,
                      const Color color,
                      const char* str,
                      const bool flush) const
 {
-  return (moveCursor(coordinate, false) &&
+  return (moveCursor(coord, false) &&
           setColor(color, false) &&
           print(str, flush));
 }

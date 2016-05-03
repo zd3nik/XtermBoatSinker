@@ -3,24 +3,12 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include <unistd.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <string.h>
 #include <errno.h>
-#include <set>
 #include "Server.h"
-#include "Configuration.h"
 #include "CommandArgs.h"
 #include "Logger.h"
-#include "Input.h"
 #include "Screen.h"
-#include "Game.h"
-
-//-----------------------------------------------------------------------------
-static Input input(fileno(stdin));
 
 //-----------------------------------------------------------------------------
 const char* Server::ANY_ADDRESS = "0.0.0.0";
@@ -57,7 +45,7 @@ bool Server::init() {
     while (!isValidPort(port)) {
       snprintf(str, sizeof(str), "Enter port [RET=%d] -> ", DEFAULT_PORT);
       screen.print(str, true);
-      switch (input.readln()) {
+      switch (input.readln(STDIN_FILENO)) {
       case -1:
         return false;
       case 0:
@@ -217,34 +205,25 @@ char Server::waitForPlayers(Game& game) {
   std::set<char> opts;
   Coordinate coord;
   char str[1024];
-  unsigned row = 0;
 
   screen.clear();
 
-  snprintf(str, sizeof(str), "Title: %s", game.getTitle().c_str());
-  screen.printAt(coord.set(0, row++), str, false);
+  snprintf(str, sizeof(str), "Game Title: %s", game.getTitle().c_str());
+  screen.printAt(coord.set(1, 1), str, false);
 
-  snprintf(str, sizeof(str), "Min Players: %u", config.getMinPlayers(), false);
-  screen.printAt(coord.set(0, row++), str, false);
+  config.print(coord.south().setX(4), false);
 
-  snprintf(str, sizeof(str), "Max Players: %u", config.getMaxPlayers(), false);
-  screen.printAt(coord.set(0, row++), str, false);
+  snprintf(str, sizeof(str), "Players Joined: %u", game.getBoardCount(), false);
+  screen.printAt(coord.south(2).setX(1), str, false);
 
-  snprintf(str, sizeof(str), "     Joined: %u", game.getBoardCount(), false);
-  screen.printAt(coord.set(0, row++), str, false);
-
-  row++;
+  coord.south().setX(4);
 
   for (unsigned int i = 0; i < game.getBoardCount(); ++i) {
-    const Board& board = game.getBoard(i);
-    snprintf(str, sizeof(str), "Board %u: %s", (i + 1),
-             board.getPlayerName().c_str());
-    screen.printAt(coord.set(4, row++), str, false);
+    const std::string player = game.getBoard(i).getPlayerName();
+    screen.printAt(coord.south(), player.c_str(), false);
   }
 
-  row++;
-
-  screen.printAt(coord.set(0, row++), "Choose: [Q]uit", false);
+  screen.printAt(coord.south(2).setX(1), "Choose: [Q]uit", false);
   opts.insert('Q');
 
   if (game.getBoardCount() > 0) {
@@ -260,7 +239,7 @@ char Server::waitForPlayers(Game& game) {
   }
 
   screen.print(" -> ", true);
-  const char ch = input.getKeystroke(1000);
+  const char ch = input.getKeystroke(STDIN_FILENO, 1000);
   screen.print("\n", true);
 
   return (ch <= 0) ? ch : toupper(ch);
@@ -272,7 +251,7 @@ bool Server::getGameTitle(std::string& title) {
   if (CommandArgs::empty(val)) {
     const Screen& screen = Screen::getInstance(true);
     screen.print("Enter game title [RET=quit] -> ", true);
-    if (input.readln() <= 0) {
+    if (input.readln(STDIN_FILENO) <= 0) {
       return false;
     }
     title = input.getString(0, "");

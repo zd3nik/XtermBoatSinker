@@ -48,11 +48,12 @@ public:
   }
 
   bool isValid() const {
-    return ((getMinX() <= getMaxX()) && (getMinY() <= getMaxY()));
+    return (begin.isValid() && end.isValid() &&
+            (getMinX() <= getMaxX()) && (getMinY() <= getMaxY()));
   }
 
   bool contains(const unsigned x, const unsigned y) const {
-    return (isValid() &&
+    return (isValid() && (x > 0) && (y > 0) &&
             (getMinX() <= x) && (x <= getMaxX()) &&
             (getMinY() <= y) && (y <= getMaxY()));
   }

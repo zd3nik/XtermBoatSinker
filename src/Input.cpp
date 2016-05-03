@@ -3,30 +3,21 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/select.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <termios.h>
 #include "Input.h"
 #include "Logger.h"
 
 //-----------------------------------------------------------------------------
-Input::Input(const int fd, const unsigned bufSize)
-  : fd(fd),
-    bufSize(bufSize),
+Input::Input(const unsigned bufSize)
+  : bufSize(bufSize),
     buffer(new char[bufSize]),
     line(new char[bufSize]),
     pos(0),
     len(0)
 {
-  if (fd < 0) {
-    Logger::error() << "Invalid input descriptor: " << fd;
-  }
 }
 
 //-----------------------------------------------------------------------------
@@ -39,11 +30,75 @@ Input::~Input() {
 }
 
 //-----------------------------------------------------------------------------
-int Input::readln(const unsigned timeout_ms, std::set<int>* watch) {
-  if ((fd < 0) || !readline(timeout_ms, watch)) {
+int Input::waitForData(const unsigned timeout_ms) {
+  if (handles.empty()) {
+    Logger::error() << "No input handles";
+    return -2;
+  }
+
+  fd_set set;
+  FD_ZERO(&set);
+
+  int maxFd = 0;
+  std::set<int>::const_iterator it;
+  for (it = handles.begin(); it != handles.end(); ++it) {
+    const int fd = (*it);
+    if (fd >= 0) {
+      maxFd = std::max<int>(maxFd, fd);
+      FD_SET(fd, &set);
+    }
+  }
+
+  struct timeval tv;
+  tv.tv_sec = (timeout_ms / 1000);
+  tv.tv_usec = ((timeout_ms % 1000) * 10);
+
+  int ret;
+  while (true) {
+    ret = select((maxFd + 1), &set, NULL, NULL, (timeout_ms ? &tv : NULL));
+    if (ret < 0) {
+      if (errno == EINTR) {
+        Logger::debug() << "Input select interrupted, retrying";
+        if (timeout_ms && !tv.tv_sec && !tv.tv_usec) {
+          tv.tv_usec = 1000;
+        }
+        continue;
+      }
+      Logger::error() << "Input select failed: " << strerror(errno);
+      return -2;
+    }
+    break;
+  }
+  if (ret) {
+    for (it = handles.begin(); it != handles.end(); ++it) {
+      const int fd = (*it);
+      if (FD_ISSET(fd, &set)) {
+        return fd;
+      }
+    }
+  }
+  return -1;
+}
+
+//-----------------------------------------------------------------------------
+int Input::readln(const int fd) {
+  fields.clear();
+  if (fd < 0) {
+    Logger::error() << "Input readln() invalid handle: " << fd;
     return -1;
   }
-  fields.clear();
+  unsigned n = 0;
+  while (n < (bufSize - 1)) {
+    if ((pos >= len) && !bufferData(fd)) {
+      return false;
+    }
+    if (!len) {
+      break;
+    } else if ((pos < len) && ((line[n++] = buffer[pos++]) == '\n')) {
+      break;
+    }
+  }
+  line[n] = 0;
   char* begin = line;
   char* end = line;
   for (; (*end) && ((*end) != '\r') && ((*end) != '\n'); ++end) {
@@ -61,7 +116,12 @@ int Input::readln(const unsigned timeout_ms, std::set<int>* watch) {
 }
 
 //-----------------------------------------------------------------------------
-char Input::getKeystroke(const unsigned timeout_ms) {
+char Input::getKeystroke(const int fd, const unsigned timeout_ms) {
+  if (fd < 0) {
+    Logger::error() << "Input getkeystroke() invalid handle: " << fd;
+    return -1;
+  }
+
   struct termios ios;
   struct termios tmp;
   char ch = 0;
@@ -90,6 +150,23 @@ char Input::getKeystroke(const unsigned timeout_ms) {
   }
 
   return ch;
+}
+
+//-----------------------------------------------------------------------------
+void Input::addHandle(const int handle) {
+  if (handle >= 0) {
+    handles.insert(handle);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Input::removeHandle(const int handle) {
+  handles.erase(handles.find(handle));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Input::getHandleCount() const {
+  return handles.size();
 }
 
 //-----------------------------------------------------------------------------
@@ -134,86 +211,24 @@ const int Input::getUnsigned(const unsigned index, const unsigned def) const {
 }
 
 //-----------------------------------------------------------------------------
-int Input::waitForData(const unsigned timeout_ms, std::set<int>* watch) {
-  fd_set set;
-  FD_ZERO(&set);
-  FD_SET(fd, &set);
-
-  int maxDescriptor = fd;
-  if (watch) {
-    std::set<int>::const_iterator it;
-    for (it = watch->begin(); it != watch->end(); ++it) {
-      int descriptor = (*it);
-      if ((descriptor >= 0) && (descriptor != fd)) {
-        maxDescriptor = std::max<int>(maxDescriptor, descriptor);
-        FD_SET(descriptor, &set);
+bool Input::bufferData(const int fd) {
+  pos = len = 0;
+  while (len < bufSize) {
+    ssize_t n = read(fd, buffer, bufSize);
+    if (n < 0) {
+      if (errno == EINTR) {
+        Logger::debug() << "Input read interrupted, retrying";
+        continue;
       }
-    }
-  }
-
-  struct timeval timeout;
-  timeout.tv_sec = (timeout_ms / 1000);
-  timeout.tv_usec = ((timeout_ms % 1000) * 10);
-
-  int ret = select((maxDescriptor + 1), &set, NULL, NULL,
-                   (timeout_ms ? &timeout : NULL));
-  if (ret < 0) {
-    Logger::error() << "Input select failed: " << strerror(errno);
-    return -1;
-  } else if (!ret || !FD_ISSET(fd, &set)) {
-    return 0;
-  }
-  return 1;
-}
-
-//-----------------------------------------------------------------------------
-int Input::bufferData(const unsigned timeout_ms, std::set<int>* watch) {
-  if (pos >= len) {
-    pos = len = 0;
-    switch (waitForData(timeout_ms, watch)) {
-    case -1: return -1;
-    case  0: return 0;
-    }
-    while (len < bufSize) {
-      ssize_t n = read(fd, buffer, bufSize);
-      if (n < 0) {
-        if (errno == EINTR) {
-          Logger::debug() << "Input interrupted";
-          continue;
-        }
-        Logger::error() << "Input read failed: " << strerror(errno);
-        return -1;
-      }
-      else if (n <= bufSize) {
-        len = n;
-        break;
-      } else {
-        Logger::error() << "Input buffer overflow!";
-        exit(1);
-      }
-    }
-  }
-  return (int)len;
-}
-
-//-----------------------------------------------------------------------------
-bool Input::readline(const unsigned timeout_ms, std::set<int>* watch) {
-  unsigned n = 0;
-  while (n < (bufSize - 1)) {
-    switch (bufferData(timeout_ms, watch)) {
-    case -1:
+      Logger::error() << "Input read failed: " << strerror(errno);
       return false;
-    case 0:
-      line[n] = 0;
-      return true;
-    }
-    while (pos < len) {
-      if ((line[n++] = buffer[pos++]) == '\n') {
-        line[n] = 0;
-        return true;
-      }
+    } else if (n <= bufSize) {
+      len = n;
+      break;
+    } else {
+      Logger::error() << "Input buffer overflow!";
+      exit(1);
     }
   }
-  line[n] = 0;
-  return true;
+  return (len > 0);
 }
