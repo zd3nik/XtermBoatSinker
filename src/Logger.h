@@ -49,9 +49,15 @@ public:
     return (logLevel >= level) ? LogStream(mutex, *stream, hdr) : LogStream();
   }
 
-  virtual ~Logger();
+  std::string getLogFile() const {
+    return logFile;
+  }
 
-  LogLevel getLogLevel() const;
+  LogLevel getLogLevel() const {
+    return logLevel;
+  }
+
+  virtual ~Logger();
   Logger& setLogLevel(const LogLevel logLevel);
   Logger& setLogLevel(const char* logLevelStr);
   Logger& appendToFile(const char* filePath);
@@ -60,6 +66,7 @@ private:
   Logger();
 
   Mutex mutex;
+  std::string logFile;
   LogLevel logLevel;
   std::ostream* stream;
   std::ofstream fileStream;

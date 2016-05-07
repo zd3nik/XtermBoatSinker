@@ -56,6 +56,7 @@ Logger::~Logger() {
 Logger& Logger::appendToFile(const char* filePath) {
   Mutex::Lock lock(mutex);
   stream = &std::cout;
+  logFile.clear();
   try {
     if (fileStream.is_open()) {
       fileStream.close();
@@ -63,6 +64,7 @@ Logger& Logger::appendToFile(const char* filePath) {
     if (filePath && (*filePath)) {
       fileStream.open(filePath, (std::ofstream::out|std::ofstream::app));
       stream = &fileStream;
+      logFile = filePath;
     }
   } catch (const std::exception& e) {
     error() << "Cannot open " << filePath << ": " << e.what();
@@ -91,9 +93,3 @@ Logger& Logger::setLogLevel(const char* level) {
   }
   return (*this);
 }
-
-//-----------------------------------------------------------------------------
-Logger::LogLevel Logger::getLogLevel() const {
-  return logLevel;
-}
-

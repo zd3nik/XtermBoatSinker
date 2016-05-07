@@ -43,12 +43,15 @@ public:
   }
 
 private:
-  bool addHandle();
+  char waitForInput(Game&, const int timeout = -1);
+  bool addPlayerHandle();
   bool getGameTitle(std::string& title);
-  bool printWaitScreen(Game&, Coordinate&);
+  bool isPlayerHandle(const int handle) const;
+  bool isServerHandle(const int handle) const;
+  bool isUserHandle(const int handle) const;
   bool printPlayers(Game&, const Coordinate&);
+  bool printWaitScreen(Game&, Coordinate&);
   bool sendLine(Game&, const int handle, const char* msg);
-  char waitForPlayers(Game&, const Coordinate&);
   void getPlayerInput(Game&, const int handle);
   void removePlayer(Game&, const int handle, const char* msg = NULL);
   void getGameInfo(Game& game, const int handle);

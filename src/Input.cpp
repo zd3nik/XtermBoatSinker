@@ -6,21 +6,29 @@
 #include <sys/select.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <termios.h>
 #include "Input.h"
 #include "Logger.h"
 
 //-----------------------------------------------------------------------------
 Input::Input()
-  : buffer(new char[BUFFER_SIZE]),
+  : haveTermIO(false),
+    buffer(new char[BUFFER_SIZE]),
     line(new char[BUFFER_SIZE]),
     pos(0),
     len(0)
 {
+  memset(&savedTermIOs, 0, sizeof(savedTermIOs));
+  if (tcgetattr(STDIN_FILENO, &savedTermIOs) < 0) {
+    Logger::error() << "failed to get termios: " << strerror(errno);
+  } else {
+    haveTermIO = true;
+  }
 }
 
 //-----------------------------------------------------------------------------
 Input::~Input() {
+  restoreTerminal();
+
   delete[] buffer;
   buffer = NULL;
 
@@ -29,10 +37,84 @@ Input::~Input() {
 }
 
 //-----------------------------------------------------------------------------
-int Input::waitForData(const unsigned timeout_ms) {
+bool Input::restoreTerminal() const {
+  if (haveTermIO) {
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &savedTermIOs) < 0) {
+      Logger::error() << "failed to restore termios: " << strerror(errno);
+      return false;
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+int Input::getCanonical() const {
+  struct termios ios;
+  if (tcgetattr(STDIN_FILENO, &ios) < 0) {
+    Logger::error() << "getCanonical(): tcgetattr failed: " << strerror(errno);
+    return -1;
+  }
+  return (ios.c_lflag & ICANON) ? 1 : 0;
+}
+
+//-----------------------------------------------------------------------------
+int Input::getEcho() const {
+  struct termios ios;
+  if (tcgetattr(STDIN_FILENO, &ios) < 0) {
+    Logger::error() << "getEcho(): tcgetattr failed: " << strerror(errno);
+    return -1;
+  }
+  return (ios.c_lflag & ECHO) ? 1 : 0;
+}
+
+//-----------------------------------------------------------------------------
+bool Input::setCanonical(const bool enabled) const {
+  struct termios ios;
+  if (tcgetattr(STDIN_FILENO, &ios) < 0) {
+    Logger::error() << "setCanonical(): tcgetattr failed: " << strerror(errno);
+    return false;
+  }
+
+  if (enabled) {
+    ios.c_lflag |= ICANON;
+  } else {
+    ios.c_lflag &= ~ICANON;
+  }
+
+  if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
+    Logger::error() << "setCanonical(): tcsetattr failed: " << strerror(errno);
+    return false;
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Input::setEcho(const bool enabled) const {
+  struct termios ios;
+  if (tcgetattr(STDIN_FILENO, &ios) < 0) {
+    Logger::error() << "setEcho(): tcgetattr failed: " << strerror(errno);
+    return false;
+  }
+
+  if (enabled) {
+    ios.c_lflag |= ECHO;
+  } else {
+    ios.c_lflag &= ~ECHO;
+  }
+
+  if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
+    Logger::error() << "setEcho(): tcsetattr failed: " << strerror(errno);
+    return false;
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
+  ready.clear();
   if (handles.empty()) {
-    Logger::error() << "No input handles";
-    return -2;
+    Logger::warn() << "No input handles added to wait for";
+    return true;
   }
 
   fd_set set;
@@ -58,13 +140,13 @@ int Input::waitForData(const unsigned timeout_ms) {
     if (ret < 0) {
       if (errno == EINTR) {
         Logger::debug() << "Input select interrupted, retrying";
-        if (timeout_ms && !tv.tv_sec && !tv.tv_usec) {
+        if ((timeout_ms > 0) && !tv.tv_sec && !tv.tv_usec) {
           tv.tv_usec = 1000;
         }
         continue;
       }
       Logger::error() << "Input select failed: " << strerror(errno);
-      return -2;
+      return false;
     }
     break;
   }
@@ -72,11 +154,11 @@ int Input::waitForData(const unsigned timeout_ms) {
     for (it = handles.begin(); it != handles.end(); ++it) {
       const int fd = (*it);
       if (FD_ISSET(fd, &set)) {
-        return fd;
+        ready.insert(fd);
       }
     }
   }
-  return -1;
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -84,7 +166,7 @@ int Input::readln(const int fd) {
   fields.clear();
   if (fd < 0) {
     Logger::error() << "Input readln() invalid handle: " << fd;
-    return -1;
+    return 0;
   }
 
   unsigned n = 0;
@@ -118,43 +200,6 @@ int Input::readln(const int fd) {
 }
 
 //-----------------------------------------------------------------------------
-char Input::getKeystroke(const int fd, const int timeout_ms) {
-  if (fd < 0) {
-    Logger::error() << "Input getkeystroke() invalid handle: " << fd;
-    return -1;
-  }
-
-  struct termios ios;
-  struct termios tmp;
-  char ch = 0;
-
-  if (tcgetattr(fd, &ios) < 0) {
-    Logger::error() << "getKeystroke(): tcgetattr failed: " << strerror(errno);
-    return -1;
-  }
-
-  memcpy(&tmp, &ios, sizeof(tmp));
-  tmp.c_lflag &= ~ICANON;
-  tmp.c_cc[VTIME] = (timeout_ms / 100); // convert to deciseconds
-  tmp.c_cc[VMIN] = 0;
-
-  if (tcsetattr(fd, TCSANOW, &tmp) < 0) {
-    Logger::error() << "getKeystroke(): tcsetattr failed: " << strerror(errno);
-    return -1;
-  }
-  if (read(fd, &ch, 1) < 0) {
-    Logger::error() << "getKeystroke(): read failed: " << strerror(errno);
-    ch = -1;
-  }
-  if (tcsetattr(fd, TCSANOW, &ios) < 0) {
-    Logger::error() << "getKeystroke(): tcsetattr failed: " << strerror(errno);
-    ch = -1;
-  }
-
-  return ch;
-}
-
-//-----------------------------------------------------------------------------
 void Input::addHandle(const int handle) {
   if (handle >= 0) {
     handles.insert(handle);
@@ -164,6 +209,11 @@ void Input::addHandle(const int handle) {
 //-----------------------------------------------------------------------------
 void Input::removeHandle(const int handle) {
   handles.erase(handles.find(handle));
+}
+
+//-----------------------------------------------------------------------------
+bool Input::containsHandle(const int handle) const {
+  return ((handle >= 0) && (handles.count(handle) > 0));
 }
 
 //-----------------------------------------------------------------------------

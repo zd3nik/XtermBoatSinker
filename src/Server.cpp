@@ -35,11 +35,7 @@ Server::~Server() {
 //-----------------------------------------------------------------------------
 bool Server::init() {
   const CommandArgs& args = CommandArgs::getInstance();
-
-  const char* level = args.getValueOf("-l", "--log-level");
-  if (!CommandArgs::empty(level)) {
-    Logger::getInstance().setLogLevel(level);
-  }
+  Logger::info() << args.get(0) << " version " << Server::VERSION;
 
   const char* binAddr = args.getValueOf("-b", "--bind-address");
   if (CommandArgs::empty(binAddr)) {
@@ -156,6 +152,7 @@ bool Server::startListening(const int backlog) {
   if (listen(sock, 10) < 0) {
     Logger::error() << "Failed to listen on " << bindAddress << ":" << port
                     << ": " << strerror(errno);
+    closeSocket();
     return false;
   }
 
@@ -176,30 +173,40 @@ bool Server::run() {
     return false;
   }
 
-  try {
-    if (!startListening(gameConfig.getMaxPlayers() * 2)) {
-      throw 1;
-    }
+  if (!input.setCanonical(false)) {
+    input.restoreTerminal();
+    return false;
+  }
 
+  if (!startListening(gameConfig.getMaxPlayers() * 2)) {
+    input.restoreTerminal();
+    return false;
+  }
+
+  bool ok = true;
+  try {
     Game game;
     game.setTitle(gameTitle).setConfiguration(gameConfig);
 
     Coordinate coord(1, 1);
     if (!printWaitScreen(game, coord)) {
-      return false;
+      throw 1;
     }
 
     while (!game.isStarted()) {
-      switch (waitForPlayers(game, coord)) {
+      if (!printPlayers(game, coord)) {
+        throw 1;
+      }
+      switch (waitForInput(game)) {
       case -1:
       case 'Q':
-        return false;
-      case 'B':
-        // bootPlayer(game, coord);
-        break;
+        throw 1;
+//    case 'B':
+//      bootPlayer(game, coord);
+//      break;
       case 'R':
         if (!printWaitScreen(game, coord.set(1, 1))) {
-          return false;
+          throw 1;
         }
         break;
       case 'S':
@@ -210,17 +217,13 @@ bool Server::run() {
 
     // TODO enter game loop
   }
-  catch (const int x) {
-    closeSocket();
-    return false;
-  }
-  catch (...) {
-    closeSocket();
-    throw;
+  catch (const int) {
+    ok = false;
   }
 
+  input.restoreTerminal();
   closeSocket();
-  return true;
+  return ok;
 }
 
 //-----------------------------------------------------------------------------
@@ -289,41 +292,49 @@ bool Server::printPlayers(Game& game, const Coordinate& startCoord) {
 }
 
 //-----------------------------------------------------------------------------
-char Server::waitForPlayers(Game& game, const Coordinate& startCoord) {
-  if (!printPlayers(game, startCoord)) {
-    return -1;
-  }
-
-  const char ch = input.getKeystroke(STDIN_FILENO, 500);
-  if (ch < 0) {
-    return -1;
-  }
-
-  const Screen& screen = Screen::getInstance();
-  if (ch) {
-    if (ch != '\n') {
-      if (!screen.print("\n", true)) {
-        return -1;
-      }
-    }
-    return toupper(ch);
-  }
-
-  const int handle = input.waitForData(1000);
-  if (handle < -1) {
-    return -1;
-  } else if (handle < 0) { // timeout
-    return 0;
-  } else if (handle == sock) {
-    return addHandle() ? 0 : -1;
-  }
-
-  getPlayerInput(game, handle);
-  return 0;
+bool Server::isPlayerHandle(const int handle) const {
+  return ((handle >= 0) && (handle != STDIN_FILENO) && (handle != sock));
 }
 
 //-----------------------------------------------------------------------------
-bool Server::addHandle() {
+bool Server::isServerHandle(const int handle) const {
+  return ((handle >= 0) && (handle == sock));
+}
+
+//-----------------------------------------------------------------------------
+bool Server::isUserHandle(const int handle) const {
+  return ((handle >= 0) && (handle == STDIN_FILENO));
+}
+
+//-----------------------------------------------------------------------------
+char Server::waitForInput(Game& game, const int timeout) {
+  std::set<int> ready;
+  if (!input.waitForData(ready, timeout)) {
+    return -1;
+  }
+
+  char ch = 0;
+  std::set<int>::const_iterator it;
+  for (it = ready.begin(); it != ready.end(); ++it) {
+    const int handle = (*it);
+    if (isServerHandle(handle)) {
+      if (!addPlayerHandle()) {
+        return -1;
+      }
+    } else if (isUserHandle(handle)) {
+      if (input.readln(STDIN_FILENO) < 0) {
+        return -1;
+      }
+      ch = input.getString(0, "")[0];
+    } else {
+      getPlayerInput(game, handle);
+    }
+  }
+  return toupper(ch);
+}
+
+//-----------------------------------------------------------------------------
+bool Server::addPlayerHandle() {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   socklen_t len = sizeof(addr);
@@ -437,7 +448,7 @@ void Server::getGameInfo(Game& game, const int handle) {
            "I|version/%s|title/%s|min/%u|max/%u|width/%u|height/%u|boats/%u",
            Server::VERSION,
            game.getTitle().c_str(),
-           config.getMaxPlayers(),
+           config.getMinPlayers(),
            config.getMaxPlayers(),
            config.getBoardSize().getWidth(),
            config.getBoardSize().getHeight(),
