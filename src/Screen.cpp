@@ -82,7 +82,57 @@ bool Screen::print(const char* str, const bool flush) const {
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::clear() const {
+bool Screen::clearToLineBegin(const Coordinate& coord) const {
+  if (coord && !moveCursor(coord, false)) {
+    return false;
+  }
+  char sbuf[32];
+  snprintf(sbuf, sizeof(sbuf), "%s1K", CSI);
+  return print(sbuf, true);
+}
+
+//-----------------------------------------------------------------------------
+bool Screen::clearToLineEnd(const Coordinate& coord) const {
+  if (coord && !moveCursor(coord, false)) {
+    return false;
+  }
+  char sbuf[32];
+  snprintf(sbuf, sizeof(sbuf), "%s0K", CSI);
+  return print(sbuf, true);
+}
+
+//-----------------------------------------------------------------------------
+bool Screen::clearLine(const Coordinate& coord) const {
+  if (coord && !moveCursor(coord, false)) {
+    return false;
+  }
+  char sbuf[32];
+  snprintf(sbuf, sizeof(sbuf), "%s2K", CSI);
+  return print(sbuf, true);
+}
+
+//-----------------------------------------------------------------------------
+bool Screen::clearToScreenBegin(const Coordinate& coord) const {
+  if (coord && !moveCursor(coord, false)) {
+    return false;
+  }
+  char sbuf[32];
+  snprintf(sbuf, sizeof(sbuf), "%s1J", CSI);
+  return print(sbuf, true);
+}
+
+//-----------------------------------------------------------------------------
+bool Screen::clearToScreenEnd(const Coordinate& coord) const {
+  if (coord && !moveCursor(coord, false)) {
+    return false;
+  }
+  char sbuf[32];
+  snprintf(sbuf, sizeof(sbuf), "%s0J", CSI);
+  return print(sbuf, true);
+}
+
+//-----------------------------------------------------------------------------
+bool Screen::clearAll() const {
   char sbuf[32];
   snprintf(sbuf, sizeof(sbuf), "%s2J", CSI);
   return print(sbuf, true);

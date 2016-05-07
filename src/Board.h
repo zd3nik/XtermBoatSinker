@@ -65,7 +65,9 @@ public:
         const unsigned boatAreaHeight);
 
   virtual ~Board();
+  void setStatus(const char* str);
   std::string getPlayerName() const;
+  std::string getStatus() const;
   std::string getDescriptor() const;
   std::string getMaskedDescriptor() const;
   Container getBoatArea() const;
@@ -90,6 +92,7 @@ private:
   unsigned getBoatIndex(const Coordinate& boatCoordinate) const;
 
   std::string playerName;
+  std::string status;
   unsigned boatAreaWidth;
   unsigned boatAreaHeight;
   unsigned descriptorLength;

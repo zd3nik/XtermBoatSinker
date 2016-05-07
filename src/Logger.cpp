@@ -77,6 +77,22 @@ Logger& Logger::setLogLevel(const LogLevel logLevel) {
 }
 
 //-----------------------------------------------------------------------------
+Logger& Logger::setLogLevel(const char* level) {
+  if (strcasecmp(level, "DEBUG") == 0) {
+    setLogLevel(DEBUG);
+  } else if (strcasecmp(level, "INFO") == 0) {
+    setLogLevel(INFO);
+  } else if (strcasecmp(level, "WARN") == 0) {
+    setLogLevel(INFO);
+  } else if (strcasecmp(level, "ERROR") == 0) {
+    setLogLevel(INFO);
+  } else {
+    Logger::error() << "Invalid log level: '" << level << "'";
+  }
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
 Logger::LogLevel Logger::getLogLevel() const {
   return logLevel;
 }

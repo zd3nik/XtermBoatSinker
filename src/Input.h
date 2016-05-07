@@ -13,25 +13,24 @@
 class Input
 {
 public:
-  static const unsigned DEFAULT_BUF_SIZE = 4096;
+  enum { BUFFER_SIZE = 16384U };
 
-  Input(const unsigned bufSize = DEFAULT_BUF_SIZE);
-
+  Input();
   virtual ~Input();
 
   // block execution until data available on one or more handles
-  // if timeout_ms = 0 wait indefinitely
+  // if timeout_ms = -1 wait indefinitely
   // returns -2 if error, -1 if timeout, otherwise a handle with data available
-  int waitForData(const unsigned timeout_ms = 0);
+  int waitForData(const unsigned timeout_ms = -1);
 
   // read one line (up to first \n or buffer full) from given handle
   // returns -1 if error, otherwise number of fields in the line that is read
   int readln(const int handle);
 
   // get next keystroke
-  // if timeout_ms = 0 wait indefinitely
+  // if timeout_ms = -1 wait indefinitely
   // return -1 if error, 0 if timeout, otherwise first byte of keystroke
-  char getKeystroke(const int fd, const unsigned timeout_ms = 0);
+  char getKeystroke(const int fd, const int timeout_ms = 0);
 
   void addHandle(const int handle);
   void removeHandle(const int handle);
@@ -45,7 +44,6 @@ public:
 private:
   bool bufferData(const int fd);
 
-  const unsigned bufSize;
   char* buffer;
   char* line;
   unsigned pos;

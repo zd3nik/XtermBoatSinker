@@ -53,6 +53,7 @@ public:
 
   LogLevel getLogLevel() const;
   Logger& setLogLevel(const LogLevel logLevel);
+  Logger& setLogLevel(const char* logLevelStr);
   Logger& appendToFile(const char* filePath);
 
 private:

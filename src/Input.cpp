@@ -11,10 +11,9 @@
 #include "Logger.h"
 
 //-----------------------------------------------------------------------------
-Input::Input(const unsigned bufSize)
-  : bufSize(bufSize),
-    buffer(new char[bufSize]),
-    line(new char[bufSize]),
+Input::Input()
+  : buffer(new char[BUFFER_SIZE]),
+    line(new char[BUFFER_SIZE]),
     pos(0),
     len(0)
 {
@@ -55,7 +54,7 @@ int Input::waitForData(const unsigned timeout_ms) {
 
   int ret;
   while (true) {
-    ret = select((maxFd + 1), &set, NULL, NULL, (timeout_ms ? &tv : NULL));
+    ret = select((maxFd + 1), &set, NULL, NULL, (timeout_ms < 0) ? NULL : &tv);
     if (ret < 0) {
       if (errno == EINTR) {
         Logger::debug() << "Input select interrupted, retrying";
@@ -87,8 +86,9 @@ int Input::readln(const int fd) {
     Logger::error() << "Input readln() invalid handle: " << fd;
     return -1;
   }
+
   unsigned n = 0;
-  while (n < (bufSize - 1)) {
+  while (n < (BUFFER_SIZE - 1)) {
     if ((pos >= len) && !bufferData(fd)) {
       return false;
     }
@@ -99,6 +99,8 @@ int Input::readln(const int fd) {
     }
   }
   line[n] = 0;
+  Logger::debug() << "Received '" << line << "' from channel " << fd;
+
   char* begin = line;
   char* end = line;
   for (; (*end) && ((*end) != '\r') && ((*end) != '\n'); ++end) {
@@ -116,7 +118,7 @@ int Input::readln(const int fd) {
 }
 
 //-----------------------------------------------------------------------------
-char Input::getKeystroke(const int fd, const unsigned timeout_ms) {
+char Input::getKeystroke(const int fd, const int timeout_ms) {
   if (fd < 0) {
     Logger::error() << "Input getkeystroke() invalid handle: " << fd;
     return -1;
@@ -213,8 +215,8 @@ const int Input::getUnsigned(const unsigned index, const unsigned def) const {
 //-----------------------------------------------------------------------------
 bool Input::bufferData(const int fd) {
   pos = len = 0;
-  while (len < bufSize) {
-    ssize_t n = read(fd, buffer, bufSize);
+  while (len < BUFFER_SIZE) {
+    ssize_t n = read(fd, buffer, BUFFER_SIZE);
     if (n < 0) {
       if (errno == EINTR) {
         Logger::debug() << "Input read interrupted, retrying";
@@ -222,7 +224,7 @@ bool Input::bufferData(const int fd) {
       }
       Logger::error() << "Input read failed: " << strerror(errno);
       return false;
-    } else if (n <= bufSize) {
+    } else if (n <= BUFFER_SIZE) {
       len = n;
       break;
     } else {

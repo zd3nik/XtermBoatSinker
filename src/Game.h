@@ -1,40 +1,28 @@
 //-----------------------------------------------------------------------------
-// Game.cpp
+// Game.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #ifndef GAME_H
 #define GAME_H
 
 #include "Board.h"
+#include "Configuration.h"
 #include "DBObject.h"
 
 //-----------------------------------------------------------------------------
 class Game : public DBObject
 {
 public:
-  Game()
-    : started(false)
-  { }
-
-  Game& setTitle(const std::string& title) {
-    this->title = title;
-    return (*this);
-  }
-
-  Game& setConfiguration(const Configuration& configuration) {
-    this->configuration = configuration;
-    return (*this);
-  }
-
-  Game& clearBoards() {
-    boards.clear();
-    return (*this);
-  }
-
-  Game& addBoard(const Board& board) {
-    boards.push_back(board);
-    return (*this);
-  }
+  Game();
+  Game& setTitle(const std::string& title);
+  Game& setConfiguration(const Configuration& configuration);
+  Game& clearBoards();
+  Game& addBoard(const Board& board);
+  bool isValid() const;
+  void start();
+  void disconnectBoard(const int handle, const char* msg);
+  void removeBoard(const int handle);
+  Board* getBoardForhandle(const int handle);
 
   std::string getTitle() const {
     return title;
@@ -48,22 +36,16 @@ public:
     return boards.size();
   }
 
-  Board& getBoard(const unsigned index) {
+  Board& getBoardAtIndex(const unsigned index) {
     return boards.at(index);
-  }
-
-  bool isValid() const {
-    return (title.size() && configuration.isValid() &&
-            (boards.size() >= configuration.getMinPlayers()) &&
-            (boards.size() <= configuration.getMaxPlayers()));
   }
 
   bool isStarted() const {
     return started;
   }
 
-  void start() {
-    started = true;
+  bool hasBoard(const int handle) {
+    return (getBoardForhandle(handle) != NULL);
   }
 
 private:

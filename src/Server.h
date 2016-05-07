@@ -14,8 +14,9 @@
 //-----------------------------------------------------------------------------
 class Server {
 public:
+  enum { DEFAULT_PORT = 7948 };
+  static const char* VERSION;
   static const char* ANY_ADDRESS;
-  static const int DEFAULT_PORT = 7948;
 
   static bool isValidPort(const int port) {
     return ((port > 0) && (port <= 0x7FFF));
@@ -42,8 +43,20 @@ public:
   }
 
 private:
+  bool addHandle();
   bool getGameTitle(std::string& title);
-  char waitForPlayers(Game& game);
+  bool printWaitScreen(Game&, Coordinate&);
+  bool printPlayers(Game&, const Coordinate&);
+  bool sendLine(Game&, const int handle, const char* msg);
+  char waitForPlayers(Game&, const Coordinate&);
+  void getPlayerInput(Game&, const int handle);
+  void removePlayer(Game&, const int handle, const char* msg = NULL);
+  void getGameInfo(Game& game, const int handle);
+  void joinGame(Game& game, const int handle);
+  void leaveGame(Game& game, const int handle);
+  void sendMessage(Game& game, const int handle);
+  void ping(Game& game, const int handle);
+  void shoot(Game& game, const int handle);
   Configuration getGameConfig();
 
   Input input;
