@@ -43,6 +43,10 @@ public:
     return isValidID(id) ? NONE : isValidID(toupper(id)) ? HIT_MASK : id;
   }
 
+  static char hit(const char id) {
+    return isValidID(id) ? tolower(id) : id;
+  }
+
   Boat(const char id, const unsigned length)
     : id(toupper(id)),
       length(length)

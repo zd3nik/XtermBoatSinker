@@ -59,7 +59,7 @@ public:
   }
 
   bool contains(const Coordinate& c) const {
-    return contains(c.getX(), c.getY());
+    return (c && contains(c.getX(), c.getY()));
   }
 
   bool contains(const Container& other) const {

@@ -15,14 +15,53 @@ Board::Board(const std::string playerName,
     playerName(playerName),
     boatAreaWidth(boatAreaWidth),
     boatAreaHeight(boatAreaHeight),
-    descriptorLength(playerName.size() + (boatAreaWidth * boatAreaHeight) + 1),
+    descriptorLength(boatAreaWidth * boatAreaHeight),
     descriptor(new char[descriptorLength + 1]),
     handle(-1)
 {
   memset(descriptor, Boat::NONE, descriptorLength);
-  memcpy(descriptor, playerName.c_str(), playerName.size());
-  descriptor[playerName.size()] = '/';
   descriptor[descriptorLength] = 0;
+}
+
+//-----------------------------------------------------------------------------
+Board::Board(const Board& other)
+  : Container(other.getTopLeft(), other.getBottomRight()),
+    playerName(other.playerName),
+    status(other.status),
+    boatAreaWidth(other.boatAreaWidth),
+    boatAreaHeight(other.boatAreaHeight),
+    descriptorLength(other.descriptorLength),
+    descriptor(new char[descriptorLength + 1]),
+    handle(other.handle)
+{
+  if (other.descriptor) {
+    memcpy(descriptor, other.descriptor, descriptorLength);
+  } else {
+    memset(descriptor, Boat::NONE, descriptorLength);
+  }
+  descriptor[descriptorLength] = 0;
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::operator=(const Board& other) {
+  set(other.getTopLeft(), other.getBottomRight());
+  playerName = other.playerName;
+  status = other.status;
+  boatAreaWidth = other.boatAreaWidth;
+  boatAreaHeight = other.boatAreaHeight;
+  descriptorLength = other.descriptorLength;
+  handle = other.handle;
+
+  delete[] descriptor;
+  descriptor = new char[descriptorLength + 1];
+  if (other.descriptor) {
+    memcpy(descriptor, other.descriptor, descriptorLength);
+  } else {
+    memset(descriptor, Boat::NONE, descriptorLength);
+  }
+  descriptor[descriptorLength] = 0;
+
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
@@ -54,10 +93,8 @@ std::string Board::getDescriptor() const {
 //-----------------------------------------------------------------------------
 std::string Board::getMaskedDescriptor() const {
   std::string desc = getDescriptor();
-  for (size_t i = getStartOffset(); i < desc.size(); ++i) {
-    if (Boat::isBoat(desc[i])) {
-      desc[i] = Boat::HIT_MASK;
-    }
+  for (size_t i = 0; i < desc.size(); ++i) {
+    desc[i] = Boat::mask(desc[i]);
   }
   return desc;
 }
@@ -73,7 +110,7 @@ Container Board::getBoatArea() const {
 unsigned Board::getHitCount() const {
   unsigned count = 0;
   if (descriptor) {
-    for (unsigned i = getStartOffset(); i < descriptorLength; ++i) {
+    for (unsigned i = 0; i < descriptorLength; ++i) {
       if (Boat::isHit(descriptor[i])) {
         count++;
       }
@@ -86,7 +123,7 @@ unsigned Board::getHitCount() const {
 unsigned Board::getMissCount() const {
   unsigned count = 0;
   if (descriptor) {
-    for (unsigned i = getStartOffset(); i < descriptorLength; ++i) {
+    for (unsigned i = 0; i < descriptorLength; ++i) {
       if (Boat::isMiss(descriptor[i])) {
         count++;
       }
@@ -99,7 +136,7 @@ unsigned Board::getMissCount() const {
 unsigned Board::getBoatPoints() const {
   unsigned count = 0;
   if (descriptor) {
-    for (unsigned i = getStartOffset(); i < descriptorLength; ++i) {
+    for (unsigned i = 0; i < descriptorLength; ++i) {
       if (Boat::isBoat(descriptor[i])) {
         count++;
       }
@@ -115,9 +152,7 @@ bool Board::isValid() const {
           (boatAreaSize > 0) &&
           (descriptor != NULL) &&
           (playerName.size() > 0) &&
-          (descriptorLength == (getStartOffset() + boatAreaSize)) &&
-          (strncmp(playerName.c_str(), descriptor, playerName.size()) == 0) &&
-          (descriptor[playerName.size()] == '/') &&
+          (descriptorLength == boatAreaSize) &&
           (descriptor[descriptorLength] == 0) &&
           (strlen(descriptor) == descriptorLength));
 }
@@ -162,7 +197,7 @@ bool Board::print(const PlayerState state, const bool masked) const {
     for (unsigned x = 0; x < boatAreaWidth; ++x) {
       unsigned i = (3 + (2 * x));
       if (i < ROW_WIDTH) {
-        row[i] = descriptor[getStartOffset() + x];
+        row[i] = descriptor[x];
         if (masked) {
           row[i] = Boat::mask(row[i]);
         }
@@ -186,16 +221,11 @@ bool Board::print(const PlayerState state, const bool masked) const {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::updateBoatArea(const char* newDescriptor) {
-  if (!newDescriptor ||
-      !isValid() ||
-      (strlen(descriptor) != strlen(newDescriptor)) ||
-      (strncmp(descriptor, newDescriptor, playerName.size()) != 0) ||
-      (newDescriptor[playerName.size()] != '/'))
-  {
+bool Board::updateBoatArea(const char* desc) {
+  if (!desc || !isValid() || (strlen(desc) != descriptorLength)) {
     return false;
   }
-  memcpy(descriptor, newDescriptor, descriptorLength);
+  memcpy(descriptor, desc, descriptorLength);
   return isValid();
 }
 
@@ -203,7 +233,7 @@ bool Board::updateBoatArea(const char* newDescriptor) {
 bool Board::removeBoat(const Boat& boat) {
   unsigned count = 0;
   if (descriptor) {
-    for (unsigned i = getStartOffset(); i < descriptorLength; ++i) {
+    for (unsigned i = 0; i < descriptorLength; ++i) {
       if (descriptor[i] == boat.getID()) {
         descriptor[i] = NONE;
         count++;
@@ -217,25 +247,20 @@ bool Board::removeBoat(const Boat& boat) {
 bool Board::addBoat(const Boat& boat, Coordinate coord,
                     const Movement::Direction direction)
 {
-  if (!isValid()) {
+  if (boat.isValid() || !coord.isValid() || !isValid()) {
     return false;
   }
 
   Container boatArea = getBoatArea();
   std::vector<unsigned> boatIndex;
 
-  if (boatArea.contains(coord)) {
-    boatIndex.push_back(getBoatIndex(coord));
-  } else {
-    return false;
-  }
-
-  for (unsigned i = 1; i < boat.getLength(); ++i) {
-    if (boatArea.moveCoordinate(coord, direction, 1)) {
+  for (unsigned count = boat.getLength(); count > 0; --count) {
+    if (boatArea.contains(coord)) {
       boatIndex.push_back(getBoatIndex(coord));
     } else {
       return false;
     }
+    boatArea.moveCoordinate(coord, direction, 1);
   }
 
   if (boatIndex.size() != boat.getLength()) {
@@ -244,7 +269,7 @@ bool Board::addBoat(const Boat& boat, Coordinate coord,
   }
 
   for (unsigned i = 0; i < boatIndex.size(); ++i) {
-    unsigned offset = (getStartOffset() + boatIndex[i]);
+    unsigned offset = boatIndex[i];
     if (offset >= descriptorLength) {
       Logger::error() << "boat offset exceeds descriptor length";
       return false;
@@ -257,7 +282,7 @@ bool Board::addBoat(const Boat& boat, Coordinate coord,
 //-----------------------------------------------------------------------------
 bool Board::shootAt(const Coordinate& coord, char& previous) {
   previous = 0;
-  if (!isValid()) {
+  if (!coord.isValid() || !isValid()) {
     return false;
   }
 
@@ -266,7 +291,7 @@ bool Board::shootAt(const Coordinate& coord, char& previous) {
     return false;
   }
 
-  unsigned i = (getStartOffset() + getBoatIndex(coord));
+  unsigned i = getBoatIndex(coord);
   if (i >= descriptorLength) {
     Logger::error() << "boat offset exceeds descriptor length";
     return false;
@@ -277,16 +302,11 @@ bool Board::shootAt(const Coordinate& coord, char& previous) {
     descriptor[i] = Boat::MISS;
     return true;
   } else if (Boat::isValidID(previous)) {
-    descriptor[i] = tolower(previous);
+    descriptor[i] = Boat::hit(previous);
     return true;
   }
 
   return false;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::getStartOffset() const {
-  return(playerName.size() + 1);
 }
 
 //-----------------------------------------------------------------------------

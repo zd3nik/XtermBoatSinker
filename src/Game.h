@@ -22,7 +22,8 @@ public:
   void start();
   void disconnectBoard(const int handle, const char* msg);
   void removeBoard(const int handle);
-  Board* getBoardForhandle(const int handle);
+  Board* getBoardForHandle(const int handle);
+  Board* getBoardForPlayer(const char* name);
 
   std::string getTitle() const {
     return title;
@@ -45,7 +46,7 @@ public:
   }
 
   bool hasBoard(const int handle) {
-    return (getBoardForhandle(handle) != NULL);
+    return (getBoardForHandle(handle) != NULL);
   }
 
 private:

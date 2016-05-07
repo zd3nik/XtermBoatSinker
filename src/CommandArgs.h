@@ -5,6 +5,7 @@
 #ifndef COMMANDARGS_H
 #define COMMANDARGS_H
 
+#include <ctype.h>
 #include <string.h>
 
 //-----------------------------------------------------------------------------
@@ -13,8 +14,19 @@ public:
   static void initialize(const int argc, const char* argv[]);
   static const CommandArgs& getInstance();
 
-  static bool empty(const char* str) {
-    return (!str || !(*str));
+  static bool empty(const char* str, const bool checkWhitespace = true) {
+    if (!str || !(*str)) {
+      return true;
+    }
+    if (checkWhitespace) {
+      for (const char* p = str; *p; ++p) {
+        if (!isspace(*p)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
   }
 
   int count() const;

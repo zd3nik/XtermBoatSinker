@@ -52,7 +52,7 @@ void Game::start() {
 
 //-----------------------------------------------------------------------------
 void Game::disconnectBoard(const int handle, const char* msg) {
-  Board* board = getBoardForhandle(handle);
+  Board* board = getBoardForHandle(handle);
   if (board) {
     board->setStatus(msg);
     board->setHandle(-1);
@@ -73,7 +73,7 @@ void Game::removeBoard(const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-Board* Game::getBoardForhandle(const int handle) {
+Board* Game::getBoardForHandle(const int handle) {
   if (handle >= 0) {
     for (unsigned i = 0; i < boards.size(); ++i) {
       if (boards[i].getHandle() == handle) {
@@ -84,3 +84,14 @@ Board* Game::getBoardForhandle(const int handle) {
   return NULL;
 }
 
+//-----------------------------------------------------------------------------
+Board* Game::getBoardForPlayer(const char* name) {
+  if (name && *name) {
+    for (unsigned i = 0; i < boards.size(); ++i) {
+      if (boards[i].getPlayerName() == name) {
+        return &(boards[i]);
+      }
+    }
+  }
+  return NULL;
+}

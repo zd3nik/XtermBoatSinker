@@ -17,31 +17,28 @@
 //
 //     +----------------------+
 //     |   PlayerName         | <- outer rectangle is Board container
-//     |   A B C D E F G H I J|    topLeft is relative to screen position
+//     |   A B C D E F G H I J|    topLeft is absolute screen position
 //     | 1 +-----------------+|    used for printing to screen
 //     | 2 |                 ||
 //     | 3 |                 ||
 //     | 4 |                 ||
 //     | 5 | Inner Rectangle ||
 //     | 6 |  is Boat Area   || <- inner rectangle is the boat area
-//     | 7 |                 ||    topLeft is always (0,0)
-//     | 8 |                 ||    used for aiming
-//     | 9 |                 ||    not used for printing to screen
+//     | 7 |                 ||    topLeft is always (1,1)
+//     | 8 |                 ||    used for aiming not for printing
+//     | 9 |                 ||
 //     |10 +-----------------+|
-//     |                      |
+//     |   status line        |
 //     +----------------------+
 //
-// A Board descriptor is used to transfer the Board state across the network.
-// It is a single-line string that starts with the player name, followed by
-// a single slash character ('/'), followed by the flattened boat area.
-// Example PlayerName:  John
-// Example Boat Area:   +------+
-//                      |.X..X.| (row1)
-//                      |0X0..0| (row2)
-//                      |...0X.| (row3)
-//                      +------+
-// Flattened Boat Area: .X..X.0X0..0...0X. (row1row2row3)
-// Board Descriptor:    John/.X..X.0X0..0...0X.
+// A boat descriptor is used to transfer a the boat area across the network.
+// It is a single-line string containing the flattened boat area.
+// Example Boat Area: +------+
+//                    |.X..X.| (row1)
+//                    |0X0..0| (row2)
+//                    |...0X.| (row3)
+//                    +------+
+// Boat descriptor: .X..X.0X0..0...0X. (row1row2row3)
 //-----------------------------------------------------------------------------
 class Board : public Container, DBObject
 {
@@ -63,6 +60,8 @@ public:
   Board(const std::string playerName,
         const unsigned boatAreaWidth,
         const unsigned boatAreaHeight);
+  Board(const Board& other);
+  Board& operator=(const Board& other);
 
   virtual ~Board();
   void setStatus(const char* str);
@@ -81,14 +80,15 @@ public:
   bool addBoat(const Boat& boat, Coordinate boatCoordinate,
                const Movement::Direction direction);
 
-  //-----------------------------------------------------------------------------
-  // returns true if the shot is legal (in the boat area and not already shot)
-  // previous state of coordinate set if coordinate valid, otherwise set to 0
-  //-----------------------------------------------------------------------------
+  /**
+   * @brief Shoot at a coordinate within the boat area
+   * @param boatCoordinate The coordinate in the boat area being shot
+   * @param[out] previous Set to state of coordinate coordinate before shooting
+   * @return true if the shot is legal (in the boat area and not already shot)
+   */
   bool shootAt(const Coordinate& boatCoordinate, char& previous);
 
 private:
-  unsigned getStartOffset() const;
   unsigned getBoatIndex(const Coordinate& boatCoordinate) const;
 
   std::string playerName;

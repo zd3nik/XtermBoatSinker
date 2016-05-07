@@ -16,8 +16,13 @@ const char* Server::ANY_ADDRESS = "0.0.0.0";
 
 //-----------------------------------------------------------------------------
 const char* COMM_ERROR = "comm error";
+const char* GAME_FULL = "game is full";
+const char* INVALID_BOARD = "invalid board";
+const char* NAME_IN_USE = "name in use";
 const char* PLAYER_EXITED = "exited";
 const char* PROTOCOL_ERROR = "protocol error";
+const char* NAME_TOO_LONG = "name too long";
+const char* INVALID_NAME = "invalid name";
 
 //-----------------------------------------------------------------------------
 Server::Server()
@@ -292,11 +297,6 @@ bool Server::printPlayers(Game& game, const Coordinate& startCoord) {
 }
 
 //-----------------------------------------------------------------------------
-bool Server::isPlayerHandle(const int handle) const {
-  return ((handle >= 0) && (handle != STDIN_FILENO) && (handle != sock));
-}
-
-//-----------------------------------------------------------------------------
 bool Server::isServerHandle(const int handle) const {
   return ((handle >= 0) && (handle == sock));
 }
@@ -371,16 +371,13 @@ bool Server::addPlayerHandle() {
 void Server::getPlayerInput(Game& game, const int handle) {
   if (input.readln(handle) < 0) {
     removePlayer(game, handle, COMM_ERROR);
-    return;
-  }
-
-  if (strcmp("G", input.getString(0, "")) == 0) {
+  } else if (strcmp("G", input.getString(0, "")) == 0) {
     getGameInfo(game, handle);
   } else if (strcmp("J", input.getString(0, "")) == 0) {
     joinGame(game, handle);
   } else if (strcmp("L", input.getString(0, "")) == 0) {
     leaveGame(game, handle);
-  } else if (strcmp("J", input.getString(0, "")) == 0) {
+  } else if (strcmp("M", input.getString(0, "")) == 0) {
     sendMessage(game, handle);
   } else if (strcmp("P", input.getString(0, "")) == 0) {
     ping(game, handle);
@@ -403,7 +400,11 @@ bool Server::sendLine(Game& game, const int handle, const char* msg) {
     str[sizeof(str) - 2] = '\n';
     str[sizeof(str) - 1] = 0;
   }
+
   unsigned len = strlen(str);
+  Logger::debug() << "Sending " << len << " bytes (" << str
+                  << ") to channel " << handle;
+
   if (write(handle, str, len) != len) {
     Logger::error() << "Failed to write " << len << " bytes (" << str
                     << ") to channel " << handle << ": " << strerror(errno);
@@ -424,16 +425,14 @@ bool Server::sendLine(Game& game, const int handle, const char* msg) {
 
 //-----------------------------------------------------------------------------
 void Server::removePlayer(Game& game, const int handle, const char* msg) {
-  if (game.hasBoard(handle)) {
-    bool closed = !sendLine(game, handle, msg);
-    if (game.isStarted()) {
-      game.disconnectBoard(handle, msg);
-    } else {
-      game.removeBoard(handle);
-    }
-    if (closed) {
-      return;
-    }
+  bool closed = !sendLine(game, handle, msg);
+  if (game.isStarted()) {
+    game.disconnectBoard(handle, msg);
+  } else {
+    game.removeBoard(handle);
+  }
+  if (closed) {
+    return;
   }
   input.removeHandle(handle);
   shutdown(handle, SHUT_RDWR);
@@ -465,11 +464,39 @@ void Server::getGameInfo(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 void Server::joinGame(Game& game, const int handle) {
-  if (game.hasBoard(handle)) {
+  const char* playerName = input.getString(1);
+  const char* boatDescriptor = input.getString(2);
+  const Configuration& config = game.getConfiguration();
+  const Container& boardSize = config.getBoardSize();
+
+  if (game.hasBoard(handle) ||
+      CommandArgs::empty(playerName) ||
+      CommandArgs::empty(boatDescriptor))
+  {
     removePlayer(game, handle, PROTOCOL_ERROR);
-  } else {
-    // TODO
+    return;
+  } else if (strlen(playerName) > (2 * boardSize.getWidth())) {
+    removePlayer(game, handle, NAME_TOO_LONG);
+    return;
+  } else if (game.getBoardCount() >= config.getMaxPlayers()) {
+    removePlayer(game, handle, GAME_FULL);
+    return;
+  } else if (game.getBoardForPlayer(playerName)) {
+    removePlayer(game, handle, NAME_IN_USE);
+    return;
+  } else if (!config.isValidBoatDescriptor(boatDescriptor)) {
+    removePlayer(game, handle, INVALID_BOARD);
+    return;
   }
+
+  Board board(playerName, boardSize.getWidth(), boardSize.getHeight());
+  if (!board.updateBoatArea(boatDescriptor)) {
+    removePlayer(game, handle, INVALID_BOARD);
+    return;
+  }
+
+  board.setHandle(handle);
+  game.addBoard(board);
 }
 
 //-----------------------------------------------------------------------------
@@ -479,8 +506,24 @@ void Server::leaveGame(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 void Server::sendMessage(Game& game, const int handle) {
-  if (game.hasBoard(handle)) {
-    // TODO
+  const char* playerName = input.getString(1);
+  const char* message = input.getString(2);
+  Board* sender = game.getBoardForHandle(handle);
+  if (sender) {
+    if (playerName && !CommandArgs::empty(message)) {
+      std::string msg = "M|";
+      msg.append(sender->getPlayerName());
+      msg.append("|");
+      msg.append(message);
+      for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+        const Board& board = game.getBoardAtIndex(i);
+        if (board.getHandle() != handle) {
+          if (!(*playerName) || (board.getPlayerName() == playerName)) {
+            sendLine(game, board.getHandle(), msg.c_str());
+          }
+        }
+      }
+    }
   } else {
     removePlayer(game, handle, PROTOCOL_ERROR);
   }
@@ -545,6 +588,8 @@ int main(const int argc, const char* argv[]) {
     CommandArgs::initialize(argc, argv);
     std::string title;
     Server server;
+
+    // TODO setup signal handlers
 
     if (!server.init()) {
       return 1;

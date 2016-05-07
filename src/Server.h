@@ -46,7 +46,6 @@ private:
   char waitForInput(Game&, const int timeout = -1);
   bool addPlayerHandle();
   bool getGameTitle(std::string& title);
-  bool isPlayerHandle(const int handle) const;
   bool isServerHandle(const int handle) const;
   bool isUserHandle(const int handle) const;
   bool printPlayers(Game&, const Coordinate&);

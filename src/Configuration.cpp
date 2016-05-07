@@ -117,3 +117,8 @@ bool Configuration::print(Coordinate& coord, const bool flush) const {
   snprintf(str, sizeof(str), "Max Players: %u", maxPlayers);
   screen.printAt(coord.south(), str, flush);
 }
+
+//-----------------------------------------------------------------------------
+bool Configuration::isValidBoatDescriptor(const char* descriptor) const {
+  return true; // TODO
+}
