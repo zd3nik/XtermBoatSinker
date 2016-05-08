@@ -329,7 +329,7 @@ bool Server::handleUserInput(Game& game, Coordinate& coord) {
   case 'B': return bootPlayer(game, coord);
   case 'P': return blacklistPlayer(game, coord);
   case 'Q': return quitGame(game, coord);
-  case 'R': return printGameInfo(game, coord.set(1, 1));
+  case 'R': return Screen::getInstance(true).clearAll();
   case 'S': return startGame(game, coord);
   default:
     break;
