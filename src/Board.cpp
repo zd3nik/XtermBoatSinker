@@ -76,8 +76,23 @@ Board::~Board() {
 }
 
 //-----------------------------------------------------------------------------
-void Board::setStatus(const char* str) {
-  status = (str ? str : "");
+void Board::incScore(const unsigned value) {
+  score += value;
+}
+
+//-----------------------------------------------------------------------------
+void Board::setStatus(const std::string& str) {
+  status = str;
+}
+
+//-----------------------------------------------------------------------------
+void Board::setHitTaunt(const std::string& str) {
+  hitTaunt = str;
+}
+
+//-----------------------------------------------------------------------------
+void Board::setMissTaunt(const std::string& str) {
+  missTaunt = str;
 }
 
 //-----------------------------------------------------------------------------
@@ -101,6 +116,16 @@ std::string Board::getDescriptor() const {
 }
 
 //-----------------------------------------------------------------------------
+std::string Board::getHitTaunt() const {
+  return hitTaunt;
+}
+
+//-----------------------------------------------------------------------------
+std::string Board::getMissTaunt() const {
+  return missTaunt;
+}
+
+//-----------------------------------------------------------------------------
 std::string Board::getMaskedDescriptor() const {
   std::string desc = getDescriptor();
   for (size_t i = 0; i < desc.size(); ++i) {
@@ -114,6 +139,11 @@ Container Board::getBoatArea() const {
   Coordinate topLeft(1, 1);
   Coordinate bottomRight(boatAreaWidth, boatAreaHeight);
   return Container(topLeft, bottomRight);
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::getScore() const {
+  return score;
 }
 
 //-----------------------------------------------------------------------------
@@ -165,6 +195,11 @@ bool Board::isValid() const {
           (descriptorLength == boatAreaSize) &&
           (descriptor[descriptorLength] == 0) &&
           (strlen(descriptor) == descriptorLength));
+}
+
+//-----------------------------------------------------------------------------
+bool Board::isDead() const {
+  return ((handle < 0) || (getHitCount() >= getBoatPoints()));
 }
 
 //-----------------------------------------------------------------------------

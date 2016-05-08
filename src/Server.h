@@ -62,7 +62,9 @@ private:
   bool printOptions(Game&, Coordinate&);
   bool printPlayers(Game&, Coordinate&);
   bool quitGame(Game&, Coordinate&);
-  bool sendLine(Game&, const int handle, const char* msg);
+  bool sendAllBoards(Game&);
+  bool sendBoard(Game&, const Board&);
+  bool sendLine(Game&, const int handle, const std::string msg);
   bool startGame(Game&, Coordinate&);
   bool prompt(Coordinate& coord, const char* str, std::string& field1,
               const char fieldDelimeter = 0);
@@ -74,6 +76,7 @@ private:
   void ping(Game&, const int handle);
   void removePlayer(Game&, const int handle, const char* msg = NULL);
   void sendMessage(Game&, const int handle);
+  void setTaunt(Game&, const int handle);
   void shoot(Game&, const int handle);
 
   Input input;

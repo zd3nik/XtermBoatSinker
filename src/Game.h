@@ -19,13 +19,17 @@ public:
   Game& clearBoards();
   Game& addBoard(const Board& board);
   bool isValid() const;
-  void start();
-  void disconnectBoard(const int handle, const char* msg);
+  bool isFinished() const;
+  bool fitBoardsToScreen();
+  bool start(const bool randomizeBoardOrder);
+  void disconnectBoard(const int handle, const std::string& msg);
   void removeBoard(const int handle);
+  void nextTurn();
   Board* getBoardAtIndex(const unsigned index);
   Board* getBoardForHandle(const int handle);
-  Board* getBoardForPlayer(const char* name);
-  Board* getFirstBoardForAddress(const char* address);
+  Board* getBoardForPlayer(const std::string& name);
+  Board* getFirstBoardForAddress(const std::string& address);
+  Board* getBoardToMove();
 
   std::string getTitle() const {
     return title;
@@ -48,10 +52,13 @@ public:
   }
 
 private:
+  bool randomizeBoardOrder();
+
   Configuration configuration;
   std::string title;
   std::vector<Board> boards;
   bool started;
+  unsigned boardToMove;
 };
 
 #endif // GAME_H

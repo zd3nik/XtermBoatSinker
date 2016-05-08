@@ -45,7 +45,7 @@ class Board : public Container, DBObject
 public:
   enum PlayerState {
     NONE = ' ',
-    YOUR_TURN = '*',
+    TO_MOVE = '*',
     DISCONNECTED = 'X'
   };
 
@@ -66,17 +66,24 @@ public:
   Board& operator=(const Board& other);
 
   virtual ~Board();
-  void setStatus(const char* str);
+  void incScore(const unsigned value);
+  void setStatus(const std::string& str);
+  void setHitTaunt(const std::string& value);
+  void setMissTaunt(const std::string& value);
   std::string getPlayerName() const;
   std::string getAddress() const;
   std::string getStatus() const;
   std::string getDescriptor() const;
   std::string getMaskedDescriptor() const;
+  std::string getHitTaunt() const;
+  std::string getMissTaunt() const;
   Container getBoatArea() const;
+  unsigned getScore() const;
   unsigned getHitCount() const;
   unsigned getMissCount() const;
   unsigned getBoatPoints() const;
   bool isValid() const;
+  bool isDead() const;
   bool print(const PlayerState playerState, const bool masked = true) const;
   bool updateBoatArea(const char* newDescriptor);
   bool removeBoat(const Boat& boat);
@@ -98,6 +105,9 @@ private:
   std::string playerName;
   std::string address;
   std::string status;
+  std::string hitTaunt;
+  std::string missTaunt;
+  unsigned score;
   unsigned boatAreaWidth;
   unsigned boatAreaHeight;
   unsigned descriptorLength;

@@ -199,7 +199,7 @@ bool Server::run() {
       throw 1;
     }
 
-    while (!game.isStarted()) {
+    while (!game.isFinished()) {
       Coordinate coord(1, 1);
       if (!printGameInfo(game, coord) ||
           !printPlayers(game, coord) ||
@@ -213,7 +213,7 @@ bool Server::run() {
       }
     }
 
-    // TODO enter game loop
+    // TODO send game results
   }
   catch (const int) {
     ok = false;
@@ -269,6 +269,16 @@ bool Server::printPlayers(Game& game, Coordinate& coord) {
                board->getPlayerName().c_str(), board->getAddress().c_str());
       if (!screen.printAt(coord.south(), str, false)) {
         return false;
+      }
+
+      if (game.isStarted()) {
+        snprintf(str, sizeof(str), ", Score = %u, %u of %u boats points hit",
+                 board->getScore(),
+                 board->getHitCount(),
+                 board->getBoatPoints());
+        if (!screen.print(str, false)) {
+          return false;
+        }
       }
     }
   }
@@ -466,9 +476,46 @@ bool Server::startGame(Game& game, Coordinate& coord) {
     return false;
   }
   if (toupper(*str.c_str()) == 'Y') {
-    game.start();
+    if (game.start(true)) {
+      if (!sendAllBoards(game)) {
+        return false;
+      }
+    }
   }
   return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Server::sendAllBoards(Game& game) {
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    Board* board = game.getBoardAtIndex(i);
+    if (!sendBoard(game, *board)) {
+      return false;
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+bool Server::sendBoard(Game& game, const Board& board) {
+  char str[Input::BUFFER_SIZE];
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    Board* toMove = game.getBoardToMove();
+    Board* dest = game.getBoardAtIndex(i);
+    if (dest->getHandle() >= 0) {
+      char state = (board.getHandle() < 0)
+          ? Board::DISCONNECTED
+          : (dest == toMove) ? Board::TO_MOVE
+                             : Board::NONE;
+      snprintf(str, sizeof(str), "B|%c|%s|%s|%s",
+               state,
+               board.getPlayerName().c_str(),
+               board.getStatus().c_str(),
+               board.getMaskedDescriptor().c_str());
+      if (!sendLine(game, dest->getHandle(), str)) {
+        return false;
+      }
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -594,6 +641,8 @@ void Server::getPlayerInput(Game& game, const int handle) {
     ping(game, handle);
   } else if (strcmp("S", input.getString(0, "")) == 0) {
     shoot(game, handle);
+  } else if (strcmp("T", input.getString(0, "")) == 0) {
+    setTaunt(game, handle);
   } else if (game.hasBoard(handle)) {
     sendLine(game, handle, PROTOCOL_ERROR);
   } else {
@@ -606,14 +655,25 @@ void Server::getPlayerInput(Game& game, const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-bool Server::sendLine(Game& game, const int handle, const char* msg) {
+bool Server::sendLine(Game& game, const int handle, const std::string msg) {
+  if (msg.empty()) {
+    Logger::error() << "not sending empty message";
+    return true;
+  }
+
+  if (strchr(msg.c_str(), '\n')) {
+    Logger::error() << "message contains newline (" << msg << ")";
+    return false;
+  }
+
   char str[Input::BUFFER_SIZE];
-  if (snprintf(str, sizeof(str), "%s\n", (msg ? msg : "")) >= sizeof(str)) {
+  if (snprintf(str, sizeof(str), "%s\n", msg.c_str()) >= sizeof(str)) {
+    Logger::warn() << "message exceeds buffer size (" << msg << ")";
     str[sizeof(str) - 2] = '\n';
     str[sizeof(str) - 1] = 0;
   }
 
-  unsigned len = strlen(str);
+  unsigned len = msg.size();
   Logger::debug() << "Sending " << len << " bytes (" << str << ") to channel "
                   << handle << " " << input.getHandleLabel(handle);
 
@@ -657,11 +717,13 @@ void Server::getGameInfo(Game& game, const int handle) {
   const Configuration& config = game.getConfiguration();
   char str[Input::BUFFER_SIZE];
   snprintf(str, sizeof(str),
-           "I|version/%s|title/%s|min/%u|max/%u|width/%u|height/%u|boats/%u",
+           "I|version/%s|title/%s|min/%u|max/%u|joined/%u|"
+           "width/%u|height/%u|boats/%u",
            Server::VERSION,
            game.getTitle().c_str(),
            config.getMinPlayers(),
            config.getMaxPlayers(),
+           game.getBoardCount(),
            config.getBoardSize().getWidth(),
            config.getBoardSize().getHeight(),
            config.getBoatCount());
@@ -726,33 +788,38 @@ void Server::leaveGame(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 void Server::sendMessage(Game& game, const int handle) {
+  Board* sender = game.getBoardForHandle(handle);
+  if (!sender) {
+    Logger::error() << "no board for channel " << handle << " "
+                    << input.getHandleLabel(handle);
+    removePlayer(game, handle, PROTOCOL_ERROR);
+    return;
+  }
+
   const std::string playerName = Input::trim(input.getString(1, ""));
   const std::string message = Input::trim(input.getString(2, ""));
-  Board* sender = game.getBoardForHandle(handle);
-  if (sender) {
-    if (message.size()) {
-      std::string msg = "M|";
-      msg.append(sender->getPlayerName());
-      msg.append("|");
-      msg.append(message);
-      for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-        const Board* board = game.getBoardAtIndex(i);
-        if (board && (board->getHandle() != handle)) {
-          if (playerName.empty() || (board->getPlayerName() == playerName)) {
-            sendLine(game, board->getHandle(), msg.c_str());
-          }
+  if (message.size()) {
+    std::string msg = "M|";
+    msg.append(sender->getPlayerName());
+    msg.append("|");
+    msg.append(message);
+    for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+      const Board* board = game.getBoardAtIndex(i);
+      if (board && (board->getHandle() != handle)) {
+        if (playerName.empty() || (board->getPlayerName() == playerName)) {
+          sendLine(game, board->getHandle(), msg.c_str());
         }
       }
     }
-  } else {
-    removePlayer(game, handle, PROTOCOL_ERROR);
   }
 }
 
 //-----------------------------------------------------------------------------
 void Server::ping(Game& game, const int handle) {
-  if (game.hasBoard(handle)) {
-    sendLine(game, handle, "P|PONG");
+  std::string msg = Input::trim(input.getString(1, ""));
+  if (msg.length() && game.hasBoard(handle)) {
+    msg = ("P|" + msg);
+    sendLine(game, handle, msg.c_str());
   } else {
     removePlayer(game, handle, PROTOCOL_ERROR);
   }
@@ -760,10 +827,63 @@ void Server::ping(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 void Server::shoot(Game& game, const int handle) {
-  if (game.hasBoard(handle)) {
-    // TODO
-  } else {
+  Board* sender = game.getBoardForHandle(handle);
+  if (!sender) {
+    Logger::error() << "no board for channel " << handle << " "
+                    << input.getHandleLabel(handle);
     removePlayer(game, handle, PROTOCOL_ERROR);
+    return;
+  }
+
+  if (!game.isStarted()) {
+    sendLine(game, handle, "game hasn't started");
+    return;
+  }
+  if (game.isFinished()) {
+    sendLine(game, handle, "game is already finished");
+    return;
+  }
+
+  const std::string targetPlayer = Input::trim(input.getString(1, ""));
+  Board* target = game.getBoardForPlayer(targetPlayer);
+  if (!target) {
+    sendLine(game, handle, "invalid target name");
+    return;
+  }
+
+  char id = 0;
+  Coordinate coord(input.getInt(2, 0), input.getInt(3, 0));
+  if (target->shootAt(coord, id)) {
+    char str[Input::BUFFER_SIZE];
+    if (Boat::isValidID(id)) {
+      snprintf(str, sizeof(str), "M|%s|HIT! %s", target->getHitTaunt().c_str());
+    } else {
+      snprintf(str, sizeof(str), "M|%s|MISS! %s", target->getMissTaunt().c_str());
+    }
+    if (sendLine(game, handle, str) && sendBoard(game, *target)) {
+      game.nextTurn();
+    }
+  } else {
+    sendLine(game, handle, "illegal coordinates");
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Server::setTaunt(Game& game, const int handle) {
+  Board* sender = game.getBoardForHandle(handle);
+  if (!sender) {
+    Logger::error() << "no board for channel " << handle << " "
+                    << input.getHandleLabel(handle);
+    removePlayer(game, handle, PROTOCOL_ERROR);
+    return;
+  }
+
+  std::string type = Input::trim(input.getString(1, ""));
+  std::string taunt = Input::trim(input.getString(2, ""));
+  if (strcasecmp(type.c_str(), "hit") == 0) {
+    sender->setHitTaunt(taunt);
+  } else if (strcasecmp(type.c_str(), "miss") == 0) {
+    sender->setMissTaunt(taunt.c_str());
   }
 }
 

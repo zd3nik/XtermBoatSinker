@@ -270,14 +270,14 @@ const char* Input::getString(const unsigned index, const char* def) const {
 
 //-----------------------------------------------------------------------------
 const int Input::getInt(const unsigned index, const int def) const {
-  const char* value = getString(index, NULL);
-  if (value) {
-    if (isdigit(*value)) {
-      return atoi(value);
-    } else if (((*value) == '-') && isdigit(value[1])) {
-      return atoi(value);
-    } else if (((*value) == '+') && isdigit(value[1])) {
-      return atoi(value + 1);
+  std::string str = trim(getString(index, ""));
+  if (str.size()) {
+    if (isdigit(str[0])) {
+      return atoi(str.c_str());
+    } else if (((str[0]) == '-') && (str.size() > 1) && isdigit(str[1])) {
+      return atoi(str.c_str());
+    } else if (((str[0]) == '+') && (str.size() > 1) && isdigit(str[1])) {
+      return atoi(str.c_str() + 1);
     }
   }
   return def;
