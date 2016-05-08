@@ -10,6 +10,40 @@
 #include "Logger.h"
 
 //-----------------------------------------------------------------------------
+bool Input::empty(const char* str, const bool checkWhitespace) {
+  if (!str || !(*str)) {
+    return true;
+  }
+  if (checkWhitespace) {
+    for (const char* p = str; *p; ++p) {
+      if (!isspace(*p)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+std::string Input::trim(const char* str) {
+  std::string result;
+  if (str) {
+    result.reserve(strlen(str));
+    const char* begin = str;
+    while (*begin && isspace(*begin)) begin++;
+    const char* end = begin;
+    for (const char* p = begin; *p; ++p) {
+      if (!isspace(*p)) {
+        end = p;
+      }
+    }
+    result.assign(begin, (end + ((*end) != 0)));
+  }
+  return result;
+}
+
+//-----------------------------------------------------------------------------
 Input::Input()
   : haveTermIO(false),
     buffer(new char[BUFFER_SIZE]),
@@ -58,16 +92,6 @@ int Input::getCanonical() const {
 }
 
 //-----------------------------------------------------------------------------
-int Input::getEcho() const {
-  struct termios ios;
-  if (tcgetattr(STDIN_FILENO, &ios) < 0) {
-    Logger::error() << "getEcho(): tcgetattr failed: " << strerror(errno);
-    return -1;
-  }
-  return (ios.c_lflag & ECHO) ? 1 : 0;
-}
-
-//-----------------------------------------------------------------------------
 bool Input::setCanonical(const bool enabled) const {
   struct termios ios;
   if (tcgetattr(STDIN_FILENO, &ios) < 0) {
@@ -76,34 +100,13 @@ bool Input::setCanonical(const bool enabled) const {
   }
 
   if (enabled) {
-    ios.c_lflag |= ICANON;
+    ios.c_lflag |= (ICANON | ECHO);
   } else {
-    ios.c_lflag &= ~ICANON;
+    ios.c_lflag &= ~(ICANON | ECHO);
   }
 
   if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
     Logger::error() << "setCanonical(): tcsetattr failed: " << strerror(errno);
-    return false;
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Input::setEcho(const bool enabled) const {
-  struct termios ios;
-  if (tcgetattr(STDIN_FILENO, &ios) < 0) {
-    Logger::error() << "setEcho(): tcgetattr failed: " << strerror(errno);
-    return false;
-  }
-
-  if (enabled) {
-    ios.c_lflag |= ECHO;
-  } else {
-    ios.c_lflag &= ~ECHO;
-  }
-
-  if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
-    Logger::error() << "setEcho(): tcsetattr failed: " << strerror(errno);
     return false;
   }
   return true;
@@ -162,7 +165,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
 }
 
 //-----------------------------------------------------------------------------
-int Input::readln(const int fd) {
+int Input::readln(const int fd, const char delimeter) {
   fields.clear();
   if (fd < 0) {
     Logger::error() << "Input readln() invalid handle: " << fd;
@@ -186,7 +189,7 @@ int Input::readln(const int fd) {
   char* begin = line;
   char* end = line;
   for (; (*end) && ((*end) != '\r') && ((*end) != '\n'); ++end) {
-    if ((*end) == '|') {
+    if ((*end) == delimeter) {
       (*end) = 0;
       fields.push_back(begin);
       begin = (end + 1);
@@ -197,6 +200,21 @@ int Input::readln(const int fd) {
     fields.push_back(begin);
   }
   return (int)fields.size();
+}
+
+//-----------------------------------------------------------------------------
+char Input::readChar(const int fd) {
+  if (fd < 0) {
+    Logger::error() << "Input readChar() invalid handle: " << fd;
+    return 0;
+  }
+
+  char ch = 0;
+  if (read(fd, &ch, 1) != 1) {
+    Logger::error() << "Input readChar failed: " << strerror(errno);
+    return -1;
+  }
+  return ch;
 }
 
 //-----------------------------------------------------------------------------

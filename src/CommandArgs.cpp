@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "CommandArgs.h"
 #include "Logger.h"
+#include "Input.h"
 
 //-----------------------------------------------------------------------------
 static CommandArgs* instance = NULL;
@@ -39,14 +40,14 @@ const char* CommandArgs::get(const int index) const {
 //-----------------------------------------------------------------------------
 bool CommandArgs::match(const int i, const char* a, const char* b) const {
   const char* val = get(i);
-  return (!empty(val) &&
-          ((!empty(a) && (strcmp(a, val) == 0)) ||
-           (!empty(b) && (strcmp(b, val) == 0))));
+  return (!Input::empty(val) &&
+          ((!Input::empty(a) && (strcmp(a, val) == 0)) ||
+           (!Input::empty(b) && (strcmp(b, val) == 0))));
 }
 
 //-----------------------------------------------------------------------------
 int CommandArgs::indexOf(const char* a, const char* b) const {
-  if (argc && argv && !(empty(a) && empty(b))) {
+  if (argc && argv && !(Input::empty(a) && Input::empty(b))) {
     for (int i = 0; i < argc; ++i) {
       if (match(i, a, b)) {
         return i;
@@ -58,7 +59,7 @@ int CommandArgs::indexOf(const char* a, const char* b) const {
 
 //-----------------------------------------------------------------------------
 bool CommandArgs::hasValue(const int i) const {
-  return ((i >= 0) && ((i + 1) < argc) && argv && !empty(argv[i + 1]));
+  return ((i >= 0) && ((i + 1) < argc) && argv && !Input::empty(argv[i + 1]));
 }
 
 //-----------------------------------------------------------------------------
@@ -66,12 +67,12 @@ const char* CommandArgs::CommandArgs::getValueOf(const char* a, const char* b)
 const {
   const char* param = NULL;
   int idx = -1;
-  if (argc && argv && !(empty(a) && empty(b))) {
+  if (argc && argv && !(Input::empty(a) && Input::empty(b))) {
     for (int i = 0; i < argc; ++i) {
       param = argv[i];
-      if (!empty(param) &&
-          ((!empty(a) && (strcmp(a, param) == 0)) ||
-           (!empty(b) && (strcmp(b, param) == 0))))
+      if (!Input::empty(param) &&
+          ((!Input::empty(a) && (strcmp(a, param) == 0)) ||
+           (!Input::empty(b) && (strcmp(b, param) == 0))))
       {
         idx = i;
         break;
@@ -80,7 +81,7 @@ const {
   }
   if (idx >= 0) {
     const char* value = get(idx + 1);
-    if (empty(value) || ((*value) == '-')) {
+    if (Input::empty(value) || ((*value) == '-')) {
       Logger::getInstance().log() << "ERROR: parameter "
                                   << param << " requires a value";
     } else {

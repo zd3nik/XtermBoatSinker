@@ -15,14 +15,15 @@ const char* Server::VERSION = "1.0";
 const char* Server::ANY_ADDRESS = "0.0.0.0";
 
 //-----------------------------------------------------------------------------
+const char* BOOTED = "booted";
 const char* COMM_ERROR = "comm error";
 const char* GAME_FULL = "game is full";
 const char* INVALID_BOARD = "invalid board";
+const char* INVALID_NAME = "invalid name";
 const char* NAME_IN_USE = "name in use";
+const char* NAME_TOO_LONG = "name too long";
 const char* PLAYER_EXITED = "exited";
 const char* PROTOCOL_ERROR = "protocol error";
-const char* NAME_TOO_LONG = "name too long";
-const char* INVALID_NAME = "invalid name";
 
 //-----------------------------------------------------------------------------
 Server::Server()
@@ -43,7 +44,7 @@ bool Server::init() {
   Logger::info() << args.get(0) << " version " << Server::VERSION;
 
   const char* binAddr = args.getValueOf("-b", "--bind-address");
-  if (CommandArgs::empty(binAddr)) {
+  if (Input::empty(binAddr)) {
     Logger::warn() << "Binding to address " << ANY_ADDRESS;
     bindAddress = ANY_ADDRESS;
   } else {
@@ -202,21 +203,9 @@ bool Server::run() {
       if (!printPlayers(game, coord)) {
         throw 1;
       }
-      switch (waitForInput(game)) {
-      case -1:
-      case 'Q':
+      char ch = waitForInput(game);
+      if ((ch < 0) || ((ch > 0) && !handleUserInput(game, coord))) {
         throw 1;
-//    case 'B':
-//      bootPlayer(game, coord);
-//      break;
-      case 'R':
-        if (!printWaitScreen(game, coord.set(1, 1))) {
-          throw 1;
-        }
-        break;
-      case 'S':
-        game.start();
-        break;
       }
     }
 
@@ -229,6 +218,85 @@ bool Server::run() {
   input.restoreTerminal();
   closeSocket();
   return ok;
+}
+
+//-----------------------------------------------------------------------------
+bool Server::handleUserInput(Game& game, Coordinate& coord) {
+  char ch = input.readChar(STDIN_FILENO);
+  if (ch < 0) {
+    return false;
+  }
+
+  Board* board;
+  std::string str;
+  switch (toupper(ch)) {
+  case 'B':
+    if (!getStr("Enter name of player to boot -> ", str)) {
+      return false;
+    }
+    str = Input::trim(str.c_str());
+    if ((board = game.getBoardForPlayer(str.c_str())) != NULL) {
+      removePlayer(game, board->getHandle(), BOOTED);
+      return printWaitScreen(game, coord.set(1, 1));
+    }
+    break;
+  case 'Q':
+    if (getChar("Quit Game? [y/N] -> ", "NY") != 'N') {
+      return false;
+    }
+    break;
+  case 'R':
+    if (!printWaitScreen(game, coord.set(1, 1))) {
+      return false;
+    }
+    break;
+  case 'S':
+    if (getChar("Start Game? [y/N] -> ", "NY") != 'N') {
+      game.start();
+    }
+    break;
+  }
+
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Server::getStr(const char* str, std::string& field1, const char delim) {
+  const Screen& screen = Screen::getInstance();
+  if (!screen.clearToLineEnd() || !screen.print(str, true)) {
+    return false;
+  }
+
+  if (!input.setCanonical(true) ||
+      (input.readln(STDIN_FILENO, delim) < 0) ||
+      !input.setCanonical(false))
+  {
+    return false;
+  }
+
+  field1 = input.getString(0, "");
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+char Server::getChar(const char* str, const char* opts) {
+  const Screen& screen = Screen::getInstance();
+  if (!screen.clearToLineEnd() || !screen.print(str, true)) {
+    return -1;
+  }
+
+  char ch = 0;
+  do {
+    ch = input.readChar(STDIN_FILENO);
+    if (ch < 0) {
+      return -1;
+    } else if (!ch || (ch == '\r') || (ch == '\n')) {
+      ch = opts[0];
+    } else {
+      ch = toupper(ch);
+    }
+  } while (!strchr(opts, ch));
+  return ch;
 }
 
 //-----------------------------------------------------------------------------
@@ -277,7 +345,7 @@ bool Server::printPlayers(Game& game, const Coordinate& startCoord) {
     }
   }
 
-  screen.printAt(coord.south(2).setX(1), "Choose: [R]edraw, [Q]uit", false);
+  screen.printAt(coord.south(2).setX(1), "[R]edraw, [Q]uit", false);
 
   if (game.getBoardCount() > 0) {
     if (!screen.print(", [B]oot player", false)) {
@@ -293,7 +361,7 @@ bool Server::printPlayers(Game& game, const Coordinate& startCoord) {
     }
   }
 
-  return screen.print(" -> ", true);
+  return screen.printAt(coord.south().setX(1), ": ", true);
 }
 
 //-----------------------------------------------------------------------------
@@ -313,28 +381,25 @@ char Server::waitForInput(Game& game, const int timeout) {
     return -1;
   }
 
-  char ch = 0;
+  char userInput = 0;
   std::set<int>::const_iterator it;
   for (it = ready.begin(); it != ready.end(); ++it) {
     const int handle = (*it);
     if (isServerHandle(handle)) {
-      if (!addPlayerHandle()) {
+      if (!addPlayerHandle(game)) {
         return -1;
       }
     } else if (isUserHandle(handle)) {
-      if (input.readln(STDIN_FILENO) < 0) {
-        return -1;
-      }
-      ch = input.getString(0, "")[0];
+      userInput = 1;
     } else {
       getPlayerInput(game, handle);
     }
   }
-  return toupper(ch);
+  return userInput;
 }
 
 //-----------------------------------------------------------------------------
-bool Server::addPlayerHandle() {
+bool Server::addPlayerHandle(Game& game) {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   socklen_t len = sizeof(addr);
@@ -358,6 +423,18 @@ bool Server::addPlayerHandle() {
 
     if (handle == STDIN_FILENO) {
       Logger::error() << "got stdin from accept call";
+      return false;
+    }
+
+    if (game.isStarted()) {
+      Logger::debug() << "rejecting connnection because game in progress";
+      shutdown(handle, SHUT_RDWR);
+      close(handle);
+      break;
+    }
+
+    if (game.hasBoard(handle)) {
+      Logger::error() << "Duplicate handle " << handle << " created!";
       return false;
     }
 
@@ -464,24 +541,24 @@ void Server::getGameInfo(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 void Server::joinGame(Game& game, const int handle) {
-  const char* playerName = input.getString(1);
+  const std::string playerName = Input::trim(input.getString(1, ""));
   const char* boatDescriptor = input.getString(2);
   const Configuration& config = game.getConfiguration();
   const Container& boardSize = config.getBoardSize();
 
   if (game.hasBoard(handle) ||
-      CommandArgs::empty(playerName) ||
-      CommandArgs::empty(boatDescriptor))
+      playerName.empty() ||
+      Input::empty(boatDescriptor))
   {
     removePlayer(game, handle, PROTOCOL_ERROR);
     return;
-  } else if (strlen(playerName) > (2 * boardSize.getWidth())) {
+  } else if (playerName.size() > (2 * boardSize.getWidth())) {
     removePlayer(game, handle, NAME_TOO_LONG);
     return;
   } else if (game.getBoardCount() >= config.getMaxPlayers()) {
     removePlayer(game, handle, GAME_FULL);
     return;
-  } else if (game.getBoardForPlayer(playerName)) {
+  } else if (game.getBoardForPlayer(playerName.c_str())) {
     removePlayer(game, handle, NAME_IN_USE);
     return;
   } else if (!config.isValidBoatDescriptor(boatDescriptor)) {
@@ -506,11 +583,11 @@ void Server::leaveGame(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 void Server::sendMessage(Game& game, const int handle) {
-  const char* playerName = input.getString(1);
-  const char* message = input.getString(2);
+  const std::string playerName = Input::trim(input.getString(1, ""));
+  const std::string message = Input::trim(input.getString(2, ""));
   Board* sender = game.getBoardForHandle(handle);
   if (sender) {
-    if (playerName && !CommandArgs::empty(message)) {
+    if (message.size()) {
       std::string msg = "M|";
       msg.append(sender->getPlayerName());
       msg.append("|");
@@ -518,7 +595,7 @@ void Server::sendMessage(Game& game, const int handle) {
       for (unsigned i = 0; i < game.getBoardCount(); ++i) {
         const Board& board = game.getBoardAtIndex(i);
         if (board.getHandle() != handle) {
-          if (!(*playerName) || (board.getPlayerName() == playerName)) {
+          if (playerName.empty() || (board.getPlayerName() == playerName)) {
             sendLine(game, board.getHandle(), msg.c_str());
           }
         }

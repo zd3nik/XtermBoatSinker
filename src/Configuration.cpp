@@ -119,6 +119,85 @@ bool Configuration::print(Coordinate& coord, const bool flush) const {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Configuration::getBoatIndex(const Coordinate& coord) const {
+  return boardSize.contains(coord)
+      ? (coord.getX() - 1 + (boardSize.getHeight() * (coord.getY() - 1)))
+      : ~0U;
+}
+
+//-----------------------------------------------------------------------------
+bool Configuration::getBoat(std::string& desc, const Coordinate& start,
+                            std::map<char, Boat>& boatMap) const
+{
+  unsigned i = getBoatIndex(start);
+  if (i > desc.size()) {
+    return false; // error!
+  }
+
+  Coordinate coord;
+  unsigned count = 1;
+  const char id = desc[i];
+  desc[i] = '*';
+
+  if (!Boat::isValidID(id)) {
+    return true; // ignore squares with no boat id
+  } else if (boatMap.count(id)) {
+    return false; // duplicate boat id, invalid setup
+  }
+
+  if (boardSize.contains(coord.set(start).east())) {
+    while (((i = getBoatIndex(coord)) < desc.size()) && (desc[i] == id)) {
+      desc[i] = '*';
+      count++;
+      coord.east();
+    }
+  }
+  if ((count == 1) && boardSize.contains(coord.set(start).south())) {
+    while (((i = getBoatIndex(coord)) < desc.size()) && (desc[i] == id)) {
+      desc[i] = '*';
+      count++;
+      coord.south();
+    }
+  }
+
+  if (count > 1) {
+    boatMap[id] = Boat(id, count);
+    return true;
+  }
+
+  return false;
+}
+
+//-----------------------------------------------------------------------------
 bool Configuration::isValidBoatDescriptor(const char* descriptor) const {
-  return true; // TODO
+  if (!isValid() || !descriptor || !(*descriptor)) {
+    return false;
+  }
+
+  std::string desc(descriptor);
+  if (desc.size() != (boardSize.getWidth() * boardSize.getHeight())) {
+    return false;
+  }
+
+  std::map<char, Boat> boatMap;
+  for (unsigned i = 0; i < desc.size(); i += boardSize.getWidth()) {
+    unsigned y = ((i / boardSize.getHeight()) + 1);
+    for (unsigned x = 1; x <= boardSize.getWidth(); ++x) {
+      if (!getBoat(desc, Coordinate(x, y), boatMap)) {
+        return false;
+      }
+    }
+  }
+
+  for (unsigned i = 0; i < boats.size(); ++i) {
+    const Boat& boat = boats[i];
+    std::map<char, Boat>::iterator it = boatMap.find(boat.getID());
+    if ((it == boatMap.end()) || (it->second.getLength() != boat.getLength())) {
+      return false;
+    } else {
+      boatMap.erase(it);
+    }
+  }
+
+  return boatMap.empty();
 }

@@ -47,6 +47,11 @@ public:
     return isValidID(id) ? tolower(id) : id;
   }
 
+  Boat()
+    : id(0),
+      length(0)
+  { }
+
   Boat(const char id, const unsigned length)
     : id(toupper(id)),
       length(length)

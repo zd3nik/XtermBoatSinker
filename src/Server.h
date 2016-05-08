@@ -43,22 +43,25 @@ public:
   }
 
 private:
+  char getChar(const char* str, const char* opts);
   char waitForInput(Game&, const int timeout = -1);
-  bool addPlayerHandle();
+  bool addPlayerHandle(Game&);
   bool getGameTitle(std::string& title);
+  bool getStr(const char* str, std::string& field1, const char delim = 0);
+  bool handleUserInput(Game&, Coordinate&);
   bool isServerHandle(const int handle) const;
   bool isUserHandle(const int handle) const;
   bool printPlayers(Game&, const Coordinate&);
   bool printWaitScreen(Game&, Coordinate&);
   bool sendLine(Game&, const int handle, const char* msg);
+  void getGameInfo(Game&, const int handle);
   void getPlayerInput(Game&, const int handle);
+  void joinGame(Game&, const int handle);
+  void leaveGame(Game&, const int handle);
+  void ping(Game&, const int handle);
   void removePlayer(Game&, const int handle, const char* msg = NULL);
-  void getGameInfo(Game& game, const int handle);
-  void joinGame(Game& game, const int handle);
-  void leaveGame(Game& game, const int handle);
-  void sendMessage(Game& game, const int handle);
-  void ping(Game& game, const int handle);
-  void shoot(Game& game, const int handle);
+  void sendMessage(Game&, const int handle);
+  void shoot(Game&, const int handle);
   Configuration getGameConfig();
 
   Input input;

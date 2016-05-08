@@ -7,6 +7,7 @@
 
 #include <termios.h>
 #include <string.h>
+#include <string>
 #include <vector>
 #include <set>
 
@@ -14,7 +15,12 @@
 class Input
 {
 public:
-  enum { BUFFER_SIZE = 16384U };
+  enum {
+    BUFFER_SIZE = 16384U
+  };
+
+  static bool empty(const char* str, const bool checkWhitespace = true);
+  static std::string trim(const char* str);
 
   Input();
   virtual ~Input();
@@ -30,24 +36,10 @@ public:
   bool setCanonical(const bool enabled) const;
 
   /**
-   * STDIN echos keyboard input to STDOUT by default in terminals.
-   * @brief Set echo mode on STDIN
-   * @param enabled echo mode enabled if true, disabled if false
-   * @return false on error
-   */
-  bool setEcho(const bool enabled) const;
-
-  /**
    * @brief Get the current canonical mode of STDIN
    * @return -1 on error, 1 if canonical mode enabled, 0 if disabled
    */
   int getCanonical() const;
-
-  /**
-   * @brief Get the current echo mode of STDIN
-   * @return -1 on error, 1 if echo mode enabled, 0 if disabled
-   */
-  int getEcho() const;
 
   /**
    * @brief Restore canonical and echo modes to their original state
@@ -61,7 +53,7 @@ public:
    * @brief Block execution until timeout or data becomes available for reading
    * @param[out] ready Populated with handles that have data available
    * @param timeout_ms max milliseconds to wait, -1 = wait indefinitely
-   * @return  false on error
+   * @return false on error
    */
   bool waitForData(std::set<int>& ready, const int timeout_ms = -1);
 
@@ -70,16 +62,26 @@ public:
    *   the first new-line character
    *   (BUFFER_SIZE - 1) bytes
    *   no more data available
-   * Then split the data into fields using the '|' character as the delimiter.
+   * Then split the data into fields using the specified delimiter.
    * You can the get individual field values via:
    *   this::getString(fieldIndex)
    *   this::getInt(fieldIndex)
    *   this::getUnsigned(fieldIndex)
    * @brief Read one line of data from the given handle
    * @param handle The handle to read data from
-   * @return -1 on failure, otherwise number of '|' delimited fields read
+   * @param delimeter If not 0 split line into fields via this delimeter
+   * @return -1 on error, otherwise number of '|' delimited fields read
    */
-  int readln(const int handle);
+  int readln(const int handle, const char delimeter = '|');
+
+  /**
+   * This function does not use internal buffer or alter field state,
+   * it simply does a direct read on the givne handle
+   * @brief Read a single character from the given handle
+   * @param handle The handle to read data from
+   * @return -1 on error, otherwise the first char read from the given handle
+   */
+  char readChar(const int handle);
 
   void addHandle(const int handle);
   void removeHandle(const int handle);

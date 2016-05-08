@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include "Container.h"
 #include "Boat.h"
 #include "DBObject.h"
@@ -56,6 +57,10 @@ public:
   }
 
 private:
+  unsigned getBoatIndex(const Coordinate& coord) const;
+  bool getBoat(std::string& desc, const Coordinate& start,
+               std::map<char, Boat>& boatMap) const;
+
   std::string name;
   unsigned minPlayers;
   unsigned maxPlayers;
