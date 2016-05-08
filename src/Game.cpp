@@ -73,6 +73,14 @@ void Game::removeBoard(const int handle) {
 }
 
 //-----------------------------------------------------------------------------
+Board* Game::getBoardAtIndex(const unsigned index) {
+  if (index < boards.size()) {
+    return &(boards[index]);
+  }
+  return NULL;
+}
+
+//-----------------------------------------------------------------------------
 Board* Game::getBoardForHandle(const int handle) {
   if (handle >= 0) {
     for (unsigned i = 0; i < boards.size(); ++i) {
@@ -89,6 +97,18 @@ Board* Game::getBoardForPlayer(const char* name) {
   if (name && *name) {
     for (unsigned i = 0; i < boards.size(); ++i) {
       if (boards[i].getPlayerName() == name) {
+        return &(boards[i]);
+      }
+    }
+  }
+  return NULL;
+}
+
+//-----------------------------------------------------------------------------
+Board* Game::getFirstBoardForAddress(const char* address) {
+  if (address && *address) {
+    for (unsigned i = 0; i < boards.size(); ++i) {
+      if (boards[i].getAddress() == address) {
         return &(boards[i]);
       }
     }

@@ -7,17 +7,20 @@
 #include "Logger.h"
 
 //-----------------------------------------------------------------------------
-Board::Board(const std::string playerName,
+Board::Board(const int handle,
+             const std::string& playerName,
+             const std::string& address,
              const unsigned boatAreaWidth,
              const unsigned boatAreaHeight)
   : Container(Coordinate(1, 1),
               Coordinate((3 + (2 * boatAreaWidth)), (3 + boatAreaHeight))),
+    handle(handle),
     playerName(playerName),
+    address(address),
     boatAreaWidth(boatAreaWidth),
     boatAreaHeight(boatAreaHeight),
     descriptorLength(boatAreaWidth * boatAreaHeight),
-    descriptor(new char[descriptorLength + 1]),
-    handle(-1)
+    descriptor(new char[descriptorLength + 1])
 {
   memset(descriptor, Boat::NONE, descriptorLength);
   descriptor[descriptorLength] = 0;
@@ -26,13 +29,14 @@ Board::Board(const std::string playerName,
 //-----------------------------------------------------------------------------
 Board::Board(const Board& other)
   : Container(other.getTopLeft(), other.getBottomRight()),
+    handle(other.handle),
     playerName(other.playerName),
+    address(other.address),
     status(other.status),
     boatAreaWidth(other.boatAreaWidth),
     boatAreaHeight(other.boatAreaHeight),
     descriptorLength(other.descriptorLength),
-    descriptor(new char[descriptorLength + 1]),
-    handle(other.handle)
+    descriptor(new char[descriptorLength + 1])
 {
   if (other.descriptor) {
     memcpy(descriptor, other.descriptor, descriptorLength);
@@ -45,12 +49,13 @@ Board::Board(const Board& other)
 //-----------------------------------------------------------------------------
 Board& Board::operator=(const Board& other) {
   set(other.getTopLeft(), other.getBottomRight());
+  handle = other.handle;
   playerName = other.playerName;
+  address = other.address;
   status = other.status;
   boatAreaWidth = other.boatAreaWidth;
   boatAreaHeight = other.boatAreaHeight;
   descriptorLength = other.descriptorLength;
-  handle = other.handle;
 
   delete[] descriptor;
   descriptor = new char[descriptorLength + 1];
@@ -78,6 +83,11 @@ void Board::setStatus(const char* str) {
 //-----------------------------------------------------------------------------
 std::string Board::getPlayerName() const {
   return playerName;
+}
+
+//-----------------------------------------------------------------------------
+std::string Board::getAddress() const {
+  return address;
 }
 
 //-----------------------------------------------------------------------------

@@ -5,8 +5,9 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <string>
 #include <netdb.h>
+#include <string>
+#include <set>
 #include "Configuration.h"
 #include "Input.h"
 #include "Game.h"
@@ -43,17 +44,29 @@ public:
   }
 
 private:
+  Configuration getGameConfig();
+
   char getChar(const char* str, const char* opts);
   char waitForInput(Game&, const int timeout = -1);
+
   bool addPlayerHandle(Game&);
+  bool blacklistAddress(Game&, Coordinate& coord);
+  bool blacklistPlayer(Game&, Coordinate& coord);
+  bool bootPlayer(Game&, Coordinate& coord);
+  bool clearBlacklist(Game&, Coordinate& coord);
   bool getGameTitle(std::string& title);
-  bool getStr(const char* str, std::string& field1, const char delim = 0);
   bool handleUserInput(Game&, Coordinate&);
   bool isServerHandle(const int handle) const;
   bool isUserHandle(const int handle) const;
-  bool printPlayers(Game&, const Coordinate&);
-  bool printWaitScreen(Game&, Coordinate&);
+  bool printGameInfo(Game&, Coordinate&);
+  bool printOptions(Game&, Coordinate&);
+  bool printPlayers(Game&, Coordinate&);
+  bool quitGame(Game&, Coordinate&);
   bool sendLine(Game&, const int handle, const char* msg);
+  bool startGame(Game&, Coordinate&);
+  bool prompt(Coordinate& coord, const char* str, std::string& field1,
+              const char fieldDelimeter = 0);
+
   void getGameInfo(Game&, const int handle);
   void getPlayerInput(Game&, const int handle);
   void joinGame(Game&, const int handle);
@@ -62,9 +75,9 @@ private:
   void removePlayer(Game&, const int handle, const char* msg = NULL);
   void sendMessage(Game&, const int handle);
   void shoot(Game&, const int handle);
-  Configuration getGameConfig();
 
   Input input;
+  std::set<std::string> blackList;
   std::string bindAddress;
   int port;
   int sock;

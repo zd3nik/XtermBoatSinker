@@ -22,8 +22,10 @@ public:
   void start();
   void disconnectBoard(const int handle, const char* msg);
   void removeBoard(const int handle);
+  Board* getBoardAtIndex(const unsigned index);
   Board* getBoardForHandle(const int handle);
   Board* getBoardForPlayer(const char* name);
+  Board* getFirstBoardForAddress(const char* address);
 
   std::string getTitle() const {
     return title;
@@ -35,10 +37,6 @@ public:
 
   unsigned getBoardCount() const {
     return boards.size();
-  }
-
-  Board& getBoardAtIndex(const unsigned index) {
-    return boards.at(index);
   }
 
   bool isStarted() const {

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <map>
 #include <set>
 
 //-----------------------------------------------------------------------------
@@ -16,7 +17,7 @@ class Input
 {
 public:
   enum {
-    BUFFER_SIZE = 16384U
+    BUFFER_SIZE = 4096U
   };
 
   static bool empty(const char* str, const bool checkWhitespace = true);
@@ -83,9 +84,10 @@ public:
    */
   char readChar(const int handle);
 
-  void addHandle(const int handle);
+  void addHandle(const int handle, const std::string& label = std::string());
   void removeHandle(const int handle);
   bool containsHandle(const int handle) const;
+  std::string getHandleLabel(const int handle) const;
   unsigned getHandleCount() const;
   unsigned getFieldCount() const;
   const int getInt(const unsigned index = 0, const int def = -1) const;
@@ -100,7 +102,7 @@ private:
   char* line;
   unsigned pos;
   unsigned len;
-  std::set<int> handles;
+  std::map<int, std::string> handles;
   std::vector<const char*> fields;
   struct termios savedTermIOs;
 };

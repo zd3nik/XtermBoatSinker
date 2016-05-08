@@ -124,9 +124,9 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
   FD_ZERO(&set);
 
   int maxFd = 0;
-  std::set<int>::const_iterator it;
+  std::map<int, std::string>::const_iterator it;
   for (it = handles.begin(); it != handles.end(); ++it) {
-    const int fd = (*it);
+    const int fd = it->first;
     if (fd >= 0) {
       maxFd = std::max<int>(maxFd, fd);
       FD_SET(fd, &set);
@@ -155,7 +155,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
   }
   if (ret) {
     for (it = handles.begin(); it != handles.end(); ++it) {
-      const int fd = (*it);
+      const int fd = it->first;
       if (FD_ISSET(fd, &set)) {
         ready.insert(fd);
       }
@@ -184,7 +184,9 @@ int Input::readln(const int fd, const char delimeter) {
     }
   }
   line[n] = 0;
-  Logger::debug() << "Received '" << line << "' from channel " << fd;
+
+  Logger::debug() << "Received '" << line << "' from channel " << fd
+                  << " " << getHandleLabel(fd);
 
   char* begin = line;
   char* end = line;
@@ -214,24 +216,41 @@ char Input::readChar(const int fd) {
     Logger::error() << "Input readChar failed: " << strerror(errno);
     return -1;
   }
+
+  Logger::debug() << "Received character '" << ch << "' from channel " << fd
+                  << " " << getHandleLabel(fd);
   return ch;
 }
 
 //-----------------------------------------------------------------------------
-void Input::addHandle(const int handle) {
+void Input::addHandle(const int handle, const std::string& label) {
   if (handle >= 0) {
-    handles.insert(handle);
+    handles[handle] = label;
+    Logger::debug() << "Added channel " << handle << " " << label;
   }
 }
 
 //-----------------------------------------------------------------------------
 void Input::removeHandle(const int handle) {
+  Logger::debug() << "Removing channel " << handle << " "
+                  << getHandleLabel(handle);
   handles.erase(handles.find(handle));
 }
 
 //-----------------------------------------------------------------------------
 bool Input::containsHandle(const int handle) const {
   return ((handle >= 0) && (handles.count(handle) > 0));
+}
+
+//-----------------------------------------------------------------------------
+std::string Input::getHandleLabel(const int handle) const {
+  if (handle >= 0) {
+    std::map<int, std::string>::const_iterator it = handles.find(handle);
+    if (it != handles.end()) {
+      return it->second;
+    }
+  }
+  return std::string();
 }
 
 //-----------------------------------------------------------------------------

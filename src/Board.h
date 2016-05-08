@@ -57,7 +57,9 @@ public:
     this->handle = handle;
   }
 
-  Board(const std::string playerName,
+  Board(const int handle,
+        const std::string& playerName,
+        const std::string& address,
         const unsigned boatAreaWidth,
         const unsigned boatAreaHeight);
   Board(const Board& other);
@@ -66,6 +68,7 @@ public:
   virtual ~Board();
   void setStatus(const char* str);
   std::string getPlayerName() const;
+  std::string getAddress() const;
   std::string getStatus() const;
   std::string getDescriptor() const;
   std::string getMaskedDescriptor() const;
@@ -91,13 +94,14 @@ public:
 private:
   unsigned getBoatIndex(const Coordinate& boatCoordinate) const;
 
+  int handle;
   std::string playerName;
+  std::string address;
   std::string status;
   unsigned boatAreaWidth;
   unsigned boatAreaHeight;
   unsigned descriptorLength;
   char* descriptor;
-  int handle;
 };
 
 #endif // BOARD_H
