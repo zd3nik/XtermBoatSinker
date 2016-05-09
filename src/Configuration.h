@@ -18,7 +18,7 @@ class Configuration : public DBObject
 public:
   static Configuration getDefaultConfiguration();
 
-  Configuration() { }
+  Configuration();
   Configuration(const Configuration& other);
   Configuration& operator=(const Configuration& other);
   Configuration& setName(const std::string& name);
@@ -30,7 +30,7 @@ public:
   Configuration& addBoat(const Boat& boat);
   bool isValid() const ;
   bool print(Coordinate& coord, const bool flush) const;
-  bool isValidBoatDescriptor(const char* descriptor) const;
+  bool isValidBoatDescriptor(const std::string& descriptor) const;
 
   std::string getName() const {
     return name;
@@ -42,6 +42,10 @@ public:
 
   unsigned getMaxPlayers() const {
     return maxPlayers;
+  }
+
+  unsigned getPointGoal() const {
+    return pointGoal;
   }
 
   const Container& getBoardSize() const {
@@ -64,6 +68,7 @@ private:
   std::string name;
   unsigned minPlayers;
   unsigned maxPlayers;
+  unsigned pointGoal;
   Container boardSize;
   std::vector<Boat> boats;
 };

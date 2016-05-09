@@ -45,8 +45,6 @@ public:
 
 private:
   Configuration getGameConfig();
-
-  char getChar(const char* str, const char* opts);
   char waitForInput(Game&, const int timeout = -1);
 
   bool addPlayerHandle(Game&);
@@ -63,10 +61,10 @@ private:
   bool printPlayers(Game&, Coordinate&);
   bool quitGame(Game&, Coordinate&);
   bool sendAllBoards(Game&);
-  bool sendBoard(Game&, const Board&);
+  bool sendBoard(Game&, const Board*);
   bool sendLine(Game&, const int handle, const std::string msg);
   bool startGame(Game&, Coordinate&);
-  bool prompt(Coordinate& coord, const char* str, std::string& field1,
+  bool prompt(Coordinate& coord, const std::string& str, std::string& field1,
               const char fieldDelimeter = 0);
 
   void getGameInfo(Game&, const int handle);
@@ -74,10 +72,11 @@ private:
   void joinGame(Game&, const int handle);
   void leaveGame(Game&, const int handle);
   void ping(Game&, const int handle);
-  void removePlayer(Game&, const int handle, const char* msg = NULL);
   void sendMessage(Game&, const int handle);
   void setTaunt(Game&, const int handle);
   void shoot(Game&, const int handle);
+  void removePlayer(Game&, const int handle,
+                    const std::string& msg = std::string());
 
   Input input;
   std::set<std::string> blackList;

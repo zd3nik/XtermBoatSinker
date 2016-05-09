@@ -5,6 +5,7 @@
 #ifndef SCREEN_H
 #define SCREEN_H
 
+#include <string>
 #include "Container.h"
 
 //-----------------------------------------------------------------------------
@@ -26,7 +27,7 @@ public:
   bool moveCursor(const unsigned x, const unsigned y, const bool flush) const;
   bool moveCursor(const Coordinate& coordinate, const bool flush) const;
   bool setColor(const Color color, const bool flush) const;
-  bool print(const char* str, const bool flush) const;
+  bool print(const std::string& str, const bool flush) const;
   bool clearToLineBegin(const Coordinate& coordinate = Coordinate()) const;
   bool clearToLineEnd(const Coordinate& coordinate = Coordinate()) const;
   bool clearLine(const Coordinate& coordinate = Coordinate()) const;
@@ -35,12 +36,12 @@ public:
   bool clearAll() const;
 
   bool printAt(const Coordinate& coordinate,
-               const char* str,
+               const std::string& str,
                const bool flush) const;
 
   bool printAt(const Coordinate& coordinate,
                const Color color,
-               const char* str,
+               const std::string& str,
                const bool flush) const;
 
 private:

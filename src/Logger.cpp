@@ -53,7 +53,7 @@ Logger::~Logger() {
 }
 
 //-----------------------------------------------------------------------------
-Logger& Logger::appendToFile(const char* filePath) {
+Logger& Logger::appendToFile(const std::string& file) {
   Mutex::Lock lock(mutex);
   stream = &std::cout;
   logFile.clear();
@@ -61,13 +61,13 @@ Logger& Logger::appendToFile(const char* filePath) {
     if (fileStream.is_open()) {
       fileStream.close();
     }
-    if (filePath && (*filePath)) {
-      fileStream.open(filePath, (std::ofstream::out|std::ofstream::app));
+    if (file.size()) {
+      fileStream.open(file.c_str(), (std::ofstream::out|std::ofstream::app));
       stream = &fileStream;
-      logFile = filePath;
+      logFile = file;
     }
   } catch (const std::exception& e) {
-    error() << "Cannot open " << filePath << ": " << e.what();
+    error() << "Cannot open " << file << ": " << e.what();
   }
 }
 
@@ -79,14 +79,14 @@ Logger& Logger::setLogLevel(const LogLevel logLevel) {
 }
 
 //-----------------------------------------------------------------------------
-Logger& Logger::setLogLevel(const char* level) {
-  if (strcasecmp(level, "DEBUG") == 0) {
+Logger& Logger::setLogLevel(const std::string& level) {
+  if (strcasecmp(level.c_str(), "DEBUG") == 0) {
     setLogLevel(DEBUG);
-  } else if (strcasecmp(level, "INFO") == 0) {
+  } else if (strcasecmp(level.c_str(), "INFO") == 0) {
     setLogLevel(INFO);
-  } else if (strcasecmp(level, "WARN") == 0) {
+  } else if (strcasecmp(level.c_str(), "WARN") == 0) {
     setLogLevel(INFO);
-  } else if (strcasecmp(level, "ERROR") == 0) {
+  } else if (strcasecmp(level.c_str(), "ERROR") == 0) {
     setLogLevel(INFO);
   } else {
     Logger::error() << "Invalid log level: '" << level << "'";

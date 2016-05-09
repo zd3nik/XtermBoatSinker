@@ -20,10 +20,18 @@ Configuration Configuration::getDefaultConfiguration() {
 }
 
 //-----------------------------------------------------------------------------
+Configuration::Configuration()
+  : minPlayers(0),
+    maxPlayers(0),
+    pointGoal(0)
+{ }
+
+//-----------------------------------------------------------------------------
 Configuration::Configuration(const Configuration& other)
   : name(other.name),
     minPlayers(other.minPlayers),
     maxPlayers(other.maxPlayers),
+    pointGoal(other.pointGoal),
     boardSize(other.boardSize),
     boats(other.boats.begin(), other.boats.end())
 { }
@@ -33,6 +41,7 @@ Configuration& Configuration::operator=(const Configuration& other) {
   name = other.name;
   minPlayers = other.minPlayers;
   maxPlayers = other.maxPlayers;
+  pointGoal = other.pointGoal;
   boardSize = other.boardSize;
   boats.clear();
   boats.assign(other.boats.begin(), other.boats.end());
@@ -83,6 +92,10 @@ Configuration& Configuration::clearBoats() {
 Configuration& Configuration::addBoat(const Boat& boat) {
   if (boat.isValid()) {
     boats.push_back(boat);
+    pointGoal = 0;
+    for (unsigned i = 0; i < boats.size(); ++i) {
+      pointGoal += boats[i].getLength();
+    }
   }
   return (*this);
 }
@@ -99,23 +112,36 @@ bool Configuration::print(Coordinate& coord, const bool flush) const {
   char str[1024];
 
   snprintf(str, sizeof(str), "Config Name: %s", name.c_str());
-  screen.printAt(coord, str, false);
+  if (!screen.printAt(coord, str, false)) {
+    return false;
+  }
 
   snprintf(str, sizeof(str), "Board Size: %u x %u", boardSize.getWidth(),
            boardSize.getHeight());
-  screen.printAt(coord.south(), str, false);
+  if (!screen.printAt(coord.south(), str, false)) {
+    return false;
+  }
 
   for (unsigned i = 0; i < boats.size(); ++i) {
     snprintf(str, sizeof(str), "Boat %c Size: %u", boats[i].getID(),
              boats[i].getLength());
-    screen.printAt(coord.south(), str, false);
+    if (!screen.printAt(coord.south(), str, false)) {
+      return false;
+    }
   }
 
   snprintf(str, sizeof(str), "Min Players: %u", minPlayers);
-  screen.printAt(coord.south(), str, false);
+  if (!screen.printAt(coord.south(), str, false)) {
+    return false;
+  }
 
   snprintf(str, sizeof(str), "Max Players: %u", maxPlayers);
-  screen.printAt(coord.south(), str, flush);
+  if (!screen.printAt(coord.south(), str, false)) {
+    return false;
+  }
+
+  snprintf(str, sizeof(str), "Point Goal: %u", pointGoal);
+  return screen.printAt(coord.south(), str, flush);
 }
 
 //-----------------------------------------------------------------------------
@@ -169,8 +195,8 @@ bool Configuration::getBoat(std::string& desc, const Coordinate& start,
 }
 
 //-----------------------------------------------------------------------------
-bool Configuration::isValidBoatDescriptor(const char* descriptor) const {
-  if (!isValid() || !descriptor || !(*descriptor)) {
+bool Configuration::isValidBoatDescriptor(const std::string& descriptor) const {
+  if (!isValid() || descriptor.empty()) {
     return false;
   }
 

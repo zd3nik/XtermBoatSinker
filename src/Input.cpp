@@ -26,11 +26,11 @@ bool Input::empty(const char* str, const bool checkWhitespace) {
 }
 
 //-----------------------------------------------------------------------------
-std::string Input::trim(const char* str) {
+std::string Input::trim(const std::string& str) {
   std::string result;
-  if (str) {
-    result.reserve(strlen(str));
-    const char* begin = str;
+  if (str.size()) {
+    result.reserve(str.size());
+    const char* begin = str.c_str();
     while (*begin && isspace(*begin)) begin++;
     const char* end = begin;
     for (const char* p = begin; *p; ++p) {
@@ -174,8 +174,8 @@ int Input::readln(const int fd, const char delimeter) {
 
   unsigned n = 0;
   while (n < (BUFFER_SIZE - 1)) {
-    if ((pos >= len) && !bufferData(fd)) {
-      return false;
+    if ((pos >= len) && (bufferData(fd) < 0)) {
+      return -1;
     }
     if (!len) {
       break;
@@ -269,7 +269,7 @@ const char* Input::getString(const unsigned index, const char* def) const {
 }
 
 //-----------------------------------------------------------------------------
-const int Input::getInt(const unsigned index, const int def) const {
+int Input::getInt(const unsigned index, const int def) const {
   std::string str = trim(getString(index, ""));
   if (str.size()) {
     if (isdigit(str[0])) {
@@ -284,7 +284,7 @@ const int Input::getInt(const unsigned index, const int def) const {
 }
 
 //-----------------------------------------------------------------------------
-const int Input::getUnsigned(const unsigned index, const unsigned def) const {
+int Input::getUnsigned(const unsigned index, const unsigned def) const {
   const char* value = getString(index, NULL);
   if (value) {
     const char* p = ((*value) == '+') ? (value + 1) : value;
@@ -300,7 +300,7 @@ const int Input::getUnsigned(const unsigned index, const unsigned def) const {
 }
 
 //-----------------------------------------------------------------------------
-bool Input::bufferData(const int fd) {
+int Input::bufferData(const int fd) {
   pos = len = 0;
   while (len < BUFFER_SIZE) {
     ssize_t n = read(fd, buffer, BUFFER_SIZE);
@@ -310,7 +310,7 @@ bool Input::bufferData(const int fd) {
         continue;
       }
       Logger::error() << "Input read failed: " << strerror(errno);
-      return false;
+      return -1;
     } else if (n <= BUFFER_SIZE) {
       len = n;
       break;
@@ -319,5 +319,5 @@ bool Input::bufferData(const int fd) {
       exit(1);
     }
   }
-  return (len > 0);
+  return len;
 }

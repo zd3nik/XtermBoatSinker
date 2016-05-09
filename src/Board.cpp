@@ -17,6 +17,8 @@ Board::Board(const int handle,
     handle(handle),
     playerName(playerName),
     address(address),
+    score(0),
+    turns(0),
     boatAreaWidth(boatAreaWidth),
     boatAreaHeight(boatAreaHeight),
     descriptorLength(boatAreaWidth * boatAreaHeight),
@@ -33,6 +35,8 @@ Board::Board(const Board& other)
     playerName(other.playerName),
     address(other.address),
     status(other.status),
+    score(0),
+    turns(0),
     boatAreaWidth(other.boatAreaWidth),
     boatAreaHeight(other.boatAreaHeight),
     descriptorLength(other.descriptorLength),
@@ -53,6 +57,8 @@ Board& Board::operator=(const Board& other) {
   playerName = other.playerName;
   address = other.address;
   status = other.status;
+  score = other.score;
+  turns = other.turns;
   boatAreaWidth = other.boatAreaWidth;
   boatAreaHeight = other.boatAreaHeight;
   descriptorLength = other.descriptorLength;
@@ -78,6 +84,11 @@ Board::~Board() {
 //-----------------------------------------------------------------------------
 void Board::incScore(const unsigned value) {
   score += value;
+}
+
+//-----------------------------------------------------------------------------
+void Board::incTurns(const unsigned value) {
+  turns += value;
 }
 
 //-----------------------------------------------------------------------------
@@ -144,6 +155,11 @@ Container Board::getBoatArea() const {
 //-----------------------------------------------------------------------------
 unsigned Board::getScore() const {
   return score;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::getTurns() const {
+  return turns;
 }
 
 //-----------------------------------------------------------------------------
@@ -258,19 +274,18 @@ bool Board::print(const PlayerState state, const bool masked) const {
     }
   }
 
-  // print blank line below boat area (final row)
-  memset(row, ' ', ROW_WIDTH);
-  row[ROW_WIDTH] = 0;
+  // print status line below boat area (final row)
+  snprintf(row, (ROW_WIDTH + 1), "   %s", status.c_str());
   coord.set(getMinX(), getMaxY());
   return screen.printAt(coord, row, true);
 }
 
 //-----------------------------------------------------------------------------
-bool Board::updateBoatArea(const char* desc) {
-  if (!desc || !isValid() || (strlen(desc) != descriptorLength)) {
+bool Board::updateBoatArea(const std::string& desc) {
+  if (desc.empty() || !isValid() || (desc.size() != descriptorLength)) {
     return false;
   }
-  memcpy(descriptor, desc, descriptorLength);
+  memcpy(descriptor, desc.c_str(), descriptorLength);
   return isValid();
 }
 

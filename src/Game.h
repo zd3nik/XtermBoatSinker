@@ -30,6 +30,7 @@ public:
   Board* getBoardForPlayer(const std::string& name);
   Board* getFirstBoardForAddress(const std::string& address);
   Board* getBoardToMove();
+  Board::PlayerState getStateOf(const Board*);
 
   std::string getTitle() const {
     return title;

@@ -59,8 +59,8 @@ public:
 
   virtual ~Logger();
   Logger& setLogLevel(const LogLevel logLevel);
-  Logger& setLogLevel(const char* logLevelStr);
-  Logger& appendToFile(const char* filePath);
+  Logger& setLogLevel(const std::string& logLevelStr);
+  Logger& appendToFile(const std::string& filePath);
 
 private:
   Logger();

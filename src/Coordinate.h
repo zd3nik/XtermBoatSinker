@@ -119,19 +119,19 @@ public:
     return std::string(sbuf);
   }
 
-  bool fromString(const char* str) {
-    if (str) {
+  bool fromString(const std::string& str) {
+    if (str.size()) {
       if (isalpha(str[0]) && isdigit(str[1])) {
         int newX = (toupper(str[0]) - 'A');
-        int newY = (unsigned)atoi(str + 1);
+        int newY = (unsigned)atoi(str.c_str() + 1);
         if ((newX >= 0) && (newY >= 0)) {
           x = (unsigned)(newX + 1);
           y = (unsigned)newY;
           return true;
         }
-      } else if (isdigit(str[0]) && strchr(str, ',')) {
+      } else if (isdigit(str[0]) && strchr(str.c_str(), ',')) {
         unsigned newX = 0;
-        const char* p = str;
+        const char* p = str.c_str();
         while (isdigit(*p)) {
           newX = ((10 * newX) + (*p++ - '0'));
         }

@@ -66,7 +66,8 @@ public:
   Board& operator=(const Board& other);
 
   virtual ~Board();
-  void incScore(const unsigned value);
+  void incScore(const unsigned value = 1);
+  void incTurns(const unsigned value = 1);
   void setStatus(const std::string& str);
   void setHitTaunt(const std::string& value);
   void setMissTaunt(const std::string& value);
@@ -79,13 +80,14 @@ public:
   std::string getMissTaunt() const;
   Container getBoatArea() const;
   unsigned getScore() const;
+  unsigned getTurns() const;
   unsigned getHitCount() const;
   unsigned getMissCount() const;
   unsigned getBoatPoints() const;
   bool isValid() const;
   bool isDead() const;
   bool print(const PlayerState playerState, const bool masked = true) const;
-  bool updateBoatArea(const char* newDescriptor);
+  bool updateBoatArea(const std::string& newDescriptor);
   bool removeBoat(const Boat& boat);
   bool addBoat(const Boat& boat, Coordinate boatCoordinate,
                const Movement::Direction direction);
@@ -108,6 +110,7 @@ private:
   std::string hitTaunt;
   std::string missTaunt;
   unsigned score;
+  unsigned turns;
   unsigned boatAreaWidth;
   unsigned boatAreaHeight;
   unsigned descriptorLength;

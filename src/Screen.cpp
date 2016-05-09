@@ -76,8 +76,8 @@ bool Screen::setColor(const Color color, const bool flush) const {
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::print(const char* str, const bool flush) const {
-  return ((!str || !*str || (fprintf(stdout, "%s", str) > 0)) &&
+bool Screen::print(const std::string& str, const bool flush) const {
+  return ((str.empty() || (fprintf(stdout, "%s", str.c_str()) > 0)) &&
           (!flush || (fflush(stdout) == 0)));
 }
 
@@ -140,7 +140,7 @@ bool Screen::clearAll() const {
 
 //-----------------------------------------------------------------------------
 bool Screen::printAt(const Coordinate& coord,
-                     const char* str,
+                     const std::string& str,
                      const bool flush) const
 {
   return (moveCursor(coord, false) &&
@@ -150,7 +150,7 @@ bool Screen::printAt(const Coordinate& coord,
 //-----------------------------------------------------------------------------
 bool Screen::printAt(const Coordinate& coord,
                      const Color color,
-                     const char* str,
+                     const std::string& str,
                      const bool flush) const
 {
   return (moveCursor(coord, false) &&

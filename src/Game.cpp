@@ -46,14 +46,22 @@ bool Game::isValid() const {
 //-----------------------------------------------------------------------------
 bool Game::isFinished() const {
   if (isValid() && isStarted()) {
+    unsigned minTurns = ~0U;
+    unsigned maxTurns = 0;
+    unsigned maxScore = 0;
     unsigned dead = 0;
     for (unsigned i = 0; i < boards.size(); ++i) {
       const Board& board = boards[i];
+      minTurns = std::min<unsigned>(minTurns, board.getTurns());
+      maxTurns = std::max<unsigned>(maxTurns, board.getTurns());
+      maxScore = std::max<unsigned>(maxScore, board.getScore());
       if (board.isDead()) {
         dead++;
       }
     }
-    return (dead >= (boards.size() - 1));
+    return ((dead >= (boards.size() - 1)) ||
+            ((maxScore >= configuration.getPointGoal()) &&
+             (minTurns == maxTurns)));
   }
   return false;
 }
@@ -93,6 +101,7 @@ bool Game::randomizeBoardOrder() {
     return false;
   }
   // TODO
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -190,4 +199,16 @@ Board* Game::getBoardToMove() {
     return getBoardAtIndex(boardToMove);
   }
   return NULL;
+}
+
+//-----------------------------------------------------------------------------
+Board::PlayerState Game::getStateOf(const Board* board) {
+  if (board) {
+   if (board->getHandle() < 0) {
+     return Board::DISCONNECTED;
+   } else  if (board == getBoardToMove()) {
+     return Board::TO_MOVE;
+   }
+  }
+  return Board::NONE;
 }

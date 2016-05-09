@@ -21,7 +21,7 @@ public:
   };
 
   static bool empty(const char* str, const bool checkWhitespace = true);
-  static std::string trim(const char* str);
+  static std::string trim(const std::string& str);
 
   Input();
   virtual ~Input();
@@ -90,12 +90,12 @@ public:
   std::string getHandleLabel(const int handle) const;
   unsigned getHandleCount() const;
   unsigned getFieldCount() const;
-  const int getInt(const unsigned index = 0, const int def = -1) const;
-  const int getUnsigned(const unsigned index = 0, const unsigned def = 0) const;
+  int getInt(const unsigned index = 0, const int def = -1) const;
+  int getUnsigned(const unsigned index = 0, const unsigned def = 0) const;
   const char* getString(const unsigned index = 0, const char* def = NULL) const;
 
 private:
-  bool bufferData(const int fd);
+  int bufferData(const int fd);
 
   bool haveTermIO;
   char* buffer;
