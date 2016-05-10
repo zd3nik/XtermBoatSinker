@@ -19,7 +19,7 @@ static Container GetScreenDimensions() {
 }
 
 //-----------------------------------------------------------------------------
-const Screen& Screen::getInstance(const bool update) {
+Screen& Screen::getInstance(const bool update) {
   if (update) {
     delete instance;
     instance = NULL;

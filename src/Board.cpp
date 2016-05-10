@@ -137,6 +137,30 @@ std::string Board::getMissTaunt() const {
 }
 
 //-----------------------------------------------------------------------------
+std::string Board::toString(const unsigned number,
+                            const bool toMove,
+                            const bool gameStarted) const
+{
+  char str[1024];
+  char state = (handle < 0) ? DISCONNECTED : toMove ? TO_MOVE : NONE;
+  snprintf(str, sizeof(str), "%u: %c %s", number, state, playerName.c_str());
+
+  unsigned len = strlen(str);
+  if (status.size()) {
+    snprintf((str + len), (sizeof(str) - len), " (%s)", status.c_str());
+    len = strlen(str);
+  }
+
+  if (gameStarted) {
+    snprintf((str + len), (sizeof(str) - len),
+             ", Score = %u, Turns = %u, Hit = %u of %u",
+             score, turns, getHitCount(), getBoatPoints());
+  }
+
+  return str;
+}
+
+//-----------------------------------------------------------------------------
 std::string Board::getMaskedDescriptor() const {
   std::string desc = getDescriptor();
   for (size_t i = 0; i < desc.size(); ++i) {
@@ -220,7 +244,7 @@ bool Board::isDead() const {
 
 //-----------------------------------------------------------------------------
 bool Board::print(const PlayerState state, const bool masked) const {
-  const Screen& screen = Screen::getInstance();
+  Screen& screen = Screen::getInstance();
   if (!screen.contains(*this)) {
     return false;
   }

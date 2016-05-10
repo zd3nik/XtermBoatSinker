@@ -9,7 +9,9 @@
 //-----------------------------------------------------------------------------
 Game::Game()
   : started(false),
-    boardToMove(0)
+    aborted(false),
+    boardToMove(0),
+    turnCount(0)
 { }
 
 //-----------------------------------------------------------------------------
@@ -45,7 +47,9 @@ bool Game::isValid() const {
 
 //-----------------------------------------------------------------------------
 bool Game::isFinished() const {
-  if (isValid() && isStarted()) {
+  if (aborted) {
+    return true;
+  } else if (isValid() && isStarted()) {
     unsigned minTurns = ~0U;
     unsigned maxTurns = 0;
     unsigned maxScore = 0;
@@ -91,7 +95,9 @@ bool Game::start(const bool randomize) {
 
   Logger::info() << "starting game '" << title << "'";
   started = true;
+  aborted = false;
   boardToMove = 0;
+  turnCount = 0;
   return true;
 }
 
@@ -116,8 +122,7 @@ bool Game::fitBoardsToScreen() {
     children.push_back(&board);
   }
 
-  const Screen& screen = Screen::getInstance(true);
-  return screen.arrangeChildren(children);
+  return Screen::getInstance(true).arrangeChildren(children);
 }
 
 //-----------------------------------------------------------------------------
@@ -126,12 +131,15 @@ void Game::disconnectBoard(const int handle, const std::string& msg) {
   if (board) {
     board->setStatus(msg);
     board->setHandle(-1);
+    if (started && (board == getBoardToMove()) && !isFinished()) {
+      nextTurn();
+    }
   }
 }
 
 //-----------------------------------------------------------------------------
 void Game::removeBoard(const int handle) {
-  if (handle >= 0) {
+  if ((handle >= 0) && !started) {
     std::vector<Board>::iterator it;
     for (it = boards.begin(); it != boards.end(); ++it) {
       if (it->getHandle() == handle) {
@@ -144,9 +152,12 @@ void Game::removeBoard(const int handle) {
 
 //-----------------------------------------------------------------------------
 void Game::nextTurn() {
-  if (++boardToMove >= boards.size()) {
-    boardToMove = 0;
-  }
+  do {
+    turnCount += !boardToMove;
+    if (++boardToMove >= boards.size()) {
+      boardToMove = 0;
+    }
+  } while ((boards[boardToMove].getHandle() < 0) && !isFinished());
 }
 
 //-----------------------------------------------------------------------------
@@ -199,16 +210,4 @@ Board* Game::getBoardToMove() {
     return getBoardAtIndex(boardToMove);
   }
   return NULL;
-}
-
-//-----------------------------------------------------------------------------
-Board::PlayerState Game::getStateOf(const Board* board) {
-  if (board) {
-   if (board->getHandle() < 0) {
-     return Board::DISCONNECTED;
-   } else  if (board == getBoardToMove()) {
-     return Board::TO_MOVE;
-   }
-  }
-  return Board::NONE;
 }

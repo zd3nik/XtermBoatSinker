@@ -22,7 +22,7 @@ public:
     White
   };
 
-  static const Screen& getInstance(const bool update = false);
+  static Screen& getInstance(const bool update = false);
 
   bool moveCursor(const unsigned x, const unsigned y, const bool flush) const;
   bool moveCursor(const Coordinate& coordinate, const bool flush) const;

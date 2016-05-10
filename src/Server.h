@@ -62,6 +62,7 @@ private:
   bool quitGame(Game&, Coordinate&);
   bool sendAllBoards(Game&);
   bool sendBoard(Game&, const Board*);
+  bool sendGameResults(Game&);
   bool sendLine(Game&, const int handle, const std::string msg);
   bool startGame(Game&, Coordinate&);
   bool prompt(Coordinate& coord, const std::string& str, std::string& field1,

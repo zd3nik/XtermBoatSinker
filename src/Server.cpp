@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <algorithm>
 #include "Server.h"
 #include "CommandArgs.h"
 #include "Logger.h"
@@ -45,12 +46,6 @@ bool Server::init() {
   const CommandArgs& args = CommandArgs::getInstance();
   Logger::info() << args.get(0) << " version " << Server::VERSION;
 
-  const Screen& screen = Screen::getInstance(true);
-  if (!screen.clearAll()) {
-    Logger::error() << "failed to clear screen";
-    return false;
-  }
-
   const char* binAddr = args.getValueOf("-b", "--bind-address");
   if (Input::empty(binAddr)) {
     Logger::warn() << "Binding to address " << ANY_ADDRESS;
@@ -64,20 +59,7 @@ bool Server::init() {
   if (portStr && isdigit(*portStr)) {
     port = atoi(portStr);
   } else {
-    while (!isValidPort(port)) {
-      snprintf(str, sizeof(str), "Enter port [RET=%d] -> ", DEFAULT_PORT);
-      screen.print(str, true);
-      switch (input.readln(STDIN_FILENO)) {
-      case -1:
-        return false;
-      case 0:
-        port = DEFAULT_PORT;
-        break;
-      default:
-        port = input.getInt();
-        break;
-      }
-    }
+    port = DEFAULT_PORT;
   }
 
   return true;
@@ -175,6 +157,12 @@ bool Server::startListening(const int backlog) {
 
 //-----------------------------------------------------------------------------
 bool Server::run() {
+  if (!Screen::getInstance(true).clearAll() ||
+      !Screen::getInstance().moveCursor(Coordinate(1, 1), true))
+  {
+    return false;
+  }
+
   std::string gameTitle;
   if (!getGameTitle(gameTitle)) {
     return false;
@@ -191,17 +179,15 @@ bool Server::run() {
   bool ok = true;
 
   try {
-    const Screen& screen = Screen::getInstance(true);
     if (!startListening(gameConfig.getMaxPlayers() * 2) ||
-        !input.setCanonical(false) ||
-        !screen.clearAll())
+        !input.setCanonical(false))
     {
       throw 1;
     }
 
+    Coordinate coord;
     while (!game.isFinished()) {
-      Coordinate coord(1, 1);
-      if (!printGameInfo(game, coord) ||
+      if (!printGameInfo(game, coord.set(1, 1)) ||
           !printPlayers(game, coord) ||
           !printOptions(game, coord))
       {
@@ -213,7 +199,12 @@ bool Server::run() {
       }
     }
 
-    // TODO send game results
+    if (!sendGameResults(game) ||
+        !printGameInfo(game, coord.set(1, 1)) ||
+        !printPlayers(game, coord))
+    {
+      throw 1;
+    }
   }
   catch (const int) {
     ok = false;
@@ -226,7 +217,7 @@ bool Server::run() {
 
 //-----------------------------------------------------------------------------
 bool Server::printGameInfo(Game& game, Coordinate& coord) {
-  const Screen& screen = Screen::getInstance();
+  Screen& screen = Screen::getInstance();
   char str[1024];
 
   if (!screen.clearToScreenEnd(coord)) {
@@ -249,7 +240,7 @@ bool Server::printGameInfo(Game& game, Coordinate& coord) {
 
 //-----------------------------------------------------------------------------
 bool Server::printPlayers(Game& game, Coordinate& coord) {
-  const Screen& screen = Screen::getInstance();
+  Screen& screen = Screen::getInstance();
   char str[1024];
 
   if (!screen.clearToScreenEnd(coord)) {
@@ -265,27 +256,10 @@ bool Server::printPlayers(Game& game, Coordinate& coord) {
 
   for (unsigned int i = 0; i < game.getBoardCount(); ++i) {
     const Board* board = game.getBoardAtIndex(i);
-    if (board) {
-      snprintf(str, sizeof(str), "%u: %c %s (%s) %s", (i + 1),
-               game.getStateOf(board),
-               board->getPlayerName().c_str(),
-               board->getAddress().c_str(),
-               board->getStatus().c_str());
-      if (!screen.printAt(coord.south(), str, false)) {
-        return false;
-      }
-
-      if (game.isStarted()) {
-        snprintf(str, sizeof(str),
-                 ", Score = %u, Turns = %u, Hit = %u of %u",
-                 board->getScore(),
-                 board->getTurns(),
-                 board->getHitCount(),
-                 board->getBoatPoints());
-        if (!screen.print(str, false)) {
-          return false;
-        }
-      }
+    bool toMove = (board == game.getBoardToMove());
+    std::string pstr = board->toString((i + 1), toMove, game.isStarted());
+    if (!screen.printAt(coord.south(), pstr, false)) {
+      return false;
     }
   }
 
@@ -295,7 +269,7 @@ bool Server::printPlayers(Game& game, Coordinate& coord) {
 
 //-----------------------------------------------------------------------------
 bool Server::printOptions(Game& game, Coordinate& coord) {
-  const Screen& screen = Screen::getInstance();
+  Screen& screen = Screen::getInstance();
   const Configuration& config = game.getConfiguration();
   char str[1024];
 
@@ -362,7 +336,7 @@ bool Server::clearBlacklist(Game& game, Coordinate& coord) {
     return true;
   }
 
-  const Screen& screen = Screen::getInstance();
+  Screen& screen = Screen::getInstance();
   if (!screen.clearToScreenEnd(coord.south().setX(1))) {
     return false;
   }
@@ -469,26 +443,65 @@ bool Server::blacklistAddress(Game& game, Coordinate& coord) {
 //-----------------------------------------------------------------------------
 bool Server::quitGame(Game& game, Coordinate& coord) {
   std::string str;
-  if (!prompt(coord.south(). setX(1), "Quit Game? [y/N] -> ", str) ||
-      (toupper(*str.c_str()) == 'Y'))
-  {
+  if (!prompt(coord.south(). setX(1), "Quit Game? [y/N] -> ", str)) {
     return false;
+  }
+  if (toupper(*str.c_str()) == 'Y') {
+    game.abort();
   }
   return true;
 }
 
 //-----------------------------------------------------------------------------
 bool Server::startGame(Game& game, Coordinate& coord) {
-  std::string str;
-  if (!prompt(coord.south().setX(1), "Start Game? [y/N] -> ", str)) {
-    return false;
-  }
-  if (toupper(*str.c_str()) == 'Y') {
-    if (game.start(true)) {
-      if (!sendAllBoards(game)) {
-        return false;
+  if (!game.isStarted()) {
+    std::string str;
+    if (!prompt(coord.south().setX(1), "Start Game? [y/N] -> ", str)) {
+      return false;
+    }
+    if (toupper(*str.c_str()) == 'Y') {
+      if (game.start(true)) {
+        if (!sendAllBoards(game)) {
+          return false;
+        }
       }
     }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+static bool compareScore(const Board* a, const Board* b) {
+  return (a->getScore() > b->getScore());
+}
+
+//-----------------------------------------------------------------------------
+bool Server::sendGameResults(Game& game) {
+  char str[Input::BUFFER_SIZE];
+  snprintf(str, sizeof(str), "F|status=%s|turns=%u|players=%u",
+           ((game.isFinished() && !game.isAborted()) ? "finished" : "aborted"),
+           game.getTurnCount(), game.getBoardCount());
+
+  std::vector<Board*> boards;
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    Board* board = game.getBoardAtIndex(i);
+    boards.push_back(board);
+    sendLine(game, board->getHandle(), str);
+  }
+
+  std::stable_sort(boards.begin(), boards.end(), compareScore);
+
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    Board* board = game.getBoardAtIndex(i);
+    for (unsigned x = 0; x < boards.size(); ++x) {
+      std::string ps = boards[x]->toString((x + 1), false, true);
+      snprintf(str, sizeof(str), "S|%s", ps.c_str());
+      sendLine(game, board->getHandle(), str);
+    }
+  }
+
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    removePlayer(game, game.getBoardAtIndex(i)->getHandle());
   }
   return true;
 }
@@ -507,11 +520,12 @@ bool Server::sendAllBoards(Game& game) {
 bool Server::sendBoard(Game& game, const Board* board) {
   char str[Input::BUFFER_SIZE];
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-    Board* toMove = game.getBoardToMove();
     Board* dest = game.getBoardAtIndex(i);
     if (dest->getHandle() >= 0) {
       snprintf(str, sizeof(str), "B|%c|%s|%s|%s",
-               game.getStateOf(board),
+               ((board == game.getBoardToMove())
+                ? Board::TO_MOVE
+                : (board->getHandle() < 0) ? Board::DISCONNECTED : Board::NONE),
                board->getPlayerName().c_str(),
                board->getStatus().c_str(),
                board->getMaskedDescriptor().c_str());
@@ -527,7 +541,7 @@ bool Server::sendBoard(Game& game, const Board* board) {
 bool Server::prompt(Coordinate& coord, const std::string& str,
                     std::string& field1, const char delim)
 {
-  const Screen& screen = Screen::getInstance();
+  Screen& screen = Screen::getInstance();
   if (!screen.clearToLineEnd(coord) || !screen.printAt(coord, str, true)) {
     return false;
   }
@@ -724,13 +738,14 @@ void Server::getGameInfo(Game& game, const int handle) {
   const Configuration& config = game.getConfiguration();
   char str[Input::BUFFER_SIZE];
   snprintf(str, sizeof(str),
-           "G|version/%s|title/%s|min/%u|max/%u|joined/%u|"
-           "width/%u|height/%u|boats/%u",
+           "G|version=%s|title=%s|min=%u|max=%u|joined=%u|goal=%u|"
+           "width=%u|height=%u|boats=%u",
            Server::VERSION,
            game.getTitle().c_str(),
            config.getMinPlayers(),
            config.getMaxPlayers(),
            game.getBoardCount(),
+           config.getPointGoal(),
            config.getBoardSize().getWidth(),
            config.getBoardSize().getHeight(),
            config.getBoatCount());
@@ -774,6 +789,14 @@ void Server::joinGame(Game& game, const int handle) {
     if (!board.updateBoatArea(boatDescriptor)) {
       removePlayer(game, handle, INVALID_BOARD);
     } else {
+      char str[Input::BUFFER_SIZE];
+      snprintf(str, sizeof(str), "J|%s", playerName.c_str());
+      for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+        Board* b = game.getBoardAtIndex(i);
+        if (b->getHandle() >= 0) {
+          sendLine(game, b->getHandle(), str);
+        }
+      }
       game.addBoard(board);
     }
   }
@@ -781,7 +804,21 @@ void Server::joinGame(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 void Server::leaveGame(Game& game, const int handle) {
-  removePlayer(game, handle, Input::trim(input.getString(1, "")));
+  Board* board = game.getBoardForHandle(handle);
+  std::string playerName = board ? board->getPlayerName() : "";
+  std::string reason = Input::trim(input.getString(1, ""));
+  removePlayer(game, handle, reason);
+
+  if (board) {
+    char str[Input::BUFFER_SIZE];
+    snprintf(str, sizeof(str), "L|%s|%s", playerName.c_str(), reason.c_str());
+    for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+      Board* b = game.getBoardAtIndex(i);
+      if (b->getHandle() >= 0) {
+        sendLine(game, b->getHandle(), str);
+      }
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -901,7 +938,7 @@ void Server::setTaunt(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 bool Server::getGameTitle(std::string& title) {
-  const Screen& screen = Screen::getInstance();
+  Screen& screen = Screen::getInstance();
   const char* val = CommandArgs::getInstance().getValueOf("-t", "--title");
   if (val) {
     title = val;
@@ -938,7 +975,6 @@ Configuration Server::getGameConfig() {
 int main(const int argc, const char* argv[]) {
   try {
     CommandArgs::initialize(argc, argv);
-    std::string title;
     Server server;
 
     // TODO setup signal handlers
@@ -952,8 +988,10 @@ int main(const int argc, const char* argv[]) {
       if (CommandArgs::getInstance().indexOf("-r", "--repeat") < 0) {
         break;
       }
-    };
+    }
 
+    Screen::getInstance(true).clearToScreenEnd();
+    Screen::getInstance().print("\n\n", true);
     return 0;
   }
   catch (const std::exception& e) {

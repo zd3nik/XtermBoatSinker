@@ -108,7 +108,7 @@ bool Configuration::isValid() const {
 
 //-----------------------------------------------------------------------------
 bool Configuration::print(Coordinate& coord, const bool flush) const {
-  const Screen& screen = Screen::getInstance();
+  Screen& screen = Screen::getInstance();
   char str[1024];
 
   snprintf(str, sizeof(str), "Config Name: %s", name.c_str());

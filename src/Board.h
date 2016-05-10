@@ -78,6 +78,9 @@ public:
   std::string getMaskedDescriptor() const;
   std::string getHitTaunt() const;
   std::string getMissTaunt() const;
+  std::string toString(const unsigned number, const bool toMove,
+                       const bool gameStarted) const;
+
   Container getBoatArea() const;
   unsigned getScore() const;
   unsigned getTurns() const;

@@ -30,7 +30,6 @@ public:
   Board* getBoardForPlayer(const std::string& name);
   Board* getFirstBoardForAddress(const std::string& address);
   Board* getBoardToMove();
-  Board::PlayerState getStateOf(const Board*);
 
   std::string getTitle() const {
     return title;
@@ -48,8 +47,20 @@ public:
     return started;
   }
 
+  bool isAborted() const {
+    return aborted;
+  }
+
   bool hasBoard(const int handle) {
     return (getBoardForHandle(handle) != NULL);
+  }
+
+  unsigned getTurnCount() const {
+    return turnCount;
+  }
+
+  void abort() {
+    aborted = true;
   }
 
 private:
@@ -59,7 +70,9 @@ private:
   std::string title;
   std::vector<Board> boards;
   bool started;
+  bool aborted;
   unsigned boardToMove;
+  unsigned turnCount;
 };
 
 #endif // GAME_H
