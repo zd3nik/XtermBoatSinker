@@ -234,7 +234,10 @@ void Input::addHandle(const int handle, const std::string& label) {
 void Input::removeHandle(const int handle) {
   Logger::debug() << "Removing channel " << handle << " "
                   << getHandleLabel(handle);
-  handles.erase(handles.find(handle));
+  std::map<int, std::string>::iterator it = handles.find(handle);
+  if (it != handles.end()) {
+    handles.erase(it);
+  }
 }
 
 //-----------------------------------------------------------------------------

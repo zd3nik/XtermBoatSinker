@@ -486,17 +486,21 @@ bool Server::sendGameResults(Game& game) {
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
     Board* board = game.getBoardAtIndex(i);
     boards.push_back(board);
-    sendLine(game, board->getHandle(), str);
+    if (board->getHandle() >= 0) {
+      sendLine(game, board->getHandle(), str);
+    }
   }
 
   std::stable_sort(boards.begin(), boards.end(), compareScore);
 
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
     Board* board = game.getBoardAtIndex(i);
-    for (unsigned x = 0; x < boards.size(); ++x) {
-      std::string ps = boards[x]->toString((x + 1), false, true);
-      snprintf(str, sizeof(str), "S|%s", ps.c_str());
-      sendLine(game, board->getHandle(), str);
+    if (board->getHandle() >= 0) {
+      for (unsigned x = 0; x < boards.size(); ++x) {
+        std::string ps = boards[x]->toString((x + 1), false, true);
+        snprintf(str, sizeof(str), "S|%s", ps.c_str());
+        sendLine(game, board->getHandle(), str);
+      }
     }
   }
 
@@ -679,7 +683,10 @@ bool Server::sendLine(Game& game, const int handle, const std::string msg) {
     Logger::error() << "not sending empty message";
     return true;
   }
-
+  if (handle < 0) {
+    Logger::error() << "not sending message to channel " << handle;
+    return true;
+  }
   if (strchr(msg.c_str(), '\n')) {
     Logger::error() << "message contains newline (" << msg << ")";
     return false;
@@ -840,10 +847,10 @@ void Server::sendMessage(Game& game, const int handle) {
     msg.append(message);
     for (unsigned i = 0; i < game.getBoardCount(); ++i) {
       const Board* board = game.getBoardAtIndex(i);
-      if (board && (board->getHandle() != handle)) {
-        if (playerName.empty() || (board->getPlayerName() == playerName)) {
-          sendLine(game, board->getHandle(), msg);
-        }
+      if ((board->getHandle() >= 0) && (board->getHandle() != handle) &&
+          (playerName.empty() || (board->getPlayerName() == playerName)))
+      {
+        sendLine(game, board->getHandle(), msg);
       }
     }
   }
