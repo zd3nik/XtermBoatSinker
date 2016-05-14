@@ -8,9 +8,8 @@
 #include <errno.h>
 #include "Client.h"
 #include "CommandArgs.h"
-#include "Screen.h"
 #include "Logger.h"
-#include "Board.h"
+#include "Screen.h"
 #include "Server.h"
 
 //-----------------------------------------------------------------------------
@@ -63,7 +62,7 @@ void Client::closeSocketHandle() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::init() {
+bool Client::init(Coordinate& promptCoord) {
   Screen& screen = Screen::getInstance(true);
   if (!screen.clearAll()) {
     Logger::error() << "Failed to clear screen";
@@ -91,15 +90,17 @@ bool Client::init() {
         return false;
       }
     } else {
-      if (!readGameInfo()) {
+      if (!readGameInfo() || !setupBoard(promptCoord)) {
         closeSocket();
         return false;
       }
-      if (!setupBoard()) {
+      if (!promptCoord.isValid()) {
         closeSocket();
         if (!screen.clearAll() ||
             !screen.printAt(Coordinate(1, 1),
-                            "Unable to fit boards to screen\n", true))
+                            "Unable to fit boards within terminal.\n"
+                            "Make your terminal bigger and try again\n",
+                            true))
         {
           return false;
         }
@@ -321,23 +322,23 @@ bool Client::readGameInfo() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::setupBoard() {
+bool Client::setupBoard(Coordinate& promptCoord) {
+  boardMap.clear();
+
   Screen& screen = Screen::getInstance(true);
-  if (!screen.clearAll()) {
+  if (!screen.clearAll() ||
+      !screen.moveCursor(promptCoord.set(1, 1), true))
+  {
     return false;
   }
-
-  Coordinate coord(1, 1);
-  if (!screen.moveCursor(coord, true)) {
-    return false;
-  }
-
-  std::vector<Container*> children;
-  std::vector<Board> boards;
-  boards.reserve(6);
 
   char sbuf[32];
-  for (unsigned i = 0; i < 6; ++i) {
+  const unsigned count = std::max<unsigned>(4, config.getMaxPlayers());
+  std::vector<Container*> children;
+  std::vector<Board> boards;
+
+  boards.reserve(count);
+  for (unsigned i = 0; i < count; ++i) {
     snprintf(sbuf, sizeof(sbuf), "Board #%u", (i + 1));
     boards.push_back(Board(-1, sbuf, "local",
                            config.getBoardSize().getWidth(),
@@ -353,7 +354,8 @@ bool Client::setupBoard() {
   }
 
   if (!screen.arrangeChildren(children)) {
-    return false;
+    promptCoord.set(0, 0);
+    return true;
   }
 
   for (unsigned i = 0; i < boards.size(); ++i) {
@@ -361,18 +363,110 @@ bool Client::setupBoard() {
     if (!board.print(Board::NONE, false)) {
       return false;
     }
+    promptCoord = board.getBottomRight();
   }
-  if (!screen.print("\n\nTODO: ", true)) {
-    return false;
+
+  promptCoord.south(2).setX(1);
+
+  std::vector<Boat> boats;
+  for (unsigned i = 0; i < config.getBoatCount(); ++i) {
+    boats.push_back(config.getBoat(i));
   }
 
   while (true) {
+    if (!screen.clearToScreenEnd(promptCoord) ||
+        !screen.print("Enter Board # [1 = manual setup] -> ", true))
+    {
+      return false;
+    }
     if (input.readln(STDIN_FILENO) <= 0) {
       return false;
+    }
+    int n = input.getInt();
+    if ((n == 1) && boats.size()) {
+      if (!manualSetup(boats, boards, promptCoord)) {
+        return false;
+      }
+    }
+    if ((n >= 1) && (n <= boards.size()) && (boards[n - 1].isValid())) {
+      boardMap[""] = boards[n - 1].setPlayerName("");
+      break;
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::manualSetup(std::vector<Boat>& boats,
+                         std::vector<Board>& boards,
+                         const Coordinate& promptCoord)
+{
+  Screen& screen = Screen::getInstance(true);
+  Board& board = boards.front();
+  Movement::Direction dir;
+  Coordinate coord;
+  std::string str;
+  char sbuf[64];
+  char ch;
+
+  while (true) {
+    if (!screen.clearToScreenEnd(Coordinate(1, 1))) {
+      return false;
+    }
+
+    for (unsigned i = 0; i < boards.size(); ++i) {
+      if (!boards[i].print(Board::NONE, false)) {
+        return false;
+      }
+    }
+
+    Boat& boat = boats.front();
+    snprintf(sbuf, sizeof(sbuf),
+             "Place boat '%c', length %u, facing (S)outh or (E)ast? -> ",
+             boat.getID(), boat.getLength());
+
+    if (!screen.clearToScreenEnd(coord.set(promptCoord)) ||
+        !screen.print(sbuf, true))
+    {
+      return false;
+    }
+
+    if ((ch = getChar()) <= 0) {
+      return false;
+    } else if ((toupper(ch) == 'S') || (toupper(ch) == 'E')) {
+      if (!screen.clearToScreenEnd(coord.south()) ||
+          !screen.print("From which coordinate? [example: e5] -> ", true) ||
+          (input.readln(STDIN_FILENO) <= 0))
+      {
+        return false;
+      }
+      dir = (toupper(ch) == 'S') ? Movement::South : Movement::East;
+      str = Input::trim(input.getString(0, ""));
+      if (coord.fromString(str) &&
+          board.contains(coord) &&
+          board.addBoat(boat, coord, dir))
+      {
+        boats.erase(boats.begin());
+        if (boats.empty()) {
+          break;
+        }
+      }
     }
   }
 
   return true;
+}
+
+//-----------------------------------------------------------------------------
+char Client::getChar() {
+  char ch;
+  if (!input.setCanonical(false) ||
+      ((ch = input.readChar(STDIN_FILENO)) <= 0) ||
+      !input.setCanonical(true))
+  {
+    return false;
+  }
+  return ch;
 }
 
 //-----------------------------------------------------------------------------
@@ -386,17 +480,25 @@ bool Client::joinGame() {
 }
 
 //-----------------------------------------------------------------------------
+bool Client::run(Coordinate& promptCoord) {
+  return false; // TODO
+}
+
+//-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
     srand((unsigned)time(NULL));
     CommandArgs::initialize(argc, argv);
+    Coordinate promptCoordinate;
     Client client;
 
-    if (!client.init()) {
+    if (!client.init(promptCoordinate) ||
+        !client.run(promptCoordinate))
+    {
       return 1;
     }
 
-    // TODO return Client().run() ? 0 : 1;
+    return 0;
   }
   catch (const std::exception& e) {
     Logger::error() << e.what();

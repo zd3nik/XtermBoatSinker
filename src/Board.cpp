@@ -7,6 +7,17 @@
 #include "Logger.h"
 
 //-----------------------------------------------------------------------------
+Board::Board()
+  : handle(-1),
+    score(0),
+    turns(0),
+    boatAreaWidth(0),
+    boatAreaHeight(0),
+    descriptorLength(0),
+    descriptor(NULL)
+{ }
+
+//-----------------------------------------------------------------------------
 Board::Board(const int handle,
              const std::string& playerName,
              const std::string& address,
@@ -72,6 +83,12 @@ Board& Board::operator=(const Board& other) {
   }
   descriptor[descriptorLength] = 0;
 
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::setPlayerName(const std::string& str) {
+  playerName = str;
   return (*this);
 }
 

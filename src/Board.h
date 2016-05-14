@@ -58,6 +58,7 @@ public:
     this->handle = handle;
   }
 
+  Board();
   Board(const int handle,
         const std::string& playerName,
         const std::string& address,
@@ -65,6 +66,7 @@ public:
         const unsigned boatAreaHeight);
   Board(const Board& other);
   Board& operator=(const Board& other);
+  Board& setPlayerName(const std::string& value);
 
   virtual ~Board();
   void incScore(const unsigned value = 1);

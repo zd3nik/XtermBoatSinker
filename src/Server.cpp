@@ -277,19 +277,19 @@ bool Server::printOptions(Game& game, Coordinate& coord) {
     return false;
   }
 
-  if (!screen.printAt(coord, "[Q]uit, [R]edraw, Blacklist [A]ddress", false)) {
+  if (!screen.printAt(coord, "(Q)uit, (R)edraw, Blacklist (A)ddress", false)) {
     return false;
   }
 
   if (game.getBoardCount() &&
       !screen.printAt(coord.south(),
-                      "[B]oot Player, Blacklist [P]layer", false))
+                      "(B)oot Player, Blacklist (P)layer", false))
   {
     return false;
   }
 
   if (blackList.size() &&
-      !screen.printAt(coord.south(), "[C]lear blacklist", false))
+      !screen.printAt(coord.south(), "(C)lear blacklist", false))
   {
     return false;
   }
@@ -298,7 +298,7 @@ bool Server::printOptions(Game& game, Coordinate& coord) {
       (game.getBoardCount() >= config.getMinPlayers()) &&
       (game.getBoardCount() <= config.getMaxPlayers()))
   {
-    if (!screen.printAt(coord.south(), "[S]tart Game", false)) {
+    if (!screen.printAt(coord.south(), "(S)tart Game", false)) {
       return false;
     }
   }
