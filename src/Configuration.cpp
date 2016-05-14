@@ -101,6 +101,16 @@ Configuration& Configuration::addBoat(const Boat& boat) {
 }
 
 //-----------------------------------------------------------------------------
+void Configuration::clear() {
+  name.clear();
+  minPlayers = 0;
+  maxPlayers = 0;
+  pointGoal = 0;
+  boardSize.set(Coordinate(), Coordinate());
+  boats.clear();
+}
+
+//-----------------------------------------------------------------------------
 bool Configuration::isValid() const {
   return (name.size() && (minPlayers > 1) && (maxPlayers >= minPlayers) &&
           boardSize.isValid() && boats.size());

@@ -28,6 +28,8 @@ public:
   Configuration& setBoardSize(const Container& boardSize);
   Configuration& clearBoats();
   Configuration& addBoat(const Boat& boat);
+
+  void clear();
   bool isValid() const ;
   bool print(Coordinate& coord, const bool flush) const;
   bool isValidBoatDescriptor(const std::string& descriptor) const;

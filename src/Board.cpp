@@ -5,6 +5,7 @@
 #include "Board.h"
 #include "Screen.h"
 #include "Logger.h"
+#include <time.h>
 
 //-----------------------------------------------------------------------------
 Board::Board(const int handle,
@@ -240,6 +241,27 @@ bool Board::isValid() const {
 //-----------------------------------------------------------------------------
 bool Board::isDead() const {
   return ((handle < 0) || (getHitCount() >= getBoatPoints()));
+}
+
+//-----------------------------------------------------------------------------
+bool Board::addRandomBoards(const Configuration& config) {
+  srand((unsigned)time(NULL));
+  for (unsigned i = 0; i < config.getBoatCount(); ++i) {
+    const Boat& boat = config.getBoat(i);
+    if (!boat.isValid()) {
+      continue;
+    }
+
+    while (true) {
+      unsigned x = (((unsigned)rand()) % config.getBoardSize().getWidth());
+      unsigned y = (((unsigned)rand()) % config.getBoardSize().getWidth());
+      Movement::Direction dir = (rand() & 0x4) ? Movement::South
+                                               : Movement::East;
+      if (addBoat(boat, Coordinate((x + 1), (y + 1)), dir)) {
+        break;
+      }
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------

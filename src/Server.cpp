@@ -759,7 +759,7 @@ void Server::getGameInfo(Game& game, const int handle) {
 
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     unsigned len = strlen(str);
-    snprintf((str + len), (sizeof(str) - len), "|boat/%c/%u",
+    snprintf((str + len), (sizeof(str) - len), "|boat=%c%u",
              config.getBoat(i).getID(), config.getBoat(i).getLength());
   }
 
@@ -956,7 +956,7 @@ bool Server::getGameTitle(std::string& title) {
     {
       return false;
     }
-    title = input.getString(0, "");
+    title = Input::trim(input.getString(0, ""));
     if (strchr(title.c_str(), '|')) {
       if (!screen.print("Title may not contain '|' character\n", true)) {
         return false;

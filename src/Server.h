@@ -31,14 +31,6 @@ public:
   bool startListening(const int backlog = 10);
   bool run();
 
-  std::string getBindAddress() const {
-    return bindAddress;
-  }
-
-  int getPort() const {
-    return port;
-  }
-
   bool isConnected() const {
     return (sock >= 0);
   }

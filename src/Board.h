@@ -8,6 +8,7 @@
 #include <string>
 #include "Boat.h"
 #include "Container.h"
+#include "Configuration.h"
 #include "DBObject.h"
 
 //-----------------------------------------------------------------------------
@@ -89,6 +90,7 @@ public:
   unsigned getBoatPoints() const;
   bool isValid() const;
   bool isDead() const;
+  bool addRandomBoards(const Configuration&);
   bool print(const PlayerState playerState, const bool masked = true) const;
   bool updateBoatArea(const std::string& newDescriptor);
   bool removeBoat(const Boat& boat);
