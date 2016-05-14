@@ -9,6 +9,7 @@ bool Container::arrangeChildren(std::vector<Container*>& children) const {
   Coordinate topLeft(begin);
   Coordinate bottomRight;
   unsigned height = 1;
+  bool fits = true;
 
   for (size_t i = 0; i < children.size(); ++i) {
     Container* child = children[i];
@@ -35,10 +36,11 @@ bool Container::arrangeChildren(std::vector<Container*>& children) const {
       topLeft.setX(topLeft.getX() + child->getWidth());
       height = child->getHeight();
     } else {
-      return false;
+      fits = false;
     }
   }
-  return true;
+
+  return fits;
 }
 
 //-----------------------------------------------------------------------------

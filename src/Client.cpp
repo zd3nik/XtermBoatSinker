@@ -94,25 +94,13 @@ bool Client::init(Coordinate& promptCoord) {
         closeSocket();
         return false;
       }
-      if (!promptCoord.isValid()) {
-        closeSocket();
-        if (!screen.clearAll() ||
-            !screen.printAt(Coordinate(1, 1),
-                            "Unable to fit boards within terminal.\n"
-                            "Make your terminal bigger and try again\n",
-                            true))
-        {
-          return false;
-        }
-        continue;
-      }
 
-      while (getUserName()) {
-        if (joinGame()) {
+      std::string name;
+      while (getUserName(promptCoord, name)) {
+        if (joinGame(promptCoord, name)) {
           return true;
         }
       }
-
       break;
     }
   }
@@ -318,6 +306,51 @@ bool Client::readGameInfo() {
     return false;
   }
 
+  Screen& screen = Screen::getInstance();
+  char sbuf[1024];
+  snprintf(sbuf, sizeof(sbuf),
+           "Title          : %s\n"
+           "Min Players    : %u\n"
+           "Max Players    : %u\n"
+           "Players Joined : %u\n"
+           "Point Goal     : %u\n"
+           "Board Size     : %u x %u\n"
+           "Boat Count     : %u\n",
+           config.getName().c_str(),
+           config.getMinPlayers(),
+           config.getMaxPlayers(),
+           playersJoined,
+           pointGoal,
+           width, height,
+           config.getBoatCount());
+
+  if (!screen.print(sbuf, false)) {
+    return false;
+  }
+
+  for (unsigned i = 0; i < config.getBoatCount(); ++i) {
+    const Boat& boat = config.getBoat(i);
+    snprintf(sbuf, sizeof(sbuf), "  %c: length %u\n",
+             boat.getID(), boat.getLength());
+    if (!screen.print(sbuf, false)) {
+      return false;
+    }
+  }
+
+  if (!screen.print("\nJoin this game? y/n -> ", true)) {
+    return false;
+  }
+  while (true) {
+    char ch = getChar();
+    if (ch <= 0) {
+      return false;
+    }
+    if (toupper(ch) == 'Y') {
+      break;
+    } else if (toupper(ch) == 'N') {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -355,8 +388,7 @@ bool Client::setupBoard(Coordinate& promptCoord) {
   }
 
   if (!screen.arrangeChildren(children)) {
-    promptCoord.set(0, 0);
-    return true;
+    Logger::error() << "Boards do not fit in terminal";
   }
 
   std::vector<Boat> boats;
@@ -409,7 +441,7 @@ bool Client::setupBoard(Coordinate& promptCoord) {
       }
       if ((n > 0) && (n <= boards.size()) && (boards[n - 1].isValid(config))) {
         boardMap[""] = boards[n - 1].setPlayerName("");
-        return true;
+        return screen.clearToScreenEnd(coord);
       }
       break;
     }
@@ -420,7 +452,7 @@ bool Client::setupBoard(Coordinate& promptCoord) {
 //-----------------------------------------------------------------------------
 bool Client::manualSetup(std::vector<Boat>& boats,
                          std::vector<Board>& boards,
-                         const Coordinate& promptCoord)
+                         Coordinate& promptCoord)
 {
   Screen& screen = Screen::getInstance(true);
   Board& board = boards.front();
@@ -509,13 +541,117 @@ char Client::getChar() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::getUserName() {
-  return false; // TODO
+bool Client::getUserName(Coordinate& promptCoord, std::string& name) {
+  Screen& screen = Screen::getInstance();
+  while (true) {
+    if (!screen.clearToLineEnd(promptCoord) ||
+        !screen.print("Enter your username -> ", true) ||
+        (input.readln(STDIN_FILENO) < 0))
+    {
+      return false;
+    }
+
+    name = Input::trim(input.getString(0, ""));
+    if (name.size()) {
+      break;
+    } else if (!screen.clearToScreenEnd(promptCoord)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Client::joinGame() {
-  return false; // TODO
+bool Client::joinGame(Coordinate& promptCoord, const std::string& name) {
+  Screen& screen = Screen::getInstance();
+  Coordinate coord(promptCoord);
+  if (!screen.clearToScreenEnd(coord.south())) {
+    Logger::error() << "faileed to write to screen";
+    exit(1);
+  }
+
+  if (!isConnected()) {
+    screen.print("not connected!\n", true);
+    exit(1);
+  }
+
+  std::map<std::string, Board>::const_iterator it = boardMap.find("");
+  if (it == boardMap.end()) {
+    screen.print("no board selected!\n", true);
+    exit(1);
+  }
+
+  const Board& board = it->second;
+  char sbuf[Input::BUFFER_SIZE];
+  snprintf(sbuf, sizeof(sbuf), "J|%s|%s", name.c_str(),
+           board.getDescriptor().c_str());
+
+  if (!sendLine(sbuf)) {
+    screen.print("failed to send join message to server\n", true);
+    exit(1);
+  }
+
+  if (input.readln(sock) <= 0) {
+    screen.print("no respone from server\n", true);
+    exit(1);
+  }
+
+  std::string str = input.getString(0, "");
+  if (str == "J") {
+    str = input.getString(1, "");
+    if (str != name) {
+      screen.print("invalid response from server: ", false);
+      screen.print(str, false);
+      screen.print("\n", true);
+      exit(1);
+    }
+    return true;
+  }
+
+  if (str == "E") {
+    screen.print("ERROR: ", false);
+    screen.print(input.getString(1, ""), true);
+  } else {
+    screen.print("FATAL ERROR: ", false);
+    screen.print(str, false);
+    screen.print("\n", true);
+    exit(1);
+  }
+
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::sendLine(const std::string& msg) {
+  if (msg.empty()) {
+    Logger::error() << "not sending empty message";
+    return false;
+  }
+  if (!isConnected()) {
+    Logger::error() << "not connected!";
+    return false;
+  }
+  if (strchr(msg.c_str(), '\n')) {
+    Logger::error() << "message contains newline (" << msg << ")";
+    return false;
+  }
+
+  char str[Input::BUFFER_SIZE];
+  if (snprintf(str, sizeof(str), "%s\n", msg.c_str()) >= sizeof(str)) {
+    Logger::warn() << "message exceeds buffer size (" << msg << ")";
+    str[sizeof(str) - 2] = '\n';
+    str[sizeof(str) - 1] = 0;
+  }
+
+  unsigned len = strlen(str);
+  Logger::debug() << "Sending " << len << " bytes (" << str << ") to server";
+
+  if (write(sock, str, len) != len) {
+    Logger::error() << "Failed to write " << len << " bytes (" << str
+                    << ") to server: " << strerror(errno);
+    return false;
+  }
+  return true;
 }
 
 //-----------------------------------------------------------------------------

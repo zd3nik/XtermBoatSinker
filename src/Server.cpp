@@ -22,9 +22,9 @@ const char* BOOTED = "booted";
 const char* COMM_ERROR = "comm error";
 const char* GAME_FULL = "game is full";
 const char* INVALID_BOARD = "invalid board";
-const char* INVALID_NAME = "invalid name";
-const char* NAME_IN_USE = "name in use";
-const char* NAME_TOO_LONG = "name too long";
+const char* INVALID_NAME = "E|invalid name";
+const char* NAME_IN_USE = "E|name in use";
+const char* NAME_TOO_LONG = "E|name too long";
 const char* PLAYER_EXITED = "exited";
 const char* PROTOCOL_ERROR = "protocol error";
 
@@ -653,19 +653,23 @@ bool Server::addPlayerHandle(Game& game) {
 void Server::getPlayerInput(Game& game, const int handle) {
   if (input.readln(handle) <= 0) {
     removePlayer(game, handle);
-  } else if (strcmp("G", input.getString(0, "")) == 0) {
+    return;
+  }
+
+  std::string str = input.getString(0, "");
+  if (str == "G") {
     getGameInfo(game, handle);
-  } else if (strcmp("J", input.getString(0, "")) == 0) {
+  } else if (str == "J") {
     joinGame(game, handle);
-  } else if (strcmp("L", input.getString(0, "")) == 0) {
+  } else if (str == "L") {
     leaveGame(game, handle);
-  } else if (strcmp("M", input.getString(0, "")) == 0) {
+  } else if (str == "M") {
     sendMessage(game, handle);
-  } else if (strcmp("P", input.getString(0, "")) == 0) {
+  } else if (str == "P") {
     ping(game, handle);
-  } else if (strcmp("S", input.getString(0, "")) == 0) {
+  } else if (str == "S") {
     shoot(game, handle);
-  } else if (strcmp("T", input.getString(0, "")) == 0) {
+  } else if (str == "T") {
     setTaunt(game, handle);
   } else if (game.hasBoard(handle)) {
     sendLine(game, handle, PROTOCOL_ERROR);
@@ -773,23 +777,24 @@ void Server::joinGame(Game& game, const int handle) {
   const std::string boatDescriptor = input.getString(2, "");
   const Configuration& config = game.getConfiguration();
   const Container& boardSize = config.getBoardSize();
+  char str[Input::BUFFER_SIZE];
 
   if (game.hasBoard(handle)) {
     Logger::error() << "duplicate handle in join command!";
   } else if (playerName.empty() || boatDescriptor.empty()) {
     removePlayer(game, handle, PROTOCOL_ERROR);
-  } else if (!isalpha(playerName[0])) {
-    removePlayer(game, handle, INVALID_NAME);
-  } else if (playerName.size() > (2 * boardSize.getWidth())) {
-    removePlayer(game, handle, NAME_TOO_LONG);
   } else if (blackList.count(PLAYER_PREFIX + playerName)) {
     removePlayer(game, handle, BOOTED);
   } else if (game.getBoardCount() >= config.getMaxPlayers()) {
     removePlayer(game, handle, GAME_FULL);
-  } else if (game.getBoardForPlayer(playerName)) {
-    removePlayer(game, handle, NAME_IN_USE);
   } else if (!config.isValidBoatDescriptor(boatDescriptor)) {
     removePlayer(game, handle, INVALID_BOARD);
+  } else if (!isalpha(playerName[0])) {
+    sendLine(game, handle, INVALID_NAME);
+  } else if (playerName.size() > (2 * boardSize.getWidth())) {
+    sendLine(game, handle, NAME_TOO_LONG);
+  } else if (game.getBoardForPlayer(playerName)) {
+    sendLine(game, handle, NAME_IN_USE);
   } else {
     Board board(handle, playerName, input.getHandleLabel(handle),
                 boardSize.getWidth(), boardSize.getHeight());
@@ -797,15 +802,15 @@ void Server::joinGame(Game& game, const int handle) {
     if (!board.updateBoatArea(boatDescriptor)) {
       removePlayer(game, handle, INVALID_BOARD);
     } else {
-      char str[Input::BUFFER_SIZE];
+      game.addBoard(board);
       snprintf(str, sizeof(str), "J|%s", playerName.c_str());
+      sendLine(game, handle, str);
       for (unsigned i = 0; i < game.getBoardCount(); ++i) {
         Board* b = game.getBoardAtIndex(i);
-        if (b->getHandle() >= 0) {
+        if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
           sendLine(game, b->getHandle(), str);
         }
       }
-      game.addBoard(board);
     }
   }
 }

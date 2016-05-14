@@ -32,13 +32,14 @@ private:
   char getChar();
   bool getHostAddress();
   bool getHostPort();
-  bool getUserName();
-  bool joinGame();
+  bool getUserName(Coordinate& promptCoordinate, std::string& name);
+  bool joinGame(Coordinate& promptCoordinate, const std::string& name);
   bool readGameInfo();
+  bool sendLine(const std::string& msg);
   bool setupBoard(Coordinate& promptCoordinate);
   bool manualSetup(std::vector<Boat>& boatsRemaining,
                    std::vector<Board>& boards,
-                   const Coordinate& promptCoordinate);
+                   Coordinate& promptCoordinate);
 
   Input input;
   std::string userName;
