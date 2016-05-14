@@ -35,8 +35,7 @@ Board::Board(const int handle,
     descriptorLength(boatAreaWidth * boatAreaHeight),
     descriptor(new char[descriptorLength + 1])
 {
-  memset(descriptor, Boat::NONE, descriptorLength);
-  descriptor[descriptorLength] = 0;
+  clearBoatArea();
 }
 
 //-----------------------------------------------------------------------------
@@ -96,6 +95,14 @@ Board& Board::setPlayerName(const std::string& str) {
 Board::~Board() {
   delete[] descriptor;
   descriptor = NULL;
+}
+
+//-----------------------------------------------------------------------------
+void Board::clearBoatArea() {
+  if (descriptor) {
+    memset(descriptor, Boat::NONE, descriptorLength);
+    descriptor[descriptorLength] = 0;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -243,6 +250,39 @@ unsigned Board::getBoatPoints() const {
 }
 
 //-----------------------------------------------------------------------------
+bool Board::isValid(const Configuration& config) const {
+  if (!isValid()) {
+    return false;
+  }
+  std::map<char, unsigned> boats;
+  std::map<char, unsigned>::iterator it;
+  for (unsigned i = 0; i < descriptorLength; ++i) {
+    char id = descriptor[i];
+    if (id != Boat::NONE) {
+      if ((it = boats.find(id)) == boats.end()) {
+        boats[id] = 1;
+      } else {
+        it->second++;
+      }
+    }
+  }
+  if (boats.size() != config.getBoatCount()) {
+    return false;
+  }
+  for (unsigned i = 0; i < config.getBoatCount(); ++i) {
+    const Boat& boat = config.getBoat(i);
+    if (((it = boats.find(boat.getID())) == boats.end()) ||
+        (it->second != boat.getLength()))
+    {
+      return false;
+    } else {
+      boats.erase(it);
+    }
+  }
+  return boats.empty();
+}
+
+//-----------------------------------------------------------------------------
 bool Board::isValid() const {
   unsigned boatAreaSize = (boatAreaWidth * boatAreaHeight);
   return (Container::isValid() &&
@@ -261,22 +301,29 @@ bool Board::isDead() const {
 
 //-----------------------------------------------------------------------------
 bool Board::addRandomBoats(const Configuration& config) {
+  clearBoatArea();
+  unsigned maxTries = (10 * boatAreaWidth * boatAreaHeight);
+  unsigned boatCount = 0;
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     const Boat& boat = config.getBoat(i);
     if (!boat.isValid()) {
-      continue;
+      return false;
     }
-
-    while (true) {
+    for (unsigned tries = 0;; ++tries) {
       unsigned x = (((unsigned)rand()) % config.getBoardSize().getWidth());
       unsigned y = (((unsigned)rand()) % config.getBoardSize().getWidth());
       Movement::Direction dir = (rand() & 0x4) ? Movement::South
                                                : Movement::East;
       if (addBoat(boat, Coordinate((x + 1), (y + 1)), dir)) {
+        boatCount++;
         break;
+      } else if (tries >= maxTries) {
+        Logger::error() << "failed random boat placement";
+        return false;
       }
     }
   }
+  return (boatCount == config.getBoatCount());
 }
 
 //-----------------------------------------------------------------------------
@@ -353,7 +400,7 @@ bool Board::removeBoat(const Boat& boat) {
   if (descriptor) {
     for (unsigned i = 0; i < descriptorLength; ++i) {
       if (descriptor[i] == boat.getID()) {
-        descriptor[i] = NONE;
+        descriptor[i] = Boat::NONE;
         count++;
       }
     }

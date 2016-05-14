@@ -326,16 +326,17 @@ bool Client::setupBoard(Coordinate& promptCoord) {
   boardMap.clear();
 
   Screen& screen = Screen::getInstance(true);
-  if (!screen.clearAll() ||
-      !screen.moveCursor(promptCoord.set(1, 1), true))
-  {
+  if (!screen.clearAll()) {
     return false;
   }
 
+  int n;
+  char ch;
   char sbuf[32];
   const unsigned count = std::max<unsigned>(4, config.getMaxPlayers());
   std::vector<Container*> children;
   std::vector<Board> boards;
+  std::string str;
 
   boards.reserve(count);
   for (unsigned i = 0; i < count; ++i) {
@@ -345,8 +346,8 @@ bool Client::setupBoard(Coordinate& promptCoord) {
                            config.getBoardSize().getHeight()));
 
     Board& board = boards.back();
-    if (i > 0) {
-      board.addRandomBoats(config);
+    if ((i > 0) && !board.addRandomBoats(config)) {
+      return false;
     }
 
     Container* container = &board;
@@ -358,38 +359,58 @@ bool Client::setupBoard(Coordinate& promptCoord) {
     return true;
   }
 
-  for (unsigned i = 0; i < boards.size(); ++i) {
-    Board& board = boards[i];
-    if (!board.print(Board::NONE, false)) {
-      return false;
-    }
-    promptCoord = board.getBottomRight();
-  }
-
-  promptCoord.south(2).setX(1);
-
   std::vector<Boat> boats;
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     boats.push_back(config.getBoat(i));
   }
 
   while (true) {
-    if (!screen.clearToScreenEnd(promptCoord) ||
-        !screen.print("Enter Board # [1 = manual setup] -> ", true))
+    if (!screen.clearToScreenEnd(Coordinate(1, 1))) {
+      return false;
+    }
+
+    for (unsigned i = 0; i < boards.size(); ++i) {
+      Board& board = boards[i];
+      if (!board.print(Board::NONE, false)) {
+        return false;
+      }
+      promptCoord = board.getBottomRight();
+    }
+
+    Coordinate coord(promptCoord.south(2).setX(1));
+    if (!screen.printAt(coord, "(Q)uit, (S)elect Board, (R)andomize -> ",
+                        true) ||
+        ((ch = getChar()) <= 0))
     {
       return false;
     }
-    if (input.readln(STDIN_FILENO) <= 0) {
+
+    switch (toupper(ch)) {
+    case 'Q':
       return false;
-    }
-    int n = input.getInt();
-    if ((n == 1) && boats.size()) {
-      if (!manualSetup(boats, boards, promptCoord)) {
+    case 'R':
+      for (unsigned i = 1; i < boards.size(); ++i) {
+        if (!boards[i].addRandomBoats(config)) {
+          return false;
+        }
+      }
+      break;
+    case 'S':
+      if (!screen.printAt(coord.south(), "Board# [1 = manual setup] -> ",
+                          true) ||
+          (input.readln(STDIN_FILENO) <= 0))
+      {
         return false;
       }
-    }
-    if ((n >= 1) && (n <= boards.size()) && (boards[n - 1].isValid())) {
-      boardMap[""] = boards[n - 1].setPlayerName("");
+      if (((n = input.getInt()) == 1) && boats.size()) {
+        if (!manualSetup(boats, boards, promptCoord)) {
+          return false;
+        }
+      }
+      if ((n > 0) && (n <= boards.size()) && (boards[n - 1].isValid(config))) {
+        boardMap[""] = boards[n - 1].setPlayerName("");
+        return true;
+      }
       break;
     }
   }
@@ -403,6 +424,7 @@ bool Client::manualSetup(std::vector<Boat>& boats,
 {
   Screen& screen = Screen::getInstance(true);
   Board& board = boards.front();
+  std::vector<Boat> history;
   Movement::Direction dir;
   Coordinate coord;
   std::string str;
@@ -420,37 +442,54 @@ bool Client::manualSetup(std::vector<Boat>& boats,
       }
     }
 
-    Boat& boat = boats.front();
-    snprintf(sbuf, sizeof(sbuf),
-             "Place boat '%c', length %u, facing (S)outh or (E)ast? -> ",
-             boat.getID(), boat.getLength());
-
-    if (!screen.clearToScreenEnd(coord.set(promptCoord)) ||
-        !screen.print(sbuf, true))
-    {
+    if (!screen.printAt(coord.set(promptCoord), "(D)one", false)) {
+      return false;
+    }
+    if (history.size() && !screen.print(", (U)ndo", false)) {
+      return false;
+    }
+    if (boats.size()) {
+      snprintf(sbuf, sizeof(sbuf),
+               ", Place boat '%c', length %u, facing (S)outh or (E)ast? -> ",
+               boats.front().getID(), boats.front().getLength());
+      if (!screen.print(sbuf, false)) {
+        return false;
+      }
+    }
+    if (!screen.print(" -> ", true) || ((ch = getChar()) <= 0)) {
       return false;
     }
 
-    if ((ch = getChar()) <= 0) {
-      return false;
-    } else if ((toupper(ch) == 'S') || (toupper(ch) == 'E')) {
-      if (!screen.clearToScreenEnd(coord.south()) ||
-          !screen.print("From which coordinate? [example: e5] -> ", true) ||
-          (input.readln(STDIN_FILENO) <= 0))
-      {
-        return false;
+    switch (toupper(ch)) {
+    case 'D':
+      return true;
+    case 'U':
+      if (history.size()) {
+        boats.insert(boats.begin(), history.back());
+        board.removeBoat(history.back());
+        history.pop_back();
       }
-      dir = (toupper(ch) == 'S') ? Movement::South : Movement::East;
-      str = Input::trim(input.getString(0, ""));
-      if (coord.fromString(str) &&
-          board.contains(coord) &&
-          board.addBoat(boat, coord, dir))
-      {
-        boats.erase(boats.begin());
-        if (boats.empty()) {
-          break;
+      break;
+    case 'S':
+    case 'E':
+      if (boats.size()) {
+        if (!screen.clearToScreenEnd(coord.south()) ||
+            !screen.print("From which coordinate? [example: e5] -> ", true) ||
+            (input.readln(STDIN_FILENO) < 0))
+        {
+          return false;
+        }
+        dir = (toupper(ch) == 'S') ? Movement::South : Movement::East;
+        str = Input::trim(input.getString(0, ""));
+        if (coord.fromString(str) &&
+            board.contains(coord) &&
+            board.addBoat(boats.front(), coord, dir))
+        {
+          history.push_back(boats.front());
+          boats.erase(boats.begin());
         }
       }
+      break;
     }
   }
 
@@ -491,6 +530,8 @@ int main(const int argc, const char* argv[]) {
     CommandArgs::initialize(argc, argv);
     Coordinate promptCoordinate;
     Client client;
+
+    // TODO setup signal handlers
 
     if (!client.init(promptCoordinate) ||
         !client.run(promptCoordinate))

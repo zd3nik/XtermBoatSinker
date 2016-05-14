@@ -69,6 +69,7 @@ public:
   Board& setPlayerName(const std::string& value);
 
   virtual ~Board();
+  void clearBoatArea();
   void incScore(const unsigned value = 1);
   void incTurns(const unsigned value = 1);
   void setStatus(const std::string& str);
@@ -90,6 +91,7 @@ public:
   unsigned getHitCount() const;
   unsigned getMissCount() const;
   unsigned getBoatPoints() const;
+  bool isValid(const Configuration&) const;
   bool isValid() const;
   bool isDead() const;
   bool addRandomBoats(const Configuration&);
