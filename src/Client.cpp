@@ -232,19 +232,22 @@ std::string Client::openSocket() {
 
 //-----------------------------------------------------------------------------
 bool Client::readGameInfo() {
+  Screen& screen = Screen::getInstance();
   if (!isConnected()) {
-    Logger::error() << "Not connected, can't read game info";
+    screen.print("Not connected, can't read game info\n", true);
     return false;
   }
 
   if (input.readln(sock) <= 0) {
-    Logger::error() << "No game info received";
+    screen.print("No game info received\n", true);
     return false;
   }
 
   std::string str = input.getString(0, "");
   if (str != "G") {
-    Logger::error() << PROTOCOL_ERROR;
+    screen.print("Invalid response from server: ", false);
+    screen.print(str, false);
+    screen.print("\n", true);
     return false;
   }
 
@@ -291,24 +294,8 @@ bool Client::readGameInfo() {
     config.setBoardSize((unsigned)width, (unsigned)height);
   }
 
-  if (!config.isValid()) {
-    Logger::error() << "Invalid game config";
-    return false;
-  }
-
-  if (config.getBoatCount() != (unsigned)boatCount) {
-    Logger::error() << "Boat count mismatch in game config";
-    return false;
-  }
-
-  if (config.getPointGoal() != pointGoal) {
-    Logger::error() << "Point goal mismatch in game config";
-    return false;
-  }
-
-  Screen& screen = Screen::getInstance();
   char sbuf[1024];
-  snprintf(sbuf, sizeof(sbuf),
+  snprintf(sbuf, sizeof(sbuf), "\n"
            "Title          : %s\n"
            "Min Players    : %u\n"
            "Max Players    : %u\n"
@@ -336,8 +323,31 @@ bool Client::readGameInfo() {
       return false;
     }
   }
+  if (!screen.print("\n", false)) {
+    return false;
+  }
 
-  if (!screen.print("\nJoin this game? y/n -> ", true)) {
+  if (!config.isValid()) {
+    screen.print("Invalid game config\n", true);
+    return false;
+  }
+
+  if (config.getBoatCount() != (unsigned)boatCount) {
+    screen.print("Boat count mismatch in game config\n", true);
+    return false;
+  }
+
+  if (config.getPointGoal() != pointGoal) {
+    screen.print("Point goal mismatch in game config\n", true);
+    return false;
+  }
+
+  if (playersJoined >= config.getMaxPlayers()) {
+    screen.print("Game is full\n", true);
+    return false;
+  }
+
+  if (!screen.print("Join this game? y/n -> ", true)) {
     return false;
   }
   while (true) {
@@ -656,6 +666,7 @@ bool Client::sendLine(const std::string& msg) {
 
 //-----------------------------------------------------------------------------
 bool Client::run(Coordinate& promptCoord) {
+  input.readln(STDIN_FILENO);
   return false; // TODO
 }
 
