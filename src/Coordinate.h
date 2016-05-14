@@ -111,8 +111,8 @@ public:
 
   std::string toString() const {
     char sbuf[32];
-    if (x <= ('Z' - 'A' + 1)) {
-      snprintf(sbuf, sizeof(sbuf), "%c%u", (char)('A' + x - 1), y);
+    if (x <= ('z' - 'a' + 1)) {
+      snprintf(sbuf, sizeof(sbuf), "%c%u", (char)('a' + x - 1), y);
     } else {
       snprintf(sbuf, sizeof(sbuf), "%u,%u", x, y);
     }
@@ -122,7 +122,7 @@ public:
   bool fromString(const std::string& str) {
     if (str.size()) {
       if (isalpha(str[0]) && isdigit(str[1])) {
-        int newX = (toupper(str[0]) - 'A');
+        int newX = (tolower(str[0]) - 'a');
         int newY = (unsigned)atoi(str.c_str() + 1);
         if ((newX >= 0) && (newY >= 0)) {
           x = (unsigned)(newX + 1);

@@ -643,6 +643,7 @@ bool Server::addPlayerHandle(Game& game) {
     }
 
     input.addHandle(handle, address);
+    getGameInfo(game, handle);
     break;
   }
   return true;
@@ -981,6 +982,7 @@ Configuration Server::getGameConfig() {
 //-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
+    srand((unsigned)time(NULL));
     CommandArgs::initialize(argc, argv);
     Server server;
 

@@ -5,7 +5,6 @@
 #include "Board.h"
 #include "Screen.h"
 #include "Logger.h"
-#include <time.h>
 
 //-----------------------------------------------------------------------------
 Board::Board(const int handle,
@@ -14,7 +13,7 @@ Board::Board(const int handle,
              const unsigned boatAreaWidth,
              const unsigned boatAreaHeight)
   : Container(Coordinate(1, 1),
-              Coordinate((3 + (2 * boatAreaWidth)), (3 + boatAreaHeight))),
+              Coordinate((4 + (2 * boatAreaWidth)), (3 + boatAreaHeight))),
     handle(handle),
     playerName(playerName),
     address(address),
@@ -244,8 +243,7 @@ bool Board::isDead() const {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::addRandomBoards(const Configuration& config) {
-  srand((unsigned)time(NULL));
+bool Board::addRandomBoats(const Configuration& config) {
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     const Boat& boat = config.getBoat(i);
     if (!boat.isValid()) {
@@ -271,13 +269,13 @@ bool Board::print(const PlayerState state, const bool masked) const {
     return false;
   }
 
-  Coordinate coord;
+  Coordinate coord(getTopLeft());
   char row[1024];
   const unsigned ROW_WIDTH = std::min<unsigned>((sizeof(row) - 1), getWidth());
 
   // print player name (row 1)
   snprintf(row, (ROW_WIDTH + 1), " %c %s", (char)state, playerName.c_str());
-  if (!screen.printAt(getTopLeft(), Screen::DefaultColor, row, false)) {
+  if (!screen.printAt(coord, row, false)) {
     return false;
   }
 
@@ -286,15 +284,14 @@ bool Board::print(const PlayerState state, const bool masked) const {
   for (unsigned x = 0; x < boatAreaWidth; ++x) {
     unsigned i = (3 + (2 * x));
     if (i < ROW_WIDTH) {
-      row[i] = ('A' + i);
+      row[i] = ('a' + x);
       if (++i < ROW_WIDTH) {
         row[i] = ' ';
       }
     }
   }
   row[ROW_WIDTH] = 0;
-  coord.set((getMinX() + 3), (getMinY() + 1));
-  if (!screen.printAt(coord, row, false)) {
+  if (!screen.printAt(coord.south(), row, false)) {
     return false;
   }
 
@@ -304,7 +301,7 @@ bool Board::print(const PlayerState state, const bool masked) const {
     for (unsigned x = 0; x < boatAreaWidth; ++x) {
       unsigned i = (3 + (2 * x));
       if (i < ROW_WIDTH) {
-        row[i] = descriptor[x];
+        row[i] = descriptor[x + (y * boatAreaWidth)];
         if (masked) {
           row[i] = Boat::mask(row[i]);
         }
@@ -314,16 +311,14 @@ bool Board::print(const PlayerState state, const bool masked) const {
       }
     }
     row[ROW_WIDTH] = 0;
-    coord.set(getMinX(), (getMinY() + 1 + y));
-    if (!screen.printAt(coord, row, false)) {
+    if (!screen.printAt(coord.south(), row, false)) {
       return false;
     }
   }
 
   // print status line below boat area (final row)
   snprintf(row, (ROW_WIDTH + 1), "   %s", status.c_str());
-  coord.set(getMinX(), getMaxY());
-  return screen.printAt(coord, row, true);
+  return screen.printAt(coord.south(), row, true);
 }
 
 //-----------------------------------------------------------------------------
@@ -353,7 +348,7 @@ bool Board::removeBoat(const Boat& boat) {
 bool Board::addBoat(const Boat& boat, Coordinate coord,
                     const Movement::Direction direction)
 {
-  if (boat.isValid() || !coord.isValid() || !isValid()) {
+  if (!boat.isValid() || !coord.isValid() || !isValid()) {
     return false;
   }
 
@@ -362,11 +357,21 @@ bool Board::addBoat(const Boat& boat, Coordinate coord,
 
   for (unsigned count = boat.getLength(); count > 0; --count) {
     if (boatArea.contains(coord)) {
-      boatIndex.push_back(getBoatIndex(coord));
+      unsigned idx = getBoatIndex(coord);
+      if (idx >= descriptorLength) {
+        Logger::error() << "boat offset exceeds descriptor length";
+        return false;
+      } else if (descriptor[idx] == Boat::NONE) {
+        boatIndex.push_back(getBoatIndex(coord));
+      } else {
+        return false;
+      }
     } else {
       return false;
     }
-    boatArea.moveCoordinate(coord, direction, 1);
+    if (!boatArea.moveCoordinate(coord, direction, 1)) {
+      coord.set(0, 0); // invalidate it
+    }
   }
 
   if (boatIndex.size() != boat.getLength()) {
@@ -375,12 +380,7 @@ bool Board::addBoat(const Boat& boat, Coordinate coord,
   }
 
   for (unsigned i = 0; i < boatIndex.size(); ++i) {
-    unsigned offset = boatIndex[i];
-    if (offset >= descriptorLength) {
-      Logger::error() << "boat offset exceeds descriptor length";
-      return false;
-    }
-    descriptor[offset] = boat.getID();
+    descriptor[boatIndex[i]] = boat.getID();
   }
   return true;
 }

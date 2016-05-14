@@ -16,21 +16,21 @@
 // that shows the player name, boat area, coordinate names around the
 // boat area, and one blank line bellow the boat area.
 //
-//     +----------------------+
-//     |   PlayerName         | <- outer rectangle is Board container
-//     |   A B C D E F G H I J|    topLeft is absolute screen position
-//     | 1 +-----------------+|    used for printing to screen
-//     | 2 |                 ||
-//     | 3 |                 ||
-//     | 4 |                 ||
-//     | 5 | Inner Rectangle ||
-//     | 6 |  is Boat Area   || <- inner rectangle is the boat area
-//     | 7 |                 ||    topLeft is always (1,1)
-//     | 8 |                 ||    used for aiming not for printing
-//     | 9 |                 ||
-//     |10 +-----------------+|
-//     |   status line        |
-//     +----------------------+
+//     +-----------------------+
+//     |   PlayerName          | <- outer rectangle is Board container
+//     |   A B C D E F G H I J |    topLeft is absolute screen position
+//     | 1 +-----------------+ |    used for printing to screen
+//     | 2 |                 | |
+//     | 3 |                 | |
+//     | 4 |                 | |
+//     | 5 | Inner Rectangle | |
+//     | 6 |  is Boat Area   | | <- inner rectangle is the boat area
+//     | 7 |                 | |    topLeft is always (1,1)
+//     | 8 |                 | |    used for aiming not for printing
+//     | 9 |                 | |
+//     |10 +-----------------+ |
+//     |   status line         |
+//     +-----------------------+
 //
 // A boat descriptor is used to transfer a the boat area across the network.
 // It is a single-line string containing the flattened boat area.
@@ -90,7 +90,7 @@ public:
   unsigned getBoatPoints() const;
   bool isValid() const;
   bool isDead() const;
-  bool addRandomBoards(const Configuration&);
+  bool addRandomBoats(const Configuration&);
   bool print(const PlayerState playerState, const bool masked = true) const;
   bool updateBoatArea(const std::string& newDescriptor);
   bool removeBoat(const Boat& boat);

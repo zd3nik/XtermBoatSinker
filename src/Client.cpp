@@ -87,11 +87,23 @@ bool Client::init() {
           !screen.print(err, false) ||
           !screen.print("\n\n", true))
       {
+        closeSocket();
         return false;
       }
     } else {
-      if (!readGameInfo() || !setupBoard()) {
+      if (!readGameInfo()) {
+        closeSocket();
         return false;
+      }
+      if (!setupBoard()) {
+        closeSocket();
+        if (!screen.clearAll() ||
+            !screen.printAt(Coordinate(1, 1),
+                            "Unable to fit boards to screen\n", true))
+        {
+          return false;
+        }
+        continue;
       }
 
       while (getUserName()) {
@@ -103,6 +115,8 @@ bool Client::init() {
       break;
     }
   }
+
+  closeSocket();
   return false;
 }
 
@@ -318,19 +332,24 @@ bool Client::setupBoard() {
     return false;
   }
 
-  std::vector<Board> boards;
   std::vector<Container*> children;
+  std::vector<Board> boards;
+  boards.reserve(6);
+
+  char sbuf[32];
   for (unsigned i = 0; i < 6; ++i) {
-    boards.push_back(Board(-1, userName, "local",
+    snprintf(sbuf, sizeof(sbuf), "Board #%u", (i + 1));
+    boards.push_back(Board(-1, sbuf, "local",
                            config.getBoardSize().getWidth(),
                            config.getBoardSize().getHeight()));
 
     Board& board = boards.back();
     if (i > 0) {
-      board.addRandomBoards(config);
+      board.addRandomBoats(config);
     }
 
-    children.push_back(&board);
+    Container* container = &board;
+    children.push_back(container);
   }
 
   if (!screen.arrangeChildren(children)) {
@@ -369,6 +388,7 @@ bool Client::joinGame() {
 //-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
+    srand((unsigned)time(NULL));
     CommandArgs::initialize(argc, argv);
     Client client;
 
