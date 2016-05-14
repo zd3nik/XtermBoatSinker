@@ -120,41 +120,25 @@ bool Configuration::isValid() const {
 }
 
 //-----------------------------------------------------------------------------
-bool Configuration::print(Coordinate& coord, const bool flush) const {
-  Screen& screen = Screen::getInstance();
-  char str[1024];
+void Configuration::print(Coordinate& coord) const {
+  unsigned w = boardSize.getWidth();
+  unsigned h = boardSize.getHeight();
+  Screen::print() << coord         << "Title       : " << name;
+  Screen::print() << coord.south() << "Min Players : " << minPlayers;
+  Screen::print() << coord.south() << "Max Players : " << maxPlayers;
+  Screen::print() << coord.south() << "Board Size  : " << w << " x " << h;
+  Screen::print() << coord.south() << "Point Goal  : " << pointGoal;
+  Screen::print() << coord.south() << "Boat Count  : " << boats.size();
 
-  snprintf(str, sizeof(str), "Config Name: %s", name.c_str());
-  if (!screen.printAt(coord, str, false)) {
-    return false;
-  }
-
-  snprintf(str, sizeof(str), "Board Size: %u x %u", boardSize.getWidth(),
-           boardSize.getHeight());
-  if (!screen.printAt(coord.south(), str, false)) {
-    return false;
-  }
+  coord.south().setX(3);
 
   for (unsigned i = 0; i < boats.size(); ++i) {
-    snprintf(str, sizeof(str), "Boat %c Size: %u", boats[i].getID(),
-             boats[i].getLength());
-    if (!screen.printAt(coord.south(), str, false)) {
-      return false;
-    }
+    const Boat& boat = boats[i];
+    Screen::print() << coord.south() << "  " << boat.getID()
+                    << ": length " << boat.getLength();
   }
 
-  snprintf(str, sizeof(str), "Min Players: %u", minPlayers);
-  if (!screen.printAt(coord.south(), str, false)) {
-    return false;
-  }
-
-  snprintf(str, sizeof(str), "Max Players: %u", maxPlayers);
-  if (!screen.printAt(coord.south(), str, false)) {
-    return false;
-  }
-
-  snprintf(str, sizeof(str), "Point Goal: %u", pointGoal);
-  return screen.printAt(coord.south(), str, flush);
+  Screen::print() << coord.south().setX(1);
 }
 
 //-----------------------------------------------------------------------------

@@ -33,9 +33,9 @@ public:
   Configuration& addBoat(const Boat& boat);
 
   void clear();
-  bool isValid() const ;
-  bool print(Coordinate& coord, const bool flush) const;
+  void print(Coordinate& coord) const;
   bool isValidBoatDescriptor(const std::string& descriptor) const;
+  bool isValid() const ;
 
   std::string getName() const {
     return name;

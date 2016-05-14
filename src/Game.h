@@ -17,10 +17,10 @@ class Game : public DBObject
 {
 public:
   Game();
-  Game& setTitle(const std::string& title);
-  Game& setConfiguration(const Configuration& configuration);
+  Game(const Configuration&);
+  Game& setConfiguration(const Configuration&);
   Game& clearBoards();
-  Game& addBoard(const Board& board);
+  Game& addBoard(const Board&);
   bool isValid() const;
   bool isFinished() const;
   bool fitBoardsToScreen();
@@ -34,12 +34,8 @@ public:
   Board* getFirstBoardForAddress(const std::string& address);
   Board* getBoardToMove();
 
-  std::string getTitle() const {
-    return title;
-  }
-
   const Configuration& getConfiguration() const {
-    return configuration;
+    return config;
   }
 
   unsigned getBoardCount() const {
@@ -69,8 +65,7 @@ public:
 private:
   bool randomizeBoardOrder();
 
-  Configuration configuration;
-  std::string title;
+  Configuration config;
   std::vector<Board> boards;
   bool started;
   bool aborted;

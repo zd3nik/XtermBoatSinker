@@ -2,27 +2,41 @@
 // Screen.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include "Screen.h"
 #include <sys/ioctl.h>
+#include <errno.h>
+#include <stdio.h>
+#include <iostream>
+#include <stdexcept>
+#include "Screen.h"
+#include "Logger.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
 static Screen* instance = NULL;
-static const char* CSI = "\033[";
 
 //-----------------------------------------------------------------------------
 static Container GetScreenDimensions() {
+  char sbuf[128];
   struct winsize max;
-  ioctl(0, TIOCGWINSZ , &max);
+  if (ioctl(0, TIOCGWINSZ , &max) < 0) {
+    snprintf(sbuf, sizeof(sbuf), "Failed to get screen dimensions: %s",
+             strerror(errno));
+    throw std::runtime_error(sbuf);
+  }
   Coordinate topLeft(1, 1);
   Coordinate bottomRight((unsigned)max.ws_col, (unsigned)max.ws_row);
+  if (!bottomRight.isValid()) {
+    snprintf(sbuf, sizeof(sbuf), "Invalid screen dimensions: %u x %u",
+             bottomRight.getX(), bottomRight.getY());
+    throw std::runtime_error(sbuf);
+  }
   return Container(topLeft, bottomRight);
 }
 
 //-----------------------------------------------------------------------------
-Screen& Screen::getInstance(const bool update) {
+Screen& Screen::get(const bool update) {
   if (update) {
     delete instance;
     instance = NULL;
@@ -34,131 +48,119 @@ Screen& Screen::getInstance(const bool update) {
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::moveCursor(const unsigned x, const unsigned y, const bool flush)
-const {
-  return (contains(x, y) &&
-          (fprintf(stdout, "%s%u;%uH", CSI, y, x) > 0) &&
-          (!flush || (fflush(stdout) == 0)));
+Screen::operator bool() const {
+  return (instance != NULL);
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::moveCursor(const Coordinate& coord, const bool flush) const {
-  return moveCursor(coord.getX(), coord.getY(), flush);
+Screen& Screen::clear() {
+  return str("\033[2J");
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::setColor(const Color color, const bool flush) const {
-  bool ok = false;
+Screen& Screen::clearLine() {
+  return str("\033[2K");
+}
+
+//-----------------------------------------------------------------------------
+Screen& Screen::clearToLineBegin() {
+  return str("\033[1K");
+}
+
+//-----------------------------------------------------------------------------
+Screen& Screen::clearToLineEnd() {
+  return str("\033[0K");
+}
+
+//-----------------------------------------------------------------------------
+Screen& Screen::clearToScreenBegin() {
+  return str("\033[1J");
+}
+
+//-----------------------------------------------------------------------------
+Screen& Screen::clearToScreenEnd() {
+  return str("\033[0J");
+}
+
+//-----------------------------------------------------------------------------
+Screen& Screen::color(const ScreenColor color) {
   switch (color) {
-  case DefaultColor:
-    ok = (fprintf(stdout, "%s0;0m") > 0);
-    break;
-  case Red:
-    ok = (fprintf(stdout, "%s0;31m") > 0);
-    break;
-  case Green:
-    ok = (fprintf(stdout, "%s0;32m") > 0);
-    break;
-  case Yellow:
-    ok = (fprintf(stdout, "%s0;33m") > 0);
-    break;
-  case Blue:
-    ok = (fprintf(stdout, "%s0;34m") > 0);
-    break;
-  case Magenta:
-    ok = (fprintf(stdout, "%s0;35m") > 0);
-    break;
-  case Cyan:
-    ok = (fprintf(stdout, "%s0;36m") > 0);
-    break;
-  case White:
-    ok = (fprintf(stdout, "%s0;37m") > 0);
+  case Red:     return str("\033[0;31m");
+  case Green:   return str("\033[0;32m");
+  case Yellow:  return str("\033[0;33m");
+  case Blue:    return str("\033[0;34m");
+  case Magenta: return str("\033[0;35m");
+  case Cyan:    return str("\033[0;36m");
+  case White:   return str("\033[0;37m");
+  default:
     break;
   }
-  return (ok && (!flush || fflush(stdout) == 0));
+  return str("\033[0;0m");
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::print(const std::string& str, const bool flush) const {
-  return ((str.empty() || (fprintf(stdout, "%s", str.c_str()) > 0)) &&
-          (!flush || (fflush(stdout) == 0)));
+Screen& Screen::cursor(const Coordinate& coord) {
+  return cursor(coord.getX(), coord.getY());
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::clearToLineBegin(const Coordinate& coord) const {
-  if (coord && !moveCursor(coord, false)) {
-    return false;
+Screen& Screen::cursor(const unsigned x, const unsigned y) {
+  char sbuf[32];
+  if (!contains(x, y)) {
+    Logger::error() << "invalid screen coordinates: " << x << ',' << y;
+    return (*this);
   }
-  char sbuf[32];
-  snprintf(sbuf, sizeof(sbuf), "%s1K", CSI);
-  return print(sbuf, true);
+  snprintf(sbuf, sizeof(sbuf), "\033[%u;%uH", y, x);
+  return str(sbuf);
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::clearToLineEnd(const Coordinate& coord) const {
-  if (coord && !moveCursor(coord, false)) {
-    return false;
+Screen& Screen::flag(const ScreenFlag flag) {
+  switch (flag) {
+  case EL:                 return ch('\n');
+  case Flush:              return flush();
+  case Clear:              return clear();
+  case ClearLine:          return clearLine();
+  case ClearToLineBegin:   return clearToLineBegin();
+  case ClearToLineEnd:     return clearToLineEnd();
+  case ClearToScreenBegin: return clearToScreenBegin();
+  case ClearToScreenEnd:   return clearToScreenEnd();
+  default:
+    break;
   }
-  char sbuf[32];
-  snprintf(sbuf, sizeof(sbuf), "%s0K", CSI);
-  return print(sbuf, true);
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::clearLine(const Coordinate& coord) const {
-  if (coord && !moveCursor(coord, false)) {
-    return false;
+Screen& Screen::flush() {
+  char sbuf[128];
+  if (fflush(stdout)) {
+    snprintf(sbuf, sizeof(sbuf), "Screen flush failed: %s", strerror(errno));
+    throw std::runtime_error(sbuf);
   }
-  char sbuf[32];
-  snprintf(sbuf, sizeof(sbuf), "%s2K", CSI);
-  return print(sbuf, true);
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::clearToScreenBegin(const Coordinate& coord) const {
-  if (coord && !moveCursor(coord, false)) {
-    return false;
+Screen& Screen::str(const char* x) {
+  char sbuf[128];
+  if (x && *x && (fprintf(stdout, "%s", x) <= 0)) {
+    snprintf(sbuf, sizeof(sbuf), "Failed to print to screen: %s",
+             strerror(errno));
+    throw std::runtime_error(sbuf);
   }
-  char sbuf[32];
-  snprintf(sbuf, sizeof(sbuf), "%s1J", CSI);
-  return print(sbuf, true);
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
-bool Screen::clearToScreenEnd(const Coordinate& coord) const {
-  if (coord && !moveCursor(coord, false)) {
-    return false;
+Screen& Screen::ch(const char x) {
+  char sbuf[128];
+  if (x && (fputc(x, stdout) != x)) {
+    snprintf(sbuf, sizeof(sbuf), "Failed to print to screen: %s",
+             strerror(errno));
+    throw std::runtime_error(sbuf);
   }
-  char sbuf[32];
-  snprintf(sbuf, sizeof(sbuf), "%s0J", CSI);
-  return print(sbuf, true);
-}
-
-//-----------------------------------------------------------------------------
-bool Screen::clearAll() const {
-  char sbuf[32];
-  snprintf(sbuf, sizeof(sbuf), "%s2J", CSI);
-  return print(sbuf, true);
-}
-
-//-----------------------------------------------------------------------------
-bool Screen::printAt(const Coordinate& coord,
-                     const std::string& str,
-                     const bool flush) const
-{
-  return (moveCursor(coord, false) &&
-          print(str, flush));
-}
-
-//-----------------------------------------------------------------------------
-bool Screen::printAt(const Coordinate& coord,
-                     const Color color,
-                     const std::string& str,
-                     const bool flush) const
-{
-  return (moveCursor(coord, false) &&
-          setColor(color, false) &&
-          print(str, flush));
+  return (*this);
 }
 
 } // namespace xbs

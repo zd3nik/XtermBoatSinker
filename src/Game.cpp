@@ -18,14 +18,17 @@ Game::Game()
 { }
 
 //-----------------------------------------------------------------------------
-Game& Game::setTitle(const std::string& title) {
-  this->title = title;
-  return (*this);
-}
+Game::Game(const Configuration& config)
+  : config(config),
+    started(false),
+    aborted(false),
+    boardToMove(0),
+    turnCount(0)
+{ }
 
 //-----------------------------------------------------------------------------
-Game& Game::setConfiguration(const Configuration& configuration) {
-  this->configuration = configuration;
+Game& Game::setConfiguration(const Configuration& config) {
+  this->config = config;
   return (*this);
 }
 
@@ -43,9 +46,9 @@ Game& Game::addBoard(const Board& board) {
 
 //-----------------------------------------------------------------------------
 bool Game::isValid() const {
-  return (title.size() && configuration.isValid() &&
-          (boards.size() >= configuration.getMinPlayers()) &&
-          (boards.size() <= configuration.getMaxPlayers()));
+  return (config.isValid() &&
+          (boards.size() >= config.getMinPlayers()) &&
+          (boards.size() <= config.getMaxPlayers()));
 }
 
 //-----------------------------------------------------------------------------
@@ -67,7 +70,7 @@ bool Game::isFinished() const {
       }
     }
     return ((dead >= (boards.size() - 1)) ||
-            ((maxScore >= configuration.getPointGoal()) &&
+            ((maxScore >= config.getPointGoal()) &&
              (minTurns == maxTurns)));
   }
   return false;
@@ -96,7 +99,7 @@ bool Game::start(const bool randomize) {
     return false;
   }
 
-  Logger::info() << "starting game '" << title << "'";
+  Logger::info() << "starting game '" << config.getName() << "'";
   started = true;
   aborted = false;
   boardToMove = 0;
@@ -125,7 +128,7 @@ bool Game::fitBoardsToScreen() {
     children.push_back(&board);
   }
 
-  return Screen::getInstance(true).arrangeChildren(children);
+  return Screen::get(true).arrangeChildren(children);
 }
 
 //-----------------------------------------------------------------------------

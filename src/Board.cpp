@@ -331,61 +331,36 @@ bool Board::addRandomBoats(const Configuration& config) {
 
 //-----------------------------------------------------------------------------
 bool Board::print(const PlayerState state, const bool masked) const {
-  Screen& screen = Screen::getInstance();
-  if (!screen.contains(*this)) {
-    return false;
-  }
-
   Coordinate coord(getTopLeft());
-  char row[1024];
-  const unsigned ROW_WIDTH = std::min<unsigned>((sizeof(row) - 1), getWidth());
+  char sbuf[32];
 
   // print player name (row 1)
-  snprintf(row, (ROW_WIDTH + 1), " %c %s", (char)state, playerName.c_str());
-  if (!screen.printAt(coord, row, false)) {
-    return false;
-  }
+  Screen::print() << coord << ' ' << (char)state << ' ' << playerName << EL;
 
   // print X coordinate header (row 2)
-  memset(row, ' ', 3);
+  Screen::print() << coord.south() << "  ";
   for (unsigned x = 0; x < boatAreaWidth; ++x) {
-    unsigned i = (3 + (2 * x));
-    if (i < ROW_WIDTH) {
-      row[i] = ('a' + x);
-      if (++i < ROW_WIDTH) {
-        row[i] = ' ';
-      }
-    }
+    Screen::print() << ' ' << (char)('a' + x);
   }
-  row[ROW_WIDTH] = 0;
-  if (!screen.printAt(coord.south(), row, false)) {
-    return false;
-  }
+  Screen::print() << EL;
 
   // print boat area one row at a time
   for (unsigned y = 0; y < boatAreaHeight; ++y) {
-    snprintf(row, sizeof(row), "% 2u ", (y + 1));
+    snprintf(sbuf, sizeof(sbuf), "% 2u", (y + 1));
+    Screen::print() << coord.south() << sbuf;
     for (unsigned x = 0; x < boatAreaWidth; ++x) {
-      unsigned i = (3 + (2 * x));
-      if (i < ROW_WIDTH) {
-        row[i] = descriptor[x + (y * boatAreaWidth)];
-        if (masked) {
-          row[i] = Boat::mask(row[i]);
-        }
-        if (++i < ROW_WIDTH) {
-          row[i] = ' ';
-        }
+      char ch = descriptor[x + (y * boatAreaWidth)];
+      if (masked) {
+        Screen::print() << ' ' << Boat::mask(ch);
+      } else {
+        Screen::print() << ' ' << ch;
       }
     }
-    row[ROW_WIDTH] = 0;
-    if (!screen.printAt(coord.south(), row, false)) {
-      return false;
-    }
+    Screen::print() << EL;
   }
 
   // print status line below boat area (final row)
-  snprintf(row, (ROW_WIDTH + 1), "   %s", status.c_str());
-  return screen.printAt(coord.south(), row, true);
+  return Screen::print() << coord.south() << "   " << status;
 }
 
 //-----------------------------------------------------------------------------
