@@ -12,6 +12,9 @@
 #include "Screen.h"
 #include "Server.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 const char* Client::VERSION = "1.0";
 const std::string PROTOCOL_ERROR = "protocol error";
@@ -670,13 +673,15 @@ bool Client::run(Coordinate& promptCoord) {
   return false; // TODO
 }
 
+} // namespace xbs
+
 //-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
     srand((unsigned)time(NULL));
-    CommandArgs::initialize(argc, argv);
-    Coordinate promptCoordinate;
-    Client client;
+    xbs::CommandArgs::initialize(argc, argv);
+    xbs::Coordinate promptCoordinate;
+    xbs::Client client;
 
     // TODO setup signal handlers
 
@@ -689,10 +694,10 @@ int main(const int argc, const char* argv[]) {
     return 0;
   }
   catch (const std::exception& e) {
-    Logger::error() << e.what();
+    xbs::Logger::error() << e.what();
   }
   catch (...) {
-    Logger::error() << "Unhandles exception";
+    xbs::Logger::error() << "Unhandles exception";
   }
   return 1;
 }

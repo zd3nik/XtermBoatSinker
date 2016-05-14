@@ -9,6 +9,9 @@
 #include "Coordinate.h"
 #include "Movement.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Container
 {
@@ -108,5 +111,7 @@ private:
   Coordinate begin;
   Coordinate end;
 };
+
+} // namespace xbs
 
 #endif // CONTAINER_H

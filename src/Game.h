@@ -9,6 +9,9 @@
 #include "Configuration.h"
 #include "DBObject.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Game : public DBObject
 {
@@ -74,5 +77,7 @@ private:
   unsigned boardToMove;
   unsigned turnCount;
 };
+
+} // namespace xbs
 
 #endif // GAME_H

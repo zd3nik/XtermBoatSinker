@@ -8,6 +8,9 @@
 #include <ctype.h>
 #include <string.h>
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class CommandArgs {
 public:
@@ -30,5 +33,7 @@ private:
   const int argc;
   const char** argv;
 };
+
+} // namespace xbs
 
 #endif // COMMANDARGS_H

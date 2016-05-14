@@ -5,6 +5,9 @@
 #include "Logger.h"
 #include "CommandArgs.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 static Logger* instance = NULL;
 
@@ -93,3 +96,5 @@ Logger& Logger::setLogLevel(const std::string& level) {
   }
   return (*this);
 }
+
+} // namespace xbs

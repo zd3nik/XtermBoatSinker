@@ -5,6 +5,9 @@
 #include "Configuration.h"
 #include "Screen.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 Configuration Configuration::getDefaultConfiguration() {
   return Configuration()
@@ -237,3 +240,5 @@ bool Configuration::isValidBoatDescriptor(const std::string& descriptor) const {
 
   return boatMap.empty();
 }
+
+} // namespace xbs

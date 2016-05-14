@@ -9,6 +9,9 @@
 #include "Board.h"
 #include "Configuration.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Client
 {
@@ -51,5 +54,7 @@ private:
   unsigned playersJoined;
   unsigned pointGoal;
 };
+
+} // namespace xbs
 
 #endif // CLIENT_H

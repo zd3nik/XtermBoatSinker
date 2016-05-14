@@ -4,6 +4,9 @@
 //-----------------------------------------------------------------------------
 #include "Container.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 bool Container::arrangeChildren(std::vector<Container*>& children) const {
   Coordinate topLeft(begin);
@@ -80,3 +83,4 @@ bool Container::moveCoordinate(Coordinate& coord,
   return false;
 }
 
+} // namespace xbs

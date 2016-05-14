@@ -6,6 +6,9 @@
 #include "Logger.h"
 #include "Input.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 static CommandArgs* instance = NULL;
 
@@ -90,3 +93,5 @@ const {
   }
   return NULL;
 }
+
+} // namespace xbs

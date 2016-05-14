@@ -9,6 +9,9 @@
 #include "Input.h"
 #include "Logger.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 bool Input::empty(const char* str, const bool checkWhitespace) {
   if (!str || !(*str)) {
@@ -324,3 +327,5 @@ int Input::bufferData(const int fd) {
   }
   return len;
 }
+
+} // namespace xbs

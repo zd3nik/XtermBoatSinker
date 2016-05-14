@@ -8,6 +8,9 @@
 #include <ostream>
 #include "Mutex.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class LogStream
 {
@@ -47,5 +50,7 @@ private:
   Mutex::Lock* mutexLock;
   std::ostream* stream;
 };
+
+} // namespace xbs
 
 #endif // LOGSTREAM_H

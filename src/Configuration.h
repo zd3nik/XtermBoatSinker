@@ -12,6 +12,9 @@
 #include "Boat.h"
 #include "DBObject.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Configuration : public DBObject
 {
@@ -74,5 +77,7 @@ private:
   Container boardSize;
   std::vector<Boat> boats;
 };
+
+} // namespace xbs
 
 #endif // CONFIGURATION_H

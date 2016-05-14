@@ -8,6 +8,9 @@
 #include <string>
 #include "Container.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Screen : public Container {
 public:
@@ -49,5 +52,7 @@ private:
     : Container(container)
   { }
 };
+
+} // namespace xbs
 
 #endif // SCREEN_H

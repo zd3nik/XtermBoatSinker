@@ -6,6 +6,9 @@
 #include "Screen.h"
 #include "Logger.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 Board::Board()
   : handle(-1),
@@ -483,3 +486,5 @@ bool Board::shootAt(const Coordinate& coord, char& previous) {
 unsigned Board::getBoatIndex(const Coordinate& coord) const {
   return (coord.getX() - 1 + (boatAreaWidth * (coord.getY() - 1)));
 }
+
+} // namespace xbs

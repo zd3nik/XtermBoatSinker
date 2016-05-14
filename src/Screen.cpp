@@ -5,6 +5,9 @@
 #include "Screen.h"
 #include <sys/ioctl.h>
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 static Screen* instance = NULL;
 static const char* CSI = "\033[";
@@ -157,3 +160,5 @@ bool Screen::printAt(const Coordinate& coord,
           setColor(color, false) &&
           print(str, flush));
 }
+
+} // namespace xbs

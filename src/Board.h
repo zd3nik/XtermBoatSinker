@@ -11,6 +11,9 @@
 #include "Configuration.h"
 #include "DBObject.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 // The Board class is a Container which represents a printable rectangle
 // that shows the player name, boat area, coordinate names around the
@@ -125,5 +128,7 @@ private:
   unsigned descriptorLength;
   char* descriptor;
 };
+
+} // namespace xbs
 
 #endif // BOARD_H

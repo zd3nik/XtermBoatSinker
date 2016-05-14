@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <string>
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Coordinate
 {
@@ -151,5 +154,7 @@ private:
   unsigned x;
   unsigned y;
 };
+
+} // namespace xbs
 
 #endif // COORDINATE_H

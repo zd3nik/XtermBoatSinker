@@ -4,6 +4,9 @@
 //-----------------------------------------------------------------------------
 #include "Mutex.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 Mutex::Mutex() {
   pthread_mutex_init(&mutex, NULL);
@@ -23,3 +26,5 @@ void Mutex::lock() {
 void Mutex::unlock() {
   pthread_mutex_unlock(&mutex);
 }
+
+} // namespace xbs

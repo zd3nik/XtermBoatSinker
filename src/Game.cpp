@@ -6,6 +6,9 @@
 #include "Screen.h"
 #include "Logger.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 Game::Game()
   : started(false),
@@ -211,3 +214,5 @@ Board* Game::getBoardToMove() {
   }
   return NULL;
 }
+
+} // namespace xbs

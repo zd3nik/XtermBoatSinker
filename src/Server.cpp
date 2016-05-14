@@ -11,6 +11,9 @@
 #include "Logger.h"
 #include "Screen.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 const char* Server::VERSION = "1.0";
 const char* Server::ANY_ADDRESS = "0.0.0.0";
@@ -984,12 +987,14 @@ Configuration Server::getGameConfig() {
   return Configuration::getDefaultConfiguration();
 }
 
+} // namespace xbs
+
 //-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
     srand((unsigned)time(NULL));
-    CommandArgs::initialize(argc, argv);
-    Server server;
+    xbs::CommandArgs::initialize(argc, argv);
+    xbs::Server server;
 
     // TODO setup signal handlers
 
@@ -999,20 +1004,20 @@ int main(const int argc, const char* argv[]) {
 
     while (server.run()) {
       // TODO save game
-      if (CommandArgs::getInstance().indexOf("-r", "--repeat") < 0) {
+      if (xbs::CommandArgs::getInstance().indexOf("-r", "--repeat") < 0) {
         break;
       }
     }
 
-    Screen::getInstance(true).clearToScreenEnd();
-    Screen::getInstance().print("\n\n", true);
+    xbs::Screen::getInstance(true).clearToScreenEnd();
+    xbs::Screen::getInstance().print("\n\n", true);
     return 0;
   }
   catch (const std::exception& e) {
-    Logger::error() << e.what();
+    xbs::Logger::error() << e.what();
   }
   catch (...) {
-    Logger::error() << "unhandled exception";
+    xbs::Logger::error() << "unhandled exception";
   }
   return 1;
 }

@@ -7,6 +7,9 @@
 
 #include <pthread.h>
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Mutex
 {
@@ -39,5 +42,7 @@ private:
 
   pthread_mutex_t mutex;
 };
+
+} // namespace xbs
 
 #endif // MUTEX_H

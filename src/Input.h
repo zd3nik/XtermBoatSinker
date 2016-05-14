@@ -12,6 +12,9 @@
 #include <map>
 #include <set>
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Input
 {
@@ -106,5 +109,7 @@ private:
   std::vector<const char*> fields;
   struct termios savedTermIOs;
 };
+
+} // namespace xbs
 
 #endif // INPUT_H

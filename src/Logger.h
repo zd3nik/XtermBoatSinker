@@ -10,6 +10,9 @@
 #include "LogStream.h"
 #include "Mutex.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Logger
 {
@@ -71,5 +74,7 @@ private:
   std::ostream* stream;
   std::ofstream fileStream;
 };
+
+} // namespace xbs
 
 #endif // LOGGER_H

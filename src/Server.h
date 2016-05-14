@@ -12,6 +12,9 @@
 #include "Input.h"
 #include "Game.h"
 
+namespace xbs
+{
+
 //-----------------------------------------------------------------------------
 class Server {
 public:
@@ -78,5 +81,7 @@ private:
   int sock;
   struct sockaddr_in addr;
 };
+
+} // namespace xbs
 
 #endif // SERVER_H
