@@ -7,6 +7,7 @@
 
 #include <ostream>
 #include "Mutex.h"
+#include "Screen.h"
 
 namespace xbs
 {
@@ -17,22 +18,31 @@ class LogStream
 public:
   LogStream()
     : mutexLock(NULL),
-      stream(NULL)
+      stream(NULL),
+      print(false)
   { }
 
-  LogStream(Mutex& mutex, std::ostream& stream, const char* hdr)
+  LogStream(Mutex& mutex, std::ostream& stream, const char* hdr,
+            const bool print = false)
     : mutexLock(new Mutex::Lock(mutex)),
-      stream(&stream)
+      stream(&stream),
+      print(print && ((&stream) != (&std::cout)))
   {
     if (hdr) {
       stream << hdr;
+      if (print) {
+        Screen::print() << EL << Red;
+      }
     }
   }
 
-  virtual ~LogStream() {
+  virtual ~LogStream()  {
     if (stream) {
       (*stream) << std::endl;
       stream->flush();
+    }
+    if (print) {
+      Screen::print() << DefaultColor << EL << Flush;
     }
     delete mutexLock;
     mutexLock = NULL;
@@ -43,12 +53,16 @@ public:
     if (stream) {
       (*stream) << x;
     }
+    if (print) {
+      Screen::print() << x;
+    }
     return (*this);
   }
 
 private:
   Mutex::Lock* mutexLock;
   std::ostream* stream;
+  const bool print;
 };
 
 } // namespace xbs

@@ -12,6 +12,7 @@ namespace xbs
 //-----------------------------------------------------------------------------
 Board::Board()
   : handle(-1),
+    state(DISCONNECTED),
     score(0),
     turns(0),
     boatAreaWidth(0),
@@ -29,6 +30,7 @@ Board::Board(const int handle,
   : Container(Coordinate(1, 1),
               Coordinate((4 + (2 * boatAreaWidth)), (3 + boatAreaHeight))),
     handle(handle),
+    state((handle < 0) ? DISCONNECTED : NORMAL),
     playerName(playerName),
     address(address),
     score(0),
@@ -45,6 +47,7 @@ Board::Board(const int handle,
 Board::Board(const Board& other)
   : Container(other.getTopLeft(), other.getBottomRight()),
     handle(other.handle),
+    state(other.state),
     playerName(other.playerName),
     address(other.address),
     status(other.status),
@@ -67,6 +70,7 @@ Board::Board(const Board& other)
 Board& Board::operator=(const Board& other) {
   set(other.getTopLeft(), other.getBottomRight());
   handle = other.handle;
+  state = other.state;
   playerName = other.playerName;
   address = other.address;
   status = other.status;
@@ -98,6 +102,16 @@ Board& Board::setPlayerName(const std::string& str) {
 Board::~Board() {
   delete[] descriptor;
   descriptor = NULL;
+}
+
+//-----------------------------------------------------------------------------
+void Board::setHandle(const int handle) {
+  this->handle = handle;
+  if (handle < 0) {
+    state = DISCONNECTED;
+  } else if (state == DISCONNECTED) {
+    state = NORMAL;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -169,7 +183,7 @@ std::string Board::toString(const unsigned number,
                             const bool gameStarted) const
 {
   char str[1024];
-  char state = (handle < 0) ? DISCONNECTED : toMove ? TO_MOVE : NONE;
+  char state = (handle < 0) ? DISCONNECTED : toMove ? TO_MOVE : NORMAL;
   snprintf(str, sizeof(str), "%u: %c %s", number, state, playerName.c_str());
 
   unsigned len = strlen(str);
@@ -194,6 +208,16 @@ std::string Board::getMaskedDescriptor() const {
     desc[i] = Boat::mask(desc[i]);
   }
   return desc;
+}
+
+//-----------------------------------------------------------------------------
+int Board::getHandle() const {
+  return handle;
+}
+
+//-----------------------------------------------------------------------------
+Board::PlayerState Board::getState() const {
+  return state;
 }
 
 //-----------------------------------------------------------------------------
@@ -330,7 +354,7 @@ bool Board::addRandomBoats(const Configuration& config) {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::print(const PlayerState state, const bool masked) const {
+bool Board::print(const bool masked) const {
   Coordinate coord(getTopLeft());
   char sbuf[32];
 
@@ -361,6 +385,18 @@ bool Board::print(const PlayerState state, const bool masked) const {
 
   // print status line below boat area (final row)
   return Screen::print() << coord.south() << "   " << status;
+}
+
+//-----------------------------------------------------------------------------
+bool Board::updateState(const PlayerState state) {
+  switch (state) {
+  case NORMAL:
+  case DISCONNECTED:
+  case TO_MOVE:
+    this->state = state;
+    return true;
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------

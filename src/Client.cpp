@@ -70,7 +70,6 @@ void Client::closeSocketHandle() {
     sock = -1;
   }
 }
-
 //-----------------------------------------------------------------------------
 bool Client::init(Coordinate& promptCoord) {
   std::string arg0 = CommandArgs::getInstance().get(0);
@@ -83,21 +82,16 @@ bool Client::init(Coordinate& promptCoord) {
   closeSocket();
 
   while (getHostAddress() && getHostPort()) {
-    std::string err = openSocket();
-    if (err.size()) {
-      Screen::print() << EL << err << EL << EL << Flush;
-      continue;
+    if (openSocket()) {
+      if (readGameInfo() &&
+          setupBoard(promptCoord) &&
+          getUserName(promptCoord) &&
+          waitForGameStart())
+      {
+        return true;
+      }
+      break;
     }
-
-    if (readGameInfo() &&
-        setupBoard(promptCoord) &&
-        getUserName(promptCoord) &&
-        waitForGameStart())
-    {
-      return true;
-    }
-
-    break;
   }
 
   closeSocket();
@@ -116,7 +110,7 @@ bool Client::getHostAddress() {
 
   host.clear();
   while (host.empty()) {
-    Screen::print() << "Enter host address [RET=quit] -> " << Flush;
+    Screen::print() << EL << "Enter host address [RET=quit] -> " << Flush;
     if (input.readln(STDIN_FILENO) <= 0) {
       return false;
     }
@@ -155,19 +149,18 @@ bool Client::getHostPort() {
 }
 
 //-----------------------------------------------------------------------------
-std::string Client::openSocket() {
-  std::string status;
+bool Client::openSocket() {
   if (isConnected()) {
-    Logger::warn() << "Already connected to " << host << ":" << port;
-    return status;
+    Logger::printError() << "Already connected to " << host << ":" << port;
+    return false;
   }
   if (host.empty()) {
-    Logger::error() << (status = "host address is not set");
-    return status;
+    Logger::printError() << "Host address is not set";
+    return false;
   }
   if (!Server::isValidPort(port)) {
-    Logger::error() << (status = "host port is not set");
-    return status;
+    Logger::printError() << "Host port is not set";
+    return false;
   }
 
   struct addrinfo hints;
@@ -181,12 +174,12 @@ std::string Client::openSocket() {
   struct addrinfo* result = NULL;
   int err = getaddrinfo(host.c_str(), sbuf, &hints, &result);
   if (err) {
-    Logger::error() << "Failed to lookup host '" << host << "': "
-                    << (status = gai_strerror(err));
-    return status;
+    Logger::printError() << "Failed to lookup host '" << host << "': "
+                         << gai_strerror(err);
+    return false;
   }
 
-  status = "no address information found for given host";
+  bool ok = false;
   for (struct addrinfo* p = result; p; p = p->ai_next) {
     if (p->ai_family == AF_INET) {
       struct sockaddr_in* ipv4 = (struct sockaddr_in*)p->ai_addr;
@@ -199,23 +192,23 @@ std::string Client::openSocket() {
     Logger::debug() << "Connecting to '" << host << "' (" << sbuf << ")";
 
     if ((sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-      Logger::error() << "Failed to create socket handle: "
-                      << (status = strerror(errno));
+      Logger::printError() << "Failed to create socket handle: "
+                           << strerror(errno);
       continue;
     } else if (connect(sock, p->ai_addr, p->ai_addrlen) < 0) {
-      Logger::error() << "Failed to connect to '" << host << ":"
-                      << port << "': " << (status = strerror(errno));
+      Logger::printError() << "Failed to connect to '" << host << ":"
+                           << port << "': " << strerror(errno);
       close(sock);
       sock = -1;
     } else {
       input.addHandle(sock);
-      status.clear();
+      ok = true;
       break;
     }
   }
 
   freeaddrinfo(result);
-  return status;
+  return ok;
 }
 
 //-----------------------------------------------------------------------------
@@ -266,7 +259,7 @@ bool Client::readGameInfo() {
       if (Boat::isValidID(p[0]) && isdigit(p[1])) {
         config.addBoat(Boat(p[0], (unsigned)atoi(p + 1)));
       } else {
-        Logger::error() << "Invalid boat spec: " << p;
+        Logger::printError() << "Invalid boat spec: " << p;
       }
     } else if (str.size()) {
       Logger::debug() << str;
@@ -349,7 +342,7 @@ bool Client::setupBoard(Coordinate& promptCoord) {
   }
 
   if (!Screen::get().arrangeChildren(children)) {
-    Logger::error() << "Boards do not fit in terminal";
+    Logger::printError() << "Boards do not fit in terminal";
   }
 
   std::vector<Boat> boats;
@@ -362,7 +355,7 @@ bool Client::setupBoard(Coordinate& promptCoord) {
 
     for (unsigned i = 0; i < boards.size(); ++i) {
       Board& board = boards[i];
-      if (!board.print(Board::NONE, false)) {
+      if (!board.print(false)) {
         return false;
       }
       promptCoord = board.getBottomRight();
@@ -422,7 +415,7 @@ bool Client::manualSetup(std::vector<Boat>& boats,
   while (true) {
     Screen::print() << Coordinate(1, 1) << ClearToScreenEnd;
     for (unsigned i = 0; i < boards.size(); ++i) {
-      if (!boards[i].print(Board::NONE, false)) {
+      if (!boards[i].print(false)) {
         return false;
       }
     }
@@ -495,13 +488,18 @@ bool Client::getUserName(Coordinate& promptCoord) {
     if (input.readln(STDIN_FILENO) < 0) {
       return false;
     }
+    if (input.getFieldCount() > 1) {
+      Logger::printError() << "Your username may not contain '|' characters";
+      continue;
+    }
 
     userName = Input::trim(input.getString(0, ""));
     if (userName.size()) {
-      if (!joinGame(promptCoord)) {
-        return false;
-      } else if (userName.size()) {
+      bool retry = false;
+      if (joinGame(promptCoord, retry)) {
         break;
+      } else if (!retry) {
+        return false;
       }
     } else {
       Screen::print() << promptCoord << ClearToScreenEnd;
@@ -511,36 +509,33 @@ bool Client::getUserName(Coordinate& promptCoord) {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::joinGame(Coordinate& promptCoord) {
+bool Client::joinGame(Coordinate& promptCoord, bool& retry) {
+  retry = false;
   Coordinate coord(promptCoord);
   Screen::print() << coord.south() << ClearToScreenEnd << Flush;
 
   if (userName.empty()) {
-    Screen::print() << "Username not set!" << EL << Flush;
+    Logger::printError() << "Username not set!";
     return false;
   }
 
   std::map<std::string, Board>::iterator it = boardMap.find("");
   if (it == boardMap.end()) {
-    Screen::print() << "No board selected!" << EL << Flush;
+    Logger::printError() << "No board selected!";
     return false;
   }
 
-  it->second.setPlayerName(userName);
-  boardMap[userName] = it->second;
-  boardMap.erase(it);
-
   char sbuf[Input::BUFFER_SIZE];
   snprintf(sbuf, sizeof(sbuf), "J|%s|%s", userName.c_str(),
-           boardMap[userName].getDescriptor().c_str());
+           it->second.getDescriptor().c_str());
 
   if (!sendLine(sbuf)) {
-    Screen::print() << "Failed to send join message to server" << EL << Flush;
+    Logger::printError() << "Failed to send join message to server";
     return false;
   }
 
   if (input.readln(sock) <= 0) {
-    Screen::print() << "No respone from server" << EL << Flush;
+    Logger::printError() << "No respone from server";
     return false;
   }
 
@@ -548,19 +543,32 @@ bool Client::joinGame(Coordinate& promptCoord) {
   if (str == "J") {
     str = input.getString(1, "");
     if (str != userName) {
-      Screen::print() << "Invalid response from server: " << str << EL << Flush;
+      Logger::printError() << "Invalid response from server: " << str;
       return false;
     }
+    it->second.setPlayerName(userName);
+    boardMap[userName] = it->second;
+    boardMap.erase(it);
     return true;
   }
 
   if (str == "E") {
-    Screen::print() << "ERROR: " << input.getString(1, "") << Flush;
-    userName.clear();
-    return true;
+    str = Input::trim(input.getString(1, ""));
+    if (str.empty()) {
+      Logger::printError() << "Empty error message received from server";
+    } else {
+      Logger::printError() << input.getString(1, "");
+      retry = true;
+    }
+    return false;
   }
 
-  Screen::print() << "FATAL ERROR: " << str << EL << Flush;
+  str = Input::trim(str);
+  if (str.empty()) {
+    Logger::printError() << "Empty message received from server";
+  } else {
+    Logger::printError() << str;
+  }
   return false;
 }
 
@@ -633,15 +641,15 @@ bool Client::sendMessage() {
 //-----------------------------------------------------------------------------
 bool Client::sendLine(const std::string& msg) {
   if (msg.empty()) {
-    Logger::error() << "not sending empty message";
+    Logger::printError() << "not sending empty message";
     return false;
   }
   if (!isConnected()) {
-    Logger::error() << "not connected!";
+    Logger::printError() << "not connected!";
     return false;
   }
   if (strchr(msg.c_str(), '\n')) {
-    Logger::error() << "message contains newline (" << msg << ")";
+    Logger::printError() << "message contains newline (" << msg << ")";
     return false;
   }
 
@@ -656,8 +664,8 @@ bool Client::sendLine(const std::string& msg) {
   Logger::debug() << "Sending " << len << " bytes (" << str << ") to server";
 
   if (write(sock, str, len) != len) {
-    Logger::error() << "Failed to write " << len << " bytes (" << str
-                    << ") to server: " << strerror(errno);
+    Logger::printError() << "Failed to write " << len << " bytes (" << str
+                         << ") to server: " << strerror(errno);
     return false;
   }
   return true;
@@ -692,21 +700,21 @@ bool Client::handleServerMessage() {
   }
 
   std::string str = input.getString(0, "");
-  if (str == "J") {
+  if (str == "M") {
+    addMessage();
+  } else if (str == "J") {
     return addPlayer();
   } else if (str == "L") {
     return removePlayer();
   } else if (str == "B") {
     return updateBoard();
-  } else if (str == "M") {
-    return addMessage();
   } else if (str == "S") {
     return startGame();
   } else if (str == "F") {
     return endGame();
   }
 
-  Screen::print() << EL << str << EL << Flush;
+  Logger::printError() << str;
   return false;
 }
 
@@ -714,11 +722,12 @@ bool Client::handleServerMessage() {
 bool Client::addPlayer() {
   std::string name = Input::trim(input.getString(1, ""));
   if (name.empty()) {
-    Logger::error() << "Invalid addPlayer message from server";
+    Logger::printError() << "Invalid addPlayer message from server";
     return false;
   }
   if (boardMap.count(name)) {
-    Logger::error() << "Duplicate addPlayer message from server";
+    Logger::printError() << "Duplicate player name (" << name
+                         << ") received from server";
     return false;
   }
 
@@ -732,7 +741,7 @@ bool Client::addPlayer() {
 bool Client::removePlayer() {
   std::string name = Input::trim(input.getString(1, ""));
   if (name.empty() || !boardMap.count(name)) {
-    Logger::error() << "Invalid removePlayer message from server";
+    Logger::printError() << "Invalid removePlayer message from server";
     return false;
   }
   boardMap.erase(boardMap.find(name));
@@ -742,12 +751,16 @@ bool Client::removePlayer() {
 //-----------------------------------------------------------------------------
 bool Client::updateBoard() {
   std::string name = Input::trim(input.getString(1, ""));
-  std::string desc = input.getString(2, "");
-  if (name.empty() || !boardMap.count(name) || desc.empty()) {
-    Logger::error() << "Invalid updateBoard message from server";
+  std::string state = input.getString(2, "");
+  std::string desc = input.getString(3, "");
+  if (name.empty() || !boardMap.count(name) || state.empty() || desc.empty()) {
+    Logger::printError() << "Invalid updateBoard message from server";
     return false;
   }
-  return boardMap[name].updateBoatArea(desc);
+
+  Board& board = boardMap[name];
+  return (board.updateState((Board::PlayerState)state[0]) &&
+      board.updateBoatArea(desc));
 }
 
 //-----------------------------------------------------------------------------
@@ -755,14 +768,50 @@ bool Client::addMessage() {
   std::string name = Input::trim(input.getString(1, ""));
   std::string msg = Input::trim(input.getString(2, ""));
   if (msg.size()) {
-    messages.push_back(std::make_pair(name, msg));
+    if (name.size()) {
+      messages.push_back("[" + name + "] " + msg);
+    } else {
+      messages.push_back(Screen::colorCode(Red) + msg +
+                         Screen::colorCode(DefaultColor));
+    }
   }
   return true;
 }
 
 //-----------------------------------------------------------------------------
 bool Client::startGame() {
-  return true; // TODO
+  unsigned count = (input.getFieldCount() - 1);
+  if (count != boardMap.size()) {
+    Logger::printError() << "Player count mismatch: boards=" << boardMap.size()
+                         << ", players=" << count;
+    return false;
+  }
+  if (count < 2) {
+    Logger::printError() << "Can't start game with " << count << " players";
+    return false;
+  }
+
+  std::vector<Container*> children;
+  for (unsigned i = 1; i < input.getFieldCount(); ++i) {
+    std::string name = Input::trim(input.getString(i, ""));
+    if (name.empty()) {
+      Logger::printError() << "Empty player name received fro server";
+      return false;
+    }
+    if (!boardMap.count(name)) {
+      Logger::printError() << "Unknown player name (" << name
+                           << ") received from server";
+      return false;
+    }
+    Board& board = boardMap[name];
+    Container* container = &board;
+    children.push_back(container);
+  }
+
+  if (!Screen::get(true).clear().flush().arrangeChildren(children)) {
+    Logger::printError() << "Boards do not fit in terminal";
+  }
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -797,10 +846,10 @@ int main(const int argc, const char* argv[]) {
     return 0;
   }
   catch (const std::exception& e) {
-    xbs::Logger::error() << e.what();
+    xbs::Logger::printError() << e.what();
   }
   catch (...) {
-    xbs::Logger::error() << "Unhandles exception";
+    xbs::Logger::printError() << "Unhandles exception";
   }
   return 1;
 }

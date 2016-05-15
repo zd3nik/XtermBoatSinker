@@ -482,7 +482,7 @@ bool Server::sendBoard(Game& game, const Board* board) {
       snprintf(str, sizeof(str), "B|%c|%s|%s|%s",
                ((board == game.getBoardToMove())
                 ? Board::TO_MOVE
-                : (board->getHandle() < 0) ? Board::DISCONNECTED : Board::NONE),
+                : (board->getHandle() < 0) ? Board::DISCONNECTED : Board::NORMAL),
                board->getPlayerName().c_str(),
                board->getStatus().c_str(),
                board->getMaskedDescriptor().c_str());

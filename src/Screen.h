@@ -40,6 +40,7 @@ class Screen : public Container {
 public:
   static Screen& get(const bool update = false);
   static Screen& print() { return get(false); }
+  static const char* colorCode(const ScreenColor);
 
   operator bool() const;
 

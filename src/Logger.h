@@ -28,6 +28,10 @@ public:
 
   static Logger& getInstance();
 
+  static inline LogStream printError() {
+    return getInstance().log(ERROR, "ERROR: ", true);
+  }
+
   static inline LogStream error() {
     return getInstance().log(ERROR, "ERROR: ");
   }
@@ -48,8 +52,11 @@ public:
     return LogStream(mutex, *stream, hdr);
   }
 
-  inline LogStream log(const LogLevel level, const char* hdr = NULL) {
-    return (logLevel >= level) ? LogStream(mutex, *stream, hdr) : LogStream();
+  inline LogStream log(const LogLevel level, const char* hdr = NULL,
+                       const bool print = false)
+  {
+    return (logLevel >= level) ? LogStream(mutex, *stream, hdr, print)
+                               : LogStream();
   }
 
   std::string getLogFile() const {

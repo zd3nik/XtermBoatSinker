@@ -48,18 +48,10 @@ class Board : public Container, DBObject
 {
 public:
   enum PlayerState {
-    NONE = ' ',
+    NORMAL = ' ',
     TO_MOVE = '*',
     DISCONNECTED = 'X'
   };
-
-  int getHandle() const {
-    return handle;
-  }
-
-  void setHandle(const int handle) {
-    this->handle = handle;
-  }
 
   Board();
   Board(const int handle,
@@ -75,9 +67,10 @@ public:
   void clearBoatArea();
   void incScore(const unsigned value = 1);
   void incTurns(const unsigned value = 1);
-  void setStatus(const std::string& str);
+  void setHandle(const int handle);
   void setHitTaunt(const std::string& value);
   void setMissTaunt(const std::string& value);
+  void setStatus(const std::string& str);
   std::string getPlayerName() const;
   std::string getAddress() const;
   std::string getStatus() const;
@@ -88,19 +81,22 @@ public:
   std::string toString(const unsigned number, const bool toMove,
                        const bool gameStarted) const;
 
+  int getHandle() const;
+  PlayerState getState() const;
   Container getBoatArea() const;
-  unsigned getScore() const;
-  unsigned getTurns() const;
+  unsigned getBoatPoints() const;
   unsigned getHitCount() const;
   unsigned getMissCount() const;
-  unsigned getBoatPoints() const;
-  bool isValid(const Configuration&) const;
-  bool isValid() const;
-  bool isDead() const;
+  unsigned getScore() const;
+  unsigned getTurns() const;
   bool addRandomBoats(const Configuration&);
-  bool print(const PlayerState playerState, const bool masked = true) const;
-  bool updateBoatArea(const std::string& newDescriptor);
+  bool isDead() const;
+  bool isValid() const;
+  bool isValid(const Configuration&) const;
+  bool print(const bool masked = true) const;
   bool removeBoat(const Boat& boat);
+  bool updateBoatArea(const std::string& newDescriptor);
+  bool updateState(const PlayerState);
   bool addBoat(const Boat& boat, Coordinate boatCoordinate,
                const Movement::Direction direction);
 
@@ -116,6 +112,7 @@ private:
   unsigned getBoatIndex(const Coordinate& boatCoordinate) const;
 
   int handle;
+  PlayerState state;
   std::string playerName;
   std::string address;
   std::string status;

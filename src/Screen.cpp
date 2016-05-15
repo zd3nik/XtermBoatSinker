@@ -48,6 +48,22 @@ Screen& Screen::get(const bool update) {
 }
 
 //-----------------------------------------------------------------------------
+const char* Screen::colorCode(const ScreenColor color) {
+  switch (color) {
+  case Red:     return "\033[0;31m";
+  case Green:   return "\033[0;32m";
+  case Yellow:  return "\033[0;33m";
+  case Blue:    return "\033[0;34m";
+  case Magenta: return "\033[0;35m";
+  case Cyan:    return "\033[0;36m";
+  case White:   return "\033[0;37m";
+  default:
+    break;
+  }
+  return "\033[0;0m";
+}
+
+//-----------------------------------------------------------------------------
 Screen::operator bool() const {
   return (instance != NULL);
 }
@@ -84,18 +100,7 @@ Screen& Screen::clearToScreenEnd() {
 
 //-----------------------------------------------------------------------------
 Screen& Screen::color(const ScreenColor color) {
-  switch (color) {
-  case Red:     return str("\033[0;31m");
-  case Green:   return str("\033[0;32m");
-  case Yellow:  return str("\033[0;33m");
-  case Blue:    return str("\033[0;34m");
-  case Magenta: return str("\033[0;35m");
-  case Cyan:    return str("\033[0;36m");
-  case White:   return str("\033[0;37m");
-  default:
-    break;
-  }
-  return str("\033[0;0m");
+  return str(colorCode(color));
 }
 
 //-----------------------------------------------------------------------------

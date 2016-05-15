@@ -30,7 +30,6 @@ public:
   }
 
 private:
-  std::string openSocket();
   void closeSocket();
   void closeSocketHandle();
   char getChar();
@@ -42,7 +41,8 @@ private:
   bool getHostPort();
   bool getUserName(Coordinate& promptCoordinate);
   bool handleServerMessage();
-  bool joinGame(Coordinate& promptCoordinate);
+  bool joinGame(Coordinate& promptCoordinate, bool& retry);
+  bool openSocket();
   bool readGameInfo();
   bool removePlayer();
   bool sendLine(const std::string& msg);
@@ -64,7 +64,7 @@ private:
   Configuration config;
   std::string userName;
   std::map<std::string, Board> boardMap;
-  std::vector<std::pair<std::string, std::string> > messages;
+  std::vector<std::string> messages;
 };
 
 } // namespace xbs
