@@ -32,7 +32,9 @@ const std::string FLD_BOAT = "boat=";
 //-----------------------------------------------------------------------------
 Client::Client()
   : port(-1),
-    sock(-1)
+    sock(-1),
+    gameStarted(false),
+    gameFinished(false)
 {
   input.addHandle(STDIN_FILENO);
 }
@@ -47,7 +49,12 @@ void Client::closeSocket() {
   closeSocketHandle();
   port = -1;
   host.clear();
+  config.clear();
   userName.clear();
+  boardMap.clear();
+  messages.clear();
+  gameStarted = false;
+  gameFinished = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -73,24 +80,24 @@ bool Client::init(Coordinate& promptCoord) {
   Screen::get() << Clear << Coordinate(1, 1) << progname
                 << " version " << Client::VERSION << EL << Flush;
 
+  closeSocket();
+
   while (getHostAddress() && getHostPort()) {
     std::string err = openSocket();
     if (err.size()) {
       Screen::print() << EL << err << EL << EL << Flush;
-    } else {
-      if (!readGameInfo() || !setupBoard(promptCoord)) {
-        closeSocket();
-        return false;
-      }
-
-      std::string name;
-      while (getUserName(promptCoord, name)) {
-        if (joinGame(promptCoord, name)) {
-          return true;
-        }
-      }
-      break;
+      continue;
     }
+
+    if (readGameInfo() &&
+        setupBoard(promptCoord) &&
+        getUserName(promptCoord) &&
+        waitForGameStart())
+    {
+      return true;
+    }
+
+    break;
   }
 
   closeSocket();
@@ -229,12 +236,11 @@ bool Client::readGameInfo() {
   }
 
   config.clear();
-  playersJoined = 0;
-  pointGoal = 0;
-
-  int width = 0;
-  int height = 0;
-  int boatCount = -1;
+  unsigned width = 0;
+  unsigned height = 0;
+  unsigned boatCount = 0;
+  unsigned pointGoal = 0;
+  unsigned playersJoined = 0;
 
   for (unsigned i = 1; i < input.getFieldCount(); ++i) {
     str = Input::trim(input.getString(i,""));
@@ -250,11 +256,11 @@ bool Client::readGameInfo() {
     } else if (strncmp(p, FLD_GOAL.c_str(), FLD_GOAL.size()) == 0) {
       pointGoal = (unsigned)atoi(p + FLD_GOAL.size());
     } else if (strncmp(p, FLD_WIDTH.c_str(), FLD_WIDTH.size()) == 0) {
-      width = atoi(p + FLD_WIDTH.size());
+      width = (unsigned)atoi(p + FLD_WIDTH.size());
     } else if (strncmp(p, FLD_HEIGHT.c_str(), FLD_HEIGHT.size()) == 0) {
-      height = atoi(p + FLD_HEIGHT.size());
+      height = (unsigned)atoi(p + FLD_HEIGHT.size());
     } else if (strncmp(p, FLD_BOATS.c_str(), FLD_BOATS.size()) == 0) {
-      boatCount = atoi(p + FLD_BOATS.size());
+      boatCount = (unsigned)atoi(p + FLD_BOATS.size());
     } else if (strncmp(p, FLD_BOAT.c_str(), FLD_BOAT.size()) == 0) {
       p += FLD_BOAT.size();
       if (Boat::isValidID(p[0]) && isdigit(p[1])) {
@@ -268,7 +274,7 @@ bool Client::readGameInfo() {
   }
 
   if ((width > 0) && (height > 0)) {
-    config.setBoardSize((unsigned)width, (unsigned)height);
+    config.setBoardSize(width, height);
   }
 
   Screen::get(true).clear();
@@ -481,7 +487,7 @@ char Client::getChar() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::getUserName(Coordinate& promptCoord, std::string& name) {
+bool Client::getUserName(Coordinate& promptCoord) {
   while (true) {
     Screen::print() << promptCoord << ClearToLineEnd
                     << "Enter your username -> " << Flush;
@@ -490,9 +496,13 @@ bool Client::getUserName(Coordinate& promptCoord, std::string& name) {
       return false;
     }
 
-    name = Input::trim(input.getString(0, ""));
-    if (name.size()) {
-      break;
+    userName = Input::trim(input.getString(0, ""));
+    if (userName.size()) {
+      if (!joinGame(promptCoord)) {
+        return false;
+      } else if (userName.size()) {
+        break;
+      }
     } else {
       Screen::print() << promptCoord << ClearToScreenEnd;
     }
@@ -501,54 +511,123 @@ bool Client::getUserName(Coordinate& promptCoord, std::string& name) {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::joinGame(Coordinate& promptCoord, const std::string& name) {
+bool Client::joinGame(Coordinate& promptCoord) {
   Coordinate coord(promptCoord);
   Screen::print() << coord.south() << ClearToScreenEnd << Flush;
 
-  if (!isConnected()) {
-    Screen::print() << "Not connected!" << EL << Flush;
-    exit(1);
+  if (userName.empty()) {
+    Screen::print() << "Username not set!" << EL << Flush;
+    return false;
   }
 
-  std::map<std::string, Board>::const_iterator it = boardMap.find("");
+  std::map<std::string, Board>::iterator it = boardMap.find("");
   if (it == boardMap.end()) {
     Screen::print() << "No board selected!" << EL << Flush;
-    exit(1);
+    return false;
   }
 
-  const Board& board = it->second;
+  it->second.setPlayerName(userName);
+  boardMap[userName] = it->second;
+  boardMap.erase(it);
+
   char sbuf[Input::BUFFER_SIZE];
-  snprintf(sbuf, sizeof(sbuf), "J|%s|%s", name.c_str(),
-           board.getDescriptor().c_str());
+  snprintf(sbuf, sizeof(sbuf), "J|%s|%s", userName.c_str(),
+           boardMap[userName].getDescriptor().c_str());
 
   if (!sendLine(sbuf)) {
     Screen::print() << "Failed to send join message to server" << EL << Flush;
-    exit(1);
+    return false;
   }
 
   if (input.readln(sock) <= 0) {
     Screen::print() << "No respone from server" << EL << Flush;
-    exit(1);
+    return false;
   }
 
   std::string str = input.getString(0, "");
   if (str == "J") {
     str = input.getString(1, "");
-    if (str != name) {
+    if (str != userName) {
       Screen::print() << "Invalid response from server: " << str << EL << Flush;
-      exit(1);
+      return false;
     }
     return true;
   }
 
   if (str == "E") {
     Screen::print() << "ERROR: " << input.getString(1, "") << Flush;
-  } else {
-    Screen::print() << "FATAL ERROR: " << str << EL << Flush;
-    exit(1);
+    userName.clear();
+    return true;
   }
 
+  Screen::print() << "FATAL ERROR: " << str << EL << Flush;
   return false;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::waitForGameStart() {
+  Screen::get(true).clear();
+
+  if (userName.empty()) {
+    Screen::print() << "Username not set!" << EL << Flush;
+    return false;
+  }
+  if (boardMap.find(userName) == boardMap.end()) {
+    Screen::print() << "No board selected!" << EL << Flush;
+    return false;
+  }
+  if (!input.setCanonical(false)) {
+    Screen::print() << "Failed to disable terminal canonical mode: "
+                    << strerror(errno) << EL << Flush;
+    return false;
+  }
+
+  char ch;
+  while (!gameStarted) {
+    Coordinate coord(1, 1);
+    Screen::print() << coord << ClearToScreenEnd;
+    config.print(coord);
+
+    Screen::print() << coord.south() << "Players:";
+    coord.south().setX(3);
+
+    std::map<std::string, Board>::const_iterator it;
+    for (it = boardMap.begin(); it != boardMap.end(); ++it) {
+      Screen::print() << coord.south() << it->first;
+      if (userName == it->first) {
+        Screen::print() << " (you)";
+      }
+    }
+
+    Screen::print() << coord.south(2).setX(1) << "Waiting for game to start";
+    Screen::print() << coord.south() << "(Q)uit, (R)edraw";
+    if (boardMap.size() > 1) {
+      Screen::print() << ", (M)essage";
+    }
+
+    Screen::print() << " -> " << Flush;
+    if ((ch = waitForInput()) < 0) {
+      return false;
+    } else if ((ch > 0) && ((ch = input.readChar(STDIN_FILENO)) <= 0)) {
+      return false;
+    }
+
+    ch = toupper(ch);
+    if (ch == 'Q') {
+      return false;
+    } else if (ch == 'R') {
+      Screen::get(true).clear();
+    } else if ((ch == 'M') && (boardMap.size() > 1)) {
+      sendMessage();
+    }
+  }
+
+  return gameStarted;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::sendMessage() {
+  return true; // TODO
 }
 
 //-----------------------------------------------------------------------------
@@ -582,6 +661,113 @@ bool Client::sendLine(const std::string& msg) {
     return false;
   }
   return true;
+}
+
+//-----------------------------------------------------------------------------
+char Client::waitForInput(const int timeout) {
+  std::set<int> ready;
+  if (!input.waitForData(ready, timeout)) {
+    return -1;
+  }
+
+  char userInput = 0;
+  std::set<int>::const_iterator it;
+  for (it = ready.begin(); it != ready.end(); ++it) {
+    const int handle = (*it);
+    if (handle == sock) {
+      if (!handleServerMessage()) {
+        return -1;
+      }
+    } else if (handle == STDIN_FILENO) {
+      userInput = 1;
+    }
+  }
+  return userInput;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::handleServerMessage() {
+  if (input.readln(sock) <= 0) {
+    return false;
+  }
+
+  std::string str = input.getString(0, "");
+  if (str == "J") {
+    return addPlayer();
+  } else if (str == "L") {
+    return removePlayer();
+  } else if (str == "B") {
+    return updateBoard();
+  } else if (str == "M") {
+    return addMessage();
+  } else if (str == "S") {
+    return startGame();
+  } else if (str == "F") {
+    return endGame();
+  }
+
+  Screen::print() << EL << str << EL << Flush;
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::addPlayer() {
+  std::string name = Input::trim(input.getString(1, ""));
+  if (name.empty()) {
+    Logger::error() << "Invalid addPlayer message from server";
+    return false;
+  }
+  if (boardMap.count(name)) {
+    Logger::error() << "Duplicate addPlayer message from server";
+    return false;
+  }
+
+  unsigned w = config.getBoardSize().getWidth();
+  unsigned h = config.getBoardSize().getHeight();
+  boardMap[name] = Board(-1, name, "remote", w, h);
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::removePlayer() {
+  std::string name = Input::trim(input.getString(1, ""));
+  if (name.empty() || !boardMap.count(name)) {
+    Logger::error() << "Invalid removePlayer message from server";
+    return false;
+  }
+  boardMap.erase(boardMap.find(name));
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::updateBoard() {
+  std::string name = Input::trim(input.getString(1, ""));
+  std::string desc = input.getString(2, "");
+  if (name.empty() || !boardMap.count(name) || desc.empty()) {
+    Logger::error() << "Invalid updateBoard message from server";
+    return false;
+  }
+  return boardMap[name].updateBoatArea(desc);
+}
+
+//-----------------------------------------------------------------------------
+bool Client::addMessage() {
+  std::string name = Input::trim(input.getString(1, ""));
+  std::string msg = Input::trim(input.getString(2, ""));
+  if (msg.size()) {
+    messages.push_back(std::make_pair(name, msg));
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::startGame() {
+  return true; // TODO
+}
+
+//-----------------------------------------------------------------------------
+bool Client::endGame() {
+  return true; // TODO
 }
 
 //-----------------------------------------------------------------------------

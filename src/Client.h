@@ -5,6 +5,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include <map>
 #include "Input.h"
 #include "Board.h"
 #include "Configuration.h"
@@ -33,26 +34,37 @@ private:
   void closeSocket();
   void closeSocketHandle();
   char getChar();
+  char waitForInput(const int timeout = -1);
+  bool addMessage();
+  bool addPlayer();
+  bool endGame();
   bool getHostAddress();
   bool getHostPort();
-  bool getUserName(Coordinate& promptCoordinate, std::string& name);
-  bool joinGame(Coordinate& promptCoordinate, const std::string& name);
+  bool getUserName(Coordinate& promptCoordinate);
+  bool handleServerMessage();
+  bool joinGame(Coordinate& promptCoordinate);
   bool readGameInfo();
+  bool removePlayer();
   bool sendLine(const std::string& msg);
+  bool sendMessage();
   bool setupBoard(Coordinate& promptCoordinate);
+  bool startGame();
+  bool updateBoard();
+  bool waitForGameStart();
   bool manualSetup(std::vector<Boat>& boatsRemaining,
                    std::vector<Board>& boards,
                    Coordinate& promptCoordinate);
 
   Input input;
-  std::string userName;
   std::string host;
   int port;
   int sock;
-  std::map<std::string, Board> boardMap;
+  bool gameStarted;
+  bool gameFinished;
   Configuration config;
-  unsigned playersJoined;
-  unsigned pointGoal;
+  std::string userName;
+  std::map<std::string, Board> boardMap;
+  std::vector<std::pair<std::string, std::string> > messages;
 };
 
 } // namespace xbs

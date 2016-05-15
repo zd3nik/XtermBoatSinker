@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <algorithm>
+#include <cstdio>
 #include "Server.h"
 #include "CommandArgs.h"
 #include "Logger.h"
@@ -406,11 +407,9 @@ bool Server::startGame(Game& game, Coordinate& coord) {
     if (!prompt(coord.south().setX(1), "Start Game? [y/N] -> ", str)) {
       return false;
     }
-    if (toupper(*str.c_str()) == 'Y') {
-      if (game.start(true)) {
-        if (!sendAllBoards(game)) {
-          return false;
-        }
+    if ((toupper(*str.c_str()) == 'Y') && game.start(true)) {
+      if (!sendStart(game)) {
+        return false;
       }
     }
   }
@@ -445,7 +444,7 @@ bool Server::sendGameResults(Game& game) {
     if (board->getHandle() >= 0) {
       for (unsigned x = 0; x < boards.size(); ++x) {
         std::string ps = boards[x]->toString((x + 1), false, true);
-        snprintf(str, sizeof(str), "S|%s", ps.c_str());
+        snprintf(str, sizeof(str), "R|%s", ps.c_str());
         sendLine(game, board->getHandle(), str);
       }
     }
@@ -458,11 +457,18 @@ bool Server::sendGameResults(Game& game) {
 }
 
 //-----------------------------------------------------------------------------
-bool Server::sendAllBoards(Game& game) {
+bool Server::sendStart(Game& game) {
+  std::string str = "S";
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-    if (!sendBoard(game, game.getBoardAtIndex(i))) {
+    Board* board = game.getBoardAtIndex(i);
+    str += '|';
+    str += board->getPlayerName();
+    if (!sendBoard(game, board)) {
       return false;
     }
+  }
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    sendLine(game, game.getBoardAtIndex(i)->getHandle(), str);
   }
   return true;
 }
@@ -480,9 +486,7 @@ bool Server::sendBoard(Game& game, const Board* board) {
                board->getPlayerName().c_str(),
                board->getStatus().c_str(),
                board->getMaskedDescriptor().c_str());
-      if (!sendLine(game, dest->getHandle(), str)) {
-        return false;
-      }
+      sendLine(game, dest->getHandle(), str);
     }
   }
   return true;
@@ -675,18 +679,34 @@ bool Server::sendLine(Game& game, const int handle, const std::string msg) {
 void Server::removePlayer(Game& game, const int handle,
                           const std::string& msg)
 {
+  char str[Input::BUFFER_SIZE];
+  Board* board = game.getBoardForHandle(handle);
+  if (board) {
+    snprintf(str, sizeof(str), "L|%s|%s",
+             board->getPlayerName().c_str(), msg.c_str());
+  }
+
   bool closed = msg.size() ? !sendLine(game, handle, msg) : false;
   if (game.isStarted()) {
     game.disconnectBoard(handle, msg);
   } else {
     game.removeBoard(handle);
   }
-  if (closed) {
-    return;
+
+  if (board) {
+    for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+      Board* b = game.getBoardAtIndex(i);
+      if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
+        sendLine(game, b->getHandle(), str);
+      }
+    }
   }
-  input.removeHandle(handle);
-  shutdown(handle, SHUT_RDWR);
-  close(handle);
+
+  if (!closed) {
+    input.removeHandle(handle);
+    shutdown(handle, SHUT_RDWR);
+    close(handle);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -747,12 +767,25 @@ void Server::joinGame(Game& game, const int handle) {
       removePlayer(game, handle, INVALID_BOARD);
     } else {
       game.addBoard(board);
+
+      // send confirmation to playerName
       snprintf(str, sizeof(str), "J|%s", playerName.c_str());
       sendLine(game, handle, str);
+
+      // let other players know playerName has joined
       for (unsigned i = 0; i < game.getBoardCount(); ++i) {
         Board* b = game.getBoardAtIndex(i);
         if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
           sendLine(game, b->getHandle(), str);
+        }
+      }
+
+      // send list of other players to playerName
+      for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+        Board* b = game.getBoardAtIndex(i);
+        if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
+          snprintf(str, sizeof(str), "J|%s", b->getPlayerName().c_str());
+          sendLine(game, handle, str);
         }
       }
     }
@@ -762,20 +795,8 @@ void Server::joinGame(Game& game, const int handle) {
 //-----------------------------------------------------------------------------
 void Server::leaveGame(Game& game, const int handle) {
   Board* board = game.getBoardForHandle(handle);
-  std::string playerName = board ? board->getPlayerName() : "";
   std::string reason = Input::trim(input.getString(1, ""));
   removePlayer(game, handle, reason);
-
-  if (board) {
-    char str[Input::BUFFER_SIZE];
-    snprintf(str, sizeof(str), "L|%s|%s", playerName.c_str(), reason.c_str());
-    for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-      Board* b = game.getBoardAtIndex(i);
-      if (b->getHandle() >= 0) {
-        sendLine(game, b->getHandle(), str);
-      }
-    }
-  }
 }
 
 //-----------------------------------------------------------------------------
@@ -864,9 +885,9 @@ void Server::shoot(Game& game, const int handle) {
       snprintf(str, sizeof(str), "M|%s|MISS! %s",
                target->getPlayerName().c_str(), target->getMissTaunt().c_str());
     }
-    if (sendLine(game, handle, str) && sendBoard(game, target)) {
-      game.nextTurn();
-    }
+    sendLine(game, handle, str);
+    sendBoard(game, target);
+    game.nextTurn();
   } else if (Boat::isHit(id) || Boat::isMiss(id)) {
     sendLine(game, handle, "M||that spot has already been shot");
   } else {

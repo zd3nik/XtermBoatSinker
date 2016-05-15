@@ -4,7 +4,7 @@
 //-----------------------------------------------------------------------------
 #include <sys/ioctl.h>
 #include <errno.h>
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
 #include <stdexcept>
 #include "Screen.h"
