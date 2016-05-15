@@ -101,10 +101,10 @@ private:
   int bufferData(const int fd);
 
   bool haveTermIO;
-  char* buffer;
   char* line;
-  unsigned pos;
-  unsigned len;
+  std::map<int, char*> buffer;
+  std::map<int, unsigned> pos;
+  std::map<int, unsigned> len;
   std::map<int, std::string> handles;
   std::vector<const char*> fields;
   struct termios savedTermIOs;

@@ -259,10 +259,10 @@ bool Server::printOptions(Game& game, Coordinate& coord) {
       (game.getBoardCount() >= config.getMinPlayers()) &&
       (game.getBoardCount() <= config.getMaxPlayers()))
   {
-    Screen::print() << coord.south(), "(S)tart Game";
+    Screen::print() << coord.south() << "(S)tart Game";
   }
 
-  return Screen::print() << ": " << Flush;
+  return Screen::print() << coord.south() << "-> " << Flush;
 }
 
 //-----------------------------------------------------------------------------
@@ -479,10 +479,10 @@ bool Server::sendBoard(Game& game, const Board* board) {
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
     Board* dest = game.getBoardAtIndex(i);
     if (dest->getHandle() >= 0) {
+      char state = (board == game.getBoardToMove()) ? Board::TO_MOVE
+                                                    : board->getState();
       snprintf(str, sizeof(str), "B|%c|%s|%s|%s",
-               ((board == game.getBoardToMove())
-                ? Board::TO_MOVE
-                : (board->getHandle() < 0) ? Board::DISCONNECTED : Board::NORMAL),
+               state,
                board->getPlayerName().c_str(),
                board->getStatus().c_str(),
                board->getMaskedDescriptor().c_str());
@@ -809,19 +809,22 @@ void Server::sendMessage(Game& game, const int handle) {
     return;
   }
 
-  const std::string playerName = Input::trim(input.getString(1, ""));
+  const std::string recipient = Input::trim(input.getString(1, ""));
   const std::string message = Input::trim(input.getString(2, ""));
   if (message.size()) {
     std::string msg = "M|";
     msg.append(sender->getPlayerName());
     msg.append("|");
     msg.append(message);
+    if (recipient.empty()) {
+      msg.append("|ALL");
+    }
     for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-      const Board* board = game.getBoardAtIndex(i);
-      if ((board->getHandle() >= 0) && (board->getHandle() != handle) &&
-          (playerName.empty() || (board->getPlayerName() == playerName)))
+      const Board* dest = game.getBoardAtIndex(i);
+      if ((dest->getHandle() >= 0) && (dest->getHandle() != handle) &&
+          (recipient.empty() || (dest->getPlayerName() == recipient)))
       {
-        sendLine(game, board->getHandle(), msg);
+        sendLine(game, dest->getHandle(), msg);
       }
     }
   }

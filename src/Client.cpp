@@ -71,7 +71,7 @@ void Client::closeSocketHandle() {
   }
 }
 //-----------------------------------------------------------------------------
-bool Client::init(Coordinate& promptCoord) {
+bool Client::join(Coordinate& promptCoord) {
   std::string arg0 = CommandArgs::getInstance().get(0);
   const char* p = strrchr(arg0.c_str(), '/');
   const char* progname = (p ? (p + 1) : arg0.c_str());
@@ -380,7 +380,7 @@ bool Client::setupBoard(Coordinate& promptCoord) {
     } else if (ch == 'S') {
       Screen::print() << coord.south() << "Enter Board# [1 = manual setup] -> "
                       << Flush;
-      if (input.readln(STDIN_FILENO) <= 0) {
+      if (input.readln(STDIN_FILENO) < 0) {
         return false;
       }
       if (((n = input.getInt()) == 1) && boats.size()) {
@@ -622,11 +622,15 @@ bool Client::waitForGameStart() {
 
     ch = toupper(ch);
     if (ch == 'Q') {
-      return false;
+      if (quitGame(coord)) {
+        return false;
+      }
+    } else if ((ch == 'M') && (boardMap.size() > 1)) {
+      if (!sendMessage(coord)) {
+        return false;
+      }
     } else if (ch == 'R') {
       Screen::get(true).clear();
-    } else if ((ch == 'M') && (boardMap.size() > 1)) {
-      sendMessage();
     }
   }
 
@@ -634,8 +638,65 @@ bool Client::waitForGameStart() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::sendMessage() {
-  return true; // TODO
+bool Client::prompt(Coordinate& coord, const std::string& str,
+                    std::string& field1, const char delim)
+{
+  Screen::print() << coord << ClearToLineEnd << str << Flush;
+
+  if (!input.setCanonical(true) ||
+      (input.readln(STDIN_FILENO, delim) < 0) ||
+      !input.setCanonical(false))
+  {
+    return false;
+  }
+
+  field1 = Input::trim(input.getString(0, ""));
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::quitGame(const Coordinate& promptCoord) {
+  std::string str;
+  Coordinate coord(promptCoord);
+  return (!prompt(coord.south(), "Leave Game? y/N -> ", str) ||
+          (toupper(*str.c_str()) == 'Y'));
+}
+
+//-----------------------------------------------------------------------------
+bool Client::sendMessage(const Coordinate& promptCoord) {
+  std::string name;
+  std::string message;
+  Coordinate coord(promptCoord);
+
+  Screen::print() << coord.south() << ClearToScreenEnd;
+  while (true) {
+    if (!prompt(coord, "Message which player? [RET=All] -> ", name)) {
+      return false;
+    } else if (name == userName) {
+      Logger::printError() << "Sorry, you can't message yourself!";
+    } else if (name.empty() || boardMap.count(name)) {
+      break;
+    } else {
+      Logger::printError() << "Invalid player name: " << name;
+    }
+  }
+
+  Screen::print() << coord << ClearToScreenEnd;
+  while (true) {
+    if (!prompt(coord, "Message? [RET=Abort] -> ", message)) {
+      return false;
+    } else if (message.empty()) {
+      return true;
+    } else if (strchr(message.c_str(), '|')) {
+      Logger::printError() << "Message may not contain '|' characters";
+    } else {
+      break;
+    }
+  }
+
+  char sbuf[Input::BUFFER_SIZE];
+  snprintf(sbuf, sizeof(sbuf), "M|%s|%s", name.c_str(), message.c_str());
+  return sendLine(sbuf);
 }
 
 //-----------------------------------------------------------------------------
@@ -701,7 +762,7 @@ bool Client::handleServerMessage() {
 
   std::string str = input.getString(0, "");
   if (str == "M") {
-    addMessage();
+    return addMessage();
   } else if (str == "J") {
     return addPlayer();
   } else if (str == "L") {
@@ -722,7 +783,7 @@ bool Client::handleServerMessage() {
 bool Client::addPlayer() {
   std::string name = Input::trim(input.getString(1, ""));
   if (name.empty()) {
-    Logger::printError() << "Invalid addPlayer message from server";
+    Logger::printError() << "Incomplete addPlayer message from server";
     return false;
   }
   if (boardMap.count(name)) {
@@ -750,15 +811,19 @@ bool Client::removePlayer() {
 
 //-----------------------------------------------------------------------------
 bool Client::updateBoard() {
-  std::string name = Input::trim(input.getString(1, ""));
-  std::string state = input.getString(2, "");
-  std::string desc = input.getString(3, "");
-  if (name.empty() || !boardMap.count(name) || state.empty() || desc.empty()) {
+  std::string state  = input.getString(1, "");
+  std::string name   = input.getString(2, "");
+  std::string status = input.getString(3, "");
+  std::string desc   = input.getString(4, "");
+  if ((state.size() != 1) || name.empty() || !boardMap.count(name) ||
+      desc.empty())
+  {
     Logger::printError() << "Invalid updateBoard message from server";
     return false;
   }
 
   Board& board = boardMap[name];
+  board.setStatus(status);
   return (board.updateState((Board::PlayerState)state[0]) &&
       board.updateBoatArea(desc));
 }
@@ -767,9 +832,14 @@ bool Client::updateBoard() {
 bool Client::addMessage() {
   std::string name = Input::trim(input.getString(1, ""));
   std::string msg = Input::trim(input.getString(2, ""));
+  std::string group = Input::trim(input.getString(3, ""));
   if (msg.size()) {
     if (name.size()) {
-      messages.push_back("[" + name + "] " + msg);
+      if (group.empty()) {
+        messages.push_back(name + ": " + msg);
+      } else {
+        messages.push_back(name + "|" + group + ": " + msg);
+      }
     } else {
       messages.push_back(Screen::colorCode(Red) + msg +
                          Screen::colorCode(DefaultColor));
@@ -811,12 +881,13 @@ bool Client::startGame() {
   if (!Screen::get(true).clear().flush().arrangeChildren(children)) {
     Logger::printError() << "Boards do not fit in terminal";
   }
-  return true;
+
+  return (gameStarted = true);
 }
 
 //-----------------------------------------------------------------------------
 bool Client::endGame() {
-  return true; // TODO
+  return (gameFinished = true); // TODO
 }
 
 //-----------------------------------------------------------------------------
@@ -837,7 +908,7 @@ int main(const int argc, const char* argv[]) {
 
     // TODO setup signal handlers
 
-    if (!client.init(promptCoordinate) ||
+    if (!client.join(promptCoordinate) ||
         !client.run(promptCoordinate))
     {
       return 1;

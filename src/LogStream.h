@@ -31,7 +31,7 @@ public:
     if (hdr) {
       stream << hdr;
       if (print) {
-        Screen::print() << EL << Red;
+        Screen::print() << EL << ClearLine << Red;
       }
     }
   }

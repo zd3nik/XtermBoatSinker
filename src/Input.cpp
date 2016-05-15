@@ -49,11 +49,12 @@ std::string Input::trim(const std::string& str) {
 //-----------------------------------------------------------------------------
 Input::Input()
   : haveTermIO(false),
-    buffer(new char[BUFFER_SIZE]),
-    line(new char[BUFFER_SIZE]),
-    pos(0),
-    len(0)
+    line(new char[BUFFER_SIZE])
 {
+  buffer[STDIN_FILENO] = new char[BUFFER_SIZE];
+  pos[STDIN_FILENO] = 0;
+  len[STDIN_FILENO] = 0;
+
   memset(&savedTermIOs, 0, sizeof(savedTermIOs));
   if (tcgetattr(STDIN_FILENO, &savedTermIOs) < 0) {
     Logger::error() << "failed to get termios: " << strerror(errno);
@@ -66,8 +67,15 @@ Input::Input()
 Input::~Input() {
   restoreTerminal();
 
-  delete[] buffer;
-  buffer = NULL;
+  std::map<int, char*>::iterator it;
+  for (it = buffer.begin(); it != buffer.end(); ++it) {
+    delete[] it->second;
+    it->second = NULL;
+  }
+
+  buffer.clear();
+  pos.clear();
+  len.clear();
 
   delete[] line;
   line = NULL;
@@ -119,7 +127,7 @@ bool Input::setCanonical(const bool enabled) const {
 bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
   ready.clear();
   if (handles.empty()) {
-    Logger::warn() << "No input handles added to wait for";
+    Logger::warn() << "No input handles specified to wait for";
     return true;
   }
 
@@ -131,9 +139,16 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
   for (it = handles.begin(); it != handles.end(); ++it) {
     const int fd = it->first;
     if (fd >= 0) {
-      maxFd = std::max<int>(maxFd, fd);
-      FD_SET(fd, &set);
+      if (buffer.count(fd) && (pos[fd] < len[fd])) {
+        ready.insert(fd);
+      } else {
+        maxFd = std::max<int>(maxFd, fd);
+        FD_SET(fd, &set);
+      }
     }
+  }
+  if (ready.size()) {
+    return true;
   }
 
   struct timeval tv;
@@ -175,14 +190,22 @@ int Input::readln(const int fd, const char delimeter) {
     return 0;
   }
 
+  if (buffer.find(fd) == buffer.end()) {
+    buffer[fd] = new char[BUFFER_SIZE];
+    pos[fd] = 0;
+    len[fd] = 0;
+  }
+
   unsigned n = 0;
   while (n < (BUFFER_SIZE - 1)) {
-    if ((pos >= len) && (bufferData(fd) < 0)) {
+    if ((pos[fd] >= len[fd]) && (bufferData(fd) < 0)) {
       return -1;
     }
-    if (!len) {
+    if (!len[fd]) {
       break;
-    } else if ((pos < len) && ((line[n++] = buffer[pos++]) == '\n')) {
+    } else if ((pos[fd] < len[fd]) &&
+               ((line[n++] = buffer[fd][pos[fd]++]) == '\n'))
+    {
       break;
     }
   }
@@ -307,9 +330,9 @@ int Input::getUnsigned(const unsigned index, const unsigned def) const {
 
 //-----------------------------------------------------------------------------
 int Input::bufferData(const int fd) {
-  pos = len = 0;
-  while (len < BUFFER_SIZE) {
-    ssize_t n = read(fd, buffer, BUFFER_SIZE);
+  pos[fd] = len[fd] = 0;
+  while (len[fd] < BUFFER_SIZE) {
+    ssize_t n = read(fd, buffer[fd], BUFFER_SIZE);
     if (n < 0) {
       if (errno == EINTR) {
         Logger::debug() << "Input read interrupted, retrying";
@@ -318,14 +341,14 @@ int Input::bufferData(const int fd) {
       Logger::error() << "Input read failed: " << strerror(errno);
       return -1;
     } else if (n <= BUFFER_SIZE) {
-      len = n;
+      len[fd] = n;
       break;
     } else {
       Logger::error() << "Input buffer overflow!";
       exit(1);
     }
   }
-  return len;
+  return len[fd];
 }
 
 } // namespace xbs

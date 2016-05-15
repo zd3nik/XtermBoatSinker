@@ -22,7 +22,7 @@ public:
   Client();
   virtual ~Client();
 
-  bool init(Coordinate& promptCoordinate);
+  bool join(Coordinate& promptCoordinate);
   bool run(Coordinate& promptCoordinate);
 
   bool isConnected() const {
@@ -43,10 +43,11 @@ private:
   bool handleServerMessage();
   bool joinGame(Coordinate& promptCoordinate, bool& retry);
   bool openSocket();
+  bool quitGame(const Coordinate& promptCoord);
   bool readGameInfo();
   bool removePlayer();
   bool sendLine(const std::string& msg);
-  bool sendMessage();
+  bool sendMessage(const Coordinate& promptCoord);
   bool setupBoard(Coordinate& promptCoordinate);
   bool startGame();
   bool updateBoard();
@@ -54,6 +55,9 @@ private:
   bool manualSetup(std::vector<Boat>& boatsRemaining,
                    std::vector<Board>& boards,
                    Coordinate& promptCoordinate);
+
+  bool prompt(Coordinate& coord, const std::string& str, std::string& field1,
+              const char fieldDelimeter = 0);
 
   Input input;
   std::string host;
