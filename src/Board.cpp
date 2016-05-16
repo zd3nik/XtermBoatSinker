@@ -359,7 +359,12 @@ bool Board::print(const bool masked) const {
   char sbuf[32];
 
   // print player name (row 1)
-  Screen::print() << coord << ' ' << (char)state << ' ' << playerName << EL;
+  if (state == TO_MOVE) {
+    Screen::print() << coord << ' ' << Red << (char)state << DefaultColor
+                    << ' ' << playerName << EL;
+  } else {
+    Screen::print() << coord << ' ' << (char)state << ' ' << playerName << EL;
+  }
 
   // print X coordinate header (row 2)
   Screen::print() << coord.south() << "  ";

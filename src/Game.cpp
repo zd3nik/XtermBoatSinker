@@ -2,6 +2,7 @@
 // Game.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
+#include <algorithm>
 #include "Game.h"
 #include "Screen.h"
 #include "Logger.h"
@@ -112,7 +113,7 @@ bool Game::randomizeBoardOrder() {
   if (started) {
     return false;
   }
-  // TODO
+  std::random_shuffle(boards.begin(), boards.end());
   return true;
 }
 
@@ -137,9 +138,6 @@ void Game::disconnectBoard(const int handle, const std::string& msg) {
   if (board) {
     board->setStatus(msg);
     board->setHandle(-1);
-    if (started && (board == getBoardToMove()) && !isFinished()) {
-      nextTurn();
-    }
   }
 }
 

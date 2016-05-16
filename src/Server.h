@@ -43,24 +43,28 @@ private:
   char waitForInput(Game&, const int timeout = -1);
 
   bool addPlayerHandle(Game&);
-  bool blacklistAddress(Game&, Coordinate& coord);
-  bool blacklistPlayer(Game&, Coordinate& coord);
-  bool bootPlayer(Game&, Coordinate& coord);
-  bool clearBlacklist(Game&, Coordinate& coord);
+  bool blacklistAddress(Game&, Coordinate&);
+  bool blacklistPlayer(Game&, Coordinate&);
+  bool bootPlayer(Game&, Coordinate&);
+  bool clearBlacklist(Game&, Coordinate&);
   bool getGameTitle(std::string& title);
   bool handleUserInput(Game&, Coordinate&);
   bool isServerHandle(const int handle) const;
   bool isUserHandle(const int handle) const;
+  bool isValidPlayerName(const std::string& name) const;
+  bool nextTurn(Game&);
   bool printGameInfo(Game&, Coordinate&);
   bool printOptions(Game&, Coordinate&);
   bool printPlayers(Game&, Coordinate&);
   bool quitGame(Game&, Coordinate&);
   bool sendBoard(Game&, const Board*);
   bool sendGameResults(Game&);
-  bool sendLine(Game&, const int handle, const std::string msg);
+  bool sendLineAll(Game&, const std::string& msg);
+  bool sendLine(Game&, const int handle, const std::string& msg);
+  bool sendMessage(Game&, Coordinate&);
   bool sendStart(Game&);
   bool startGame(Game&, Coordinate&);
-  bool prompt(Coordinate& coord, const std::string& str, std::string& field1,
+  bool prompt(Coordinate&, const std::string& str, std::string& field1,
               const char fieldDelimeter = 0);
 
   void getGameInfo(Game&, const int handle);

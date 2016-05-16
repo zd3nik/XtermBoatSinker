@@ -248,7 +248,8 @@ bool Server::printOptions(Game& game, Coordinate& coord) {
                   << "(Q)uit, (R)edraw, Blacklist (A)ddress";
 
   if (game.getBoardCount()) {
-    Screen::print() << coord.south() << "(B)oot Player, Blacklist (P)layer";
+    Screen::print() << coord.south()
+                    << "(M)essage, (B)oot Player, Blacklist (P)layer";
   }
 
   if (blackList.size()) {
@@ -278,6 +279,7 @@ bool Server::handleUserInput(Game& game, Coordinate& coord) {
   case 'A': return blacklistAddress(game, coord);
   case 'C': return clearBlacklist(game, coord);
   case 'B': return bootPlayer(game, coord);
+  case 'M': return sendMessage(game, coord);
   case 'P': return blacklistPlayer(game, coord);
   case 'Q': return quitGame(game, coord);
   case 'R': return Screen::get(true).clear().flush();
@@ -290,12 +292,34 @@ bool Server::handleUserInput(Game& game, Coordinate& coord) {
 }
 
 //-----------------------------------------------------------------------------
+bool Server::sendMessage(Game& game, Coordinate& coord) {
+  if (game.getBoardCount() == 0) {
+    return true;
+  }
+
+  std::string user;
+  if (!prompt(coord, "Enter recipient [RET=All] -> ", user)) {
+    return false;
+  }
+
+  std::string msg;
+  if (!prompt(coord, "Enter message [RET=Abort] -> ", msg)) {
+    return false;
+  }
+
+  if (msg.size()) {
+    sendLineAll(game, ("M|" + user + "|" + msg));
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
 bool Server::clearBlacklist(Game& game, Coordinate& coord) {
   if (blackList.empty()) {
     return true;
   }
 
-  Screen::print() << coord.south() << ClearToScreenEnd << "Blacklist:";
+  Screen::print() << coord << ClearToScreenEnd << "Blacklist:";
 
   coord.south().setX(3);
 
@@ -321,9 +345,7 @@ bool Server::bootPlayer(Game& game, Coordinate& coord) {
   }
 
   std::string str;
-  if (!prompt(coord.south().setX(1),
-              "Enter name or number of player to boot -> ", str))
-  {
+  if (!prompt(coord, "Enter name or number of player to boot -> ", str)) {
     return false;
   }
 
@@ -348,9 +370,7 @@ bool Server::blacklistPlayer(Game& game, Coordinate& coord) {
   }
 
   std::string str;
-  if (!prompt(coord.south().setX(1),
-              "Enter name or number of player to blacklist -> ", str))
-  {
+  if (!prompt(coord, "Enter name or number of player to blacklist -> ", str)) {
     return false;
   }
 
@@ -372,9 +392,7 @@ bool Server::blacklistPlayer(Game& game, Coordinate& coord) {
 //-----------------------------------------------------------------------------
 bool Server::blacklistAddress(Game& game, Coordinate& coord) {
   std::string str;
-  if (!prompt(coord.south().setX(1),
-              "Enter IP address to blacklist -> ", str))
-  {
+  if (!prompt(coord, "Enter IP address to blacklist -> ", str)) {
     return false;
   }
 
@@ -391,7 +409,7 @@ bool Server::blacklistAddress(Game& game, Coordinate& coord) {
 //-----------------------------------------------------------------------------
 bool Server::quitGame(Game& game, Coordinate& coord) {
   std::string str;
-  if (!prompt(coord.south(). setX(1), "Quit Game? [y/N] -> ", str)) {
+  if (!prompt(coord, "Quit Game? [y/N] -> ", str)) {
     return false;
   }
   if (toupper(*str.c_str()) == 'Y') {
@@ -404,7 +422,7 @@ bool Server::quitGame(Game& game, Coordinate& coord) {
 bool Server::startGame(Game& game, Coordinate& coord) {
   if (!game.isStarted()) {
     std::string str;
-    if (!prompt(coord.south().setX(1), "Start Game? [y/N] -> ", str)) {
+    if (!prompt(coord, "Start Game? [y/N] -> ", str)) {
       return false;
     }
     if ((toupper(*str.c_str()) == 'Y') && game.start(true)) {
@@ -631,7 +649,18 @@ void Server::getPlayerInput(Game& game, const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-bool Server::sendLine(Game& game, const int handle, const std::string msg) {
+bool Server::sendLineAll(Game& game, const std::string& msg) {
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    Board* dest = game.getBoardAtIndex(i);
+    if (dest->getHandle() >= 0) {
+      sendLine(game, dest->getHandle(), msg);
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Server::sendLine(Game& game, const int handle, const std::string& msg) {
   if (msg.empty()) {
     Logger::error() << "not sending empty message";
     return true;
@@ -689,6 +718,10 @@ void Server::removePlayer(Game& game, const int handle,
   bool closed = msg.size() ? !sendLine(game, handle, msg) : false;
   if (game.isStarted()) {
     game.disconnectBoard(handle, msg);
+    if (board == game.getBoardToMove()) {
+      nextTurn(game);
+    }
+
   } else {
     game.removeBoard(handle);
   }
@@ -753,7 +786,7 @@ void Server::joinGame(Game& game, const int handle) {
     removePlayer(game, handle, GAME_FULL);
   } else if (!config.isValidBoatDescriptor(boatDescriptor)) {
     removePlayer(game, handle, INVALID_BOARD);
-  } else if (!isalpha(playerName[0])) {
+  } else if (!isValidPlayerName(playerName)) {
     sendLine(game, handle, INVALID_NAME);
   } else if (playerName.size() > (2 * boardSize.getWidth())) {
     sendLine(game, handle, NAME_TOO_LONG);
@@ -793,6 +826,18 @@ void Server::joinGame(Game& game, const int handle) {
 }
 
 //-----------------------------------------------------------------------------
+bool Server::isValidPlayerName(const std::string& name) const {
+  return ((name.size() > 1) &&
+          isalpha(name[0]) &&
+          (strcasecmp(name.c_str(), "server") != 0) &&
+          (strcasecmp(name.c_str(), "all") != 0) &&
+          (strcasecmp(name.c_str(), "you") != 0) &&
+          (strcasecmp(name.c_str(), "me") != 0) &&
+          !strstr(name.c_str(), "->") &&
+          !strstr(name.c_str(), "<-"));
+}
+
+//-----------------------------------------------------------------------------
 void Server::leaveGame(Game& game, const int handle) {
   Board* board = game.getBoardForHandle(handle);
   std::string reason = Input::trim(input.getString(1, ""));
@@ -809,6 +854,9 @@ void Server::sendMessage(Game& game, const int handle) {
     return;
   }
 
+  // TODO store last N message times per board
+  // TODO reject if too many messages too rappidly
+
   const std::string recipient = Input::trim(input.getString(1, ""));
   const std::string message = Input::trim(input.getString(2, ""));
   if (message.size()) {
@@ -817,7 +865,7 @@ void Server::sendMessage(Game& game, const int handle) {
     msg.append("|");
     msg.append(message);
     if (recipient.empty()) {
-      msg.append("|ALL");
+      msg.append("|All");
     }
     for (unsigned i = 0; i < game.getBoardCount(); ++i) {
       const Board* dest = game.getBoardAtIndex(i);
@@ -890,12 +938,29 @@ void Server::shoot(Game& game, const int handle) {
     }
     sendLine(game, handle, str);
     sendBoard(game, target);
-    game.nextTurn();
+    nextTurn(game);
   } else if (Boat::isHit(id) || Boat::isMiss(id)) {
     sendLine(game, handle, "M||that spot has already been shot");
   } else {
     sendLine(game, handle, "M||illegal coordinates");
   }
+}
+
+//-----------------------------------------------------------------------------
+bool Server::nextTurn(Game& game) {
+  if (game.isStarted()) {
+    game.nextTurn();
+    if (!game.isFinished()) {
+      Board* next = game.getBoardToMove();
+      if (next) {
+        sendLineAll(game, ("N|" + next->getPlayerName()));
+      } else {
+        Logger::error() << "Failed to get board to move";
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 //-----------------------------------------------------------------------------
