@@ -6,6 +6,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <stdio.h>
 #include "Client.h"
 #include "CommandArgs.h"
 #include "Logger.h"
@@ -722,7 +723,7 @@ bool Client::sendMessage(const Coordinate& promptCoord) {
     return false;
   }
 
-  messages.push_back("[me]->[" + (name.size() ? name : "All") + "]: " + msg);
+  messages.push_back(Message("me", (name.size() ? name : "All"), msg));
   return true;
 }
 
@@ -897,18 +898,12 @@ bool Client::nextTurn() {
 
 //-----------------------------------------------------------------------------
 bool Client::addMessage() {
-  std::string name = Input::trim(input.getString(1, ""));
+  std::string from = Input::trim(input.getString(1, ""));
   std::string msg = Input::trim(input.getString(2, ""));
-  std::string group = Input::trim(input.getString(3, ""));
-  if (msg.size()) {
-    if (name.empty()) {
-      name = "server";
-    }
-    if (group.empty()) {
-      messages.push_back("[" + name + "]: " + msg);
-    } else {
-      messages.push_back("[" + name + "]->[" + group + "]: " + msg);
-    }
+  std::string to = Input::trim(input.getString(3, ""));
+  Message message(from, to, msg);
+  if (message.isValid()) {
+    messages.push_back(message);
   }
   return true;
 }
@@ -1082,14 +1077,24 @@ bool Client::printMessages(Coordinate& coord) {
     }
   }
 
-  bool first = true;
+  unsigned nameLen = (config.getBoardSize().getWidth() - 3);
+  std::vector<std::string> buffer;
+  buffer.reserve(h);
+
   unsigned i = (h > messages.size()) ? 0 : (messages.size() - h);
   while (i < messages.size()) {
+    const Message& m = messages[i++];
+    m.appendTo(buffer, nameLen);
+  }
+
+  bool first = true;
+  i = (buffer.size() > h) ? (buffer.size() - h) : 0;
+  while (i < buffer.size()) {
     if (first) {
       first = false;
       coord.south();
     }
-    Screen::print() << coord.south() << messages[i++];
+    Screen::print() << coord.south() << buffer[i++];
   }
 
   return true;
@@ -1182,12 +1187,13 @@ bool Client::clearMessages(const Coordinate& promptCoord) {
       }
     }
 
-    std::vector<std::string> tmp;
+    std::vector<Message> tmp;
     tmp.reserve(messages.size());
     str = ("[" + str + "]");
     for (unsigned i = 0; i < messages.size(); ++i) {
-      if (strncmp(messages[i].c_str(), str.c_str(), str.size()) != 0) {
-        tmp.push_back(messages[i]);
+      const Message& m = messages[i];
+      if (strncmp(m.getFrom().c_str(), str.c_str(), str.size()) != 0) {
+        tmp.push_back(m);
       }
     }
 

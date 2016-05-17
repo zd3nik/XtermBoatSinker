@@ -9,6 +9,7 @@
 #include "Input.h"
 #include "Board.h"
 #include "Configuration.h"
+#include "Message.h"
 
 namespace xbs
 {
@@ -76,7 +77,7 @@ private:
   bool gameFinished;
   Configuration config;
   std::string userName;
-  std::vector<std::string> messages;
+  std::vector<Message> messages;
   std::map<std::string, Board> boardMap;
   std::vector<Board*> boardList;
 };
