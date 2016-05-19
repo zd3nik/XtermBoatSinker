@@ -8,7 +8,6 @@
 #include <iostream>
 #include <fstream>
 #include "LogStream.h"
-#include "Mutex.h"
 
 namespace xbs
 {
@@ -49,14 +48,13 @@ public:
   }
 
   inline LogStream log(const char* hdr = NULL) {
-    return LogStream(mutex, *stream, hdr);
+    return LogStream(*stream, hdr);
   }
 
   inline LogStream log(const LogLevel level, const char* hdr = NULL,
                        const bool print = false)
   {
-    return (logLevel >= level) ? LogStream(mutex, *stream, hdr, print)
-                               : LogStream();
+    return (logLevel >= level) ? LogStream(*stream, hdr, print) : LogStream();
   }
 
   std::string getLogFile() const {
@@ -75,7 +73,6 @@ public:
 private:
   Logger();
 
-  Mutex mutex;
   std::string logFile;
   LogLevel logLevel;
   std::ostream* stream;

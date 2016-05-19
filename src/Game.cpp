@@ -186,14 +186,27 @@ Board* Game::getBoardForHandle(const int handle) {
 
 //-----------------------------------------------------------------------------
 Board* Game::getBoardForPlayer(const std::string& name) {
+  Board* board = NULL;
   if (name.size()) {
-    for (unsigned i = 0; i < boards.size(); ++i) {
-      if (boards[i].getPlayerName() == name) {
-        return &(boards[i]);
+    if (isdigit(name[0])) {
+      unsigned n = (unsigned)atoi(name.c_str());
+      if ((n > 0) && (n <= boards.size())) {
+        board = getBoardAtIndex(n - 1);
+      }
+    } else {
+      for (unsigned i = 0; i < boards.size(); ++i) {
+        std::string playerName = boards[i].getPlayerName();
+        if (strncasecmp(name.c_str(), playerName.c_str(), name.size()) == 0) {
+          if (board) {
+            return NULL;
+          } else {
+            board = &(boards[i]);
+          }
+        }
       }
     }
   }
-  return NULL;
+  return board;
 }
 
 //-----------------------------------------------------------------------------

@@ -138,13 +138,23 @@ void Board::setStatus(const std::string& str) {
 }
 
 //-----------------------------------------------------------------------------
-void Board::setHitTaunt(const std::string& str) {
-  hitTaunt = str;
+void Board::clearHitTaunts() {
+  hitTaunts.clear();
 }
 
 //-----------------------------------------------------------------------------
-void Board::setMissTaunt(const std::string& str) {
-  missTaunt = str;
+void Board::clearMissTaunts() {
+  missTaunts.clear();
+}
+
+//-----------------------------------------------------------------------------
+void Board::addHitTaunt(const std::string& str) {
+  hitTaunts.push_back(str);
+}
+
+//-----------------------------------------------------------------------------
+void Board::addMissTaunt(const std::string& str) {
+  missTaunts.push_back(str);
 }
 
 //-----------------------------------------------------------------------------
@@ -168,13 +178,33 @@ std::string Board::getDescriptor() const {
 }
 
 //-----------------------------------------------------------------------------
-std::string Board::getHitTaunt() const {
-  return hitTaunt;
+std::string Board::getHitTaunt() {
+  if (hitTaunts.size()) {
+    std::vector<std::string>::iterator it = hitTaunts.begin();
+    std::advance(it, (((unsigned)rand()) % hitTaunts.size()));
+    return (*it);
+  }
+  return std::string();
 }
 
 //-----------------------------------------------------------------------------
-std::string Board::getMissTaunt() const {
-  return missTaunt;
+std::string Board::getMissTaunt() {
+  if (missTaunts.size()) {
+    std::vector<std::string>::iterator it = missTaunts.begin();
+    std::advance(it, (((unsigned)rand()) % missTaunts.size()));
+    return (*it);
+  }
+  return std::string();
+}
+
+//-----------------------------------------------------------------------------
+std::vector<std::string> Board::getHitTaunts() const {
+  return hitTaunts;
+}
+
+//-----------------------------------------------------------------------------
+std::vector<std::string> Board::getMissTaunts() const {
+  return missTaunts;
 }
 
 //-----------------------------------------------------------------------------
@@ -319,6 +349,16 @@ bool Board::isValid() const {
           (descriptorLength == boatAreaSize) &&
           (descriptor[descriptorLength] == 0) &&
           (strlen(descriptor) == descriptorLength));
+}
+
+//-----------------------------------------------------------------------------
+bool Board::hasHitTaunts() const {
+  return !hitTaunts.empty();
+}
+
+//-----------------------------------------------------------------------------
+bool Board::hasMissTaunts() const {
+  return !missTaunts.empty();
 }
 
 //-----------------------------------------------------------------------------

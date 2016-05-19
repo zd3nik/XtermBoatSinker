@@ -6,7 +6,6 @@
 #define LOGSTREAM_H
 
 #include <ostream>
-#include "Mutex.h"
 #include "Screen.h"
 
 namespace xbs
@@ -17,15 +16,12 @@ class LogStream
 {
 public:
   LogStream()
-    : mutexLock(NULL),
-      stream(NULL),
+    : stream(NULL),
       print(false)
   { }
 
-  LogStream(Mutex& mutex, std::ostream& stream, const char* hdr,
-            const bool print = false)
-    : mutexLock(new Mutex::Lock(mutex)),
-      stream(&stream),
+  LogStream(std::ostream& stream, const char* hdr, const bool print = false)
+    : stream(&stream),
       print(print && ((&stream) != (&std::cout)))
   {
     if (hdr) {
@@ -44,8 +40,6 @@ public:
     if (print) {
       Screen::print() << DefaultColor << EL << Flush;
     }
-    delete mutexLock;
-    mutexLock = NULL;
   }
 
   template<typename T>
@@ -60,7 +54,6 @@ public:
   }
 
 private:
-  Mutex::Lock* mutexLock;
   std::ostream* stream;
   const bool print;
 };

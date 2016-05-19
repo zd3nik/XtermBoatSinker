@@ -77,11 +77,8 @@ void Client::closeSocketHandle() {
 }
 //-----------------------------------------------------------------------------
 bool Client::join() {
-  std::string arg0 = CommandArgs::getInstance().get(0);
-  const char* p = strrchr(arg0.c_str(), '/');
-  const char* progname = (p ? (p + 1) : arg0.c_str());
-
-  Screen::get() << Clear << Coordinate(1, 1) << progname
+  const CommandArgs& args = CommandArgs::getInstance();
+  Screen::get() << Clear << Coordinate(1, 1) << args.getProgramName()
                 << " version " << Client::VERSION << EL << Flush;
 
   closeSocket();
@@ -327,29 +324,33 @@ bool Client::setupBoard(Coordinate& promptCoord) {
   int n;
   char ch;
   char sbuf[32];
-  const unsigned count = std::max<unsigned>(4, config.getMaxPlayers());
   std::vector<Container*> children;
   std::vector<Board> boards;
   std::string str;
 
-  boards.reserve(count);
-  for (unsigned i = 0; i < count; ++i) {
+  boards.reserve(9);
+  for (unsigned i = 0; i < 9; ++i) {
     snprintf(sbuf, sizeof(sbuf), "Board #%u", (i + 1));
-    boards.push_back(Board(-1, sbuf, "local",
-                           config.getBoardSize().getWidth(),
-                           config.getBoardSize().getHeight()));
+    Board board(-1, sbuf, "local",
+                config.getBoardSize().getWidth(),
+                config.getBoardSize().getHeight());
 
-    Board& board = boards.back();
     if ((i > 0) && !board.addRandomBoats(config)) {
       return false;
     }
 
     Container* container = &board;
     children.push_back(container);
-  }
 
-  if (!Screen::get().arrangeChildren(children)) {
-    Logger::printError() << "Boards do not fit in terminal";
+    if (Screen::get().arrangeChildren(children)) {
+      children.pop_back();
+      boards.push_back(board);
+      container = &boards.back();
+      children.push_back(container);
+    } else {
+      children.pop_back();
+      break;
+    }
   }
 
   std::vector<Boat> boats;
@@ -377,7 +378,12 @@ bool Client::setupBoard(Coordinate& promptCoord) {
 
     ch = toupper(ch);
     if (ch == 'Q') {
-      return false;
+      Screen::print() << EL << ClearLine << "Quit? y/N -> " << Flush;
+      if ((input.readln(STDIN_FILENO) < 0) ||
+          (toupper(*input.getString(0, "")) == 'Y'))
+      {
+        return false;
+      }
     } else if (ch == 'R') {
       for (unsigned i = 1; i < boards.size(); ++i) {
         if (!boards[i].addRandomBoats(config)) {
@@ -625,7 +631,7 @@ bool Client::waitForGameStart() {
       Screen::print() << ", (M)essage";
     }
     if (messages.size() > 0) {
-      Screen::print() << ", (C)lear";
+      Screen::print() << ", (C)lear Messages";
     }
 
     Screen::print() << " -> " << Flush;
@@ -653,7 +659,7 @@ bool Client::waitForGameStart() {
     }
   }
 
-  return gameStarted;
+  return (gameStarted && !gameFinished);
 }
 
 //-----------------------------------------------------------------------------
@@ -692,7 +698,7 @@ bool Client::sendMessage(const Coordinate& promptCoord) {
   while (true) {
     if (!prompt(coord, "Enter recipient [RET=All] -> ", name)) {
       return false;
-    } else if (name.empty() || boardMap.count(name)) {
+    } else if (name.empty()) {
       break;
     } else if (!(board = getBoard(name))) {
       Logger::printError() << "Invalid player name: " << name;
@@ -901,7 +907,7 @@ bool Client::addMessage() {
   std::string from = Input::trim(input.getString(1, ""));
   std::string msg = Input::trim(input.getString(2, ""));
   std::string to = Input::trim(input.getString(3, ""));
-  Message message(from, to, msg);
+  Message message((from.size() ? from : "server"), to, msg);
   if (message.isValid()) {
     messages.push_back(message);
   }
@@ -950,7 +956,7 @@ bool Client::startGame() {
 //-----------------------------------------------------------------------------
 bool Client::endGame() {
   Screen::get(true).clear().flush();
-  gameFinished = true;
+  gameFinished = gameStarted = true;
 
   std::string str;
   std::string status;
@@ -965,17 +971,17 @@ bool Client::endGame() {
     } else if (strncmp(p, FLD_TURNS.c_str(), FLD_TURNS.size()) == 0) {
       turns = atoi(p + FLD_TURNS.size());
     } else if (strncmp(p, FLD_PLAYERS.c_str(), FLD_PLAYERS.size()) == 0) {
-      turns = atoi(p + FLD_PLAYERS.size());
+      players = atoi(p + FLD_PLAYERS.size());
     } else {
       Logger::debug() << str;
     }
   }
 
   Coordinate coord(1, 1);
-  Screen::print() << coord         << "Title       : " << config.getName();
-  Screen::print() << coord         << "Status      : " << status;
-  Screen::print() << coord.south() << "Turns taken : " << turns;
-  Screen::print() << coord.south() << "Joined      : " << players;
+  Screen::print() << coord         << "Title        : " << config.getName();
+  Screen::print() << coord.south() << "Status       : " << status;
+  Screen::print() << coord.south() << "Turns taken  : " << turns;
+  Screen::print() << coord.south() << "Participants : " << players;
 
   coord.south().setX(3);
 
@@ -984,7 +990,7 @@ bool Client::endGame() {
       break;
     }
 
-    str = input.getString(1, "");
+    str = input.getString(0, "");
     if (str == "R") {
       str = Input::trim(input.getString(1, ""));
       if (str.size()) {
@@ -993,7 +999,7 @@ bool Client::endGame() {
     }
   }
 
-  return Screen::print() << coord.south().setX(1) << Flush;
+  return Screen::print() << coord.south(2).setX(1) << Flush;
 }
 
 //-----------------------------------------------------------------------------
@@ -1105,10 +1111,10 @@ bool Client::printGameOptions(const Coordinate& promptCoord) {
   Board& board = boardMap[userName];
 
   Screen::print() << promptCoord << ClearToScreenEnd
-                  << "(Q)uit, (R)edraw, (T)aunt, (B)lock, (M)essage";
+                  << "(Q)uit, (R)edraw, (T)aunt, (M)essage";
 
   if (messages.size()) {
-    Screen::print() << ", (C)lear";
+    Screen::print() << ", (C)lear Messages";
   }
 
   if (board.getState() == Board::TO_MOVE) {
@@ -1125,34 +1131,88 @@ bool Client::blockMessages(const Coordinate& promptCoord) {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::setTaunt(const Coordinate& promptCoord) {
-  Coordinate coord(promptCoord);
+bool Client::setTaunt(const Coordinate& /*promptCoord*/) {
+  char sbuf[Input::BUFFER_SIZE];
+  Board& board = boardMap[userName];
+  std::vector<std::string> taunts;
   std::string type;
   std::string taunt;
 
-  Screen::print() << coord.south() << ClearToScreenEnd;
   while (true) {
-    if (!prompt(coord, "Taunt type? [ hit, miss ] -> ", type)) {
+    Coordinate coord(1, 1);
+    Screen::print() << coord << ClearToScreenEnd;
+
+    taunts = board.getHitTaunts();
+    Screen::print() << coord.south().setX(1) << "Hit Taunts:";
+    for (unsigned i = 0; i < taunts.size(); ++i) {
+      Screen::print() << coord.south().setX(3) << taunts[i];
+    }
+
+    taunts = board.getMissTaunts();
+    Screen::print() << coord.south(2).setX(1) << "Miss Taunts:";
+    for (unsigned i = 0; i < taunts.size(); ++i) {
+      Screen::print() << coord.south().setX(3) << taunts[i];
+    }
+
+    Screen::print() << coord.south(2).setX(1) << ClearToScreenEnd
+                    << "(A)dd, (C)lear, (D)one -> " << Flush;
+
+    char mode = input.readChar(STDIN_FILENO);
+    if (mode <= 0) {
       return false;
-    } else if (type.empty()) {
-      return true;
-    } else if (strcasecmp("hit", type.c_str()) == 0) {
+    }
+
+    mode = toupper(mode);
+    if (mode == 'D') {
       break;
-    } else if (strcasecmp("miss", type.c_str()) == 0) {
+    } else if ((mode != 'A') && (mode != 'C')) {
+      continue;
+    }
+
+    Screen::print() << coord << ClearToScreenEnd
+                    << "(H)it Taunt, (M)iss Taunt, (D)one -> " << Flush;
+
+    char type = input.readChar(STDIN_FILENO);
+    if (type <= 0) {
+      return false;
+    }
+
+    type = toupper(type);
+    if (type == 'D') {
       break;
+    } else if ((type != 'H') && (type != 'M')) {
+      continue;
+    }
+
+    Screen::print() << coord << ClearToScreenEnd;
+    if (mode == 'C') {
+      snprintf(sbuf, sizeof(sbuf), "T|%s|", ((type == 'H') ? "hit" : "miss"));
+    } else if (!prompt(coord, "Taunt message? -> ", taunt)) {
+      return false;
+    } else if (taunt.size()) {
+      snprintf(sbuf, sizeof(sbuf), "T|%s|%s", ((type == 'H') ? "hit" : "miss"),
+               taunt.c_str());
     } else {
-      Screen::print() << ClearLine << "Unknown taunt type";
+      continue;
+    }
+    if (!sendLine(sbuf)) {
+      return false;
+    }
+
+    if (mode == 'C') {
+      if (type == 'H') {
+        board.clearHitTaunts();
+      } else {
+        board.clearMissTaunts();
+      }
+    } else if (type == 'H') {
+      board.addHitTaunt(taunt);
+    } else {
+      board.addMissTaunt(taunt);
     }
   }
 
-  Screen::print() << coord << ClearToScreenEnd;
-  if (!prompt(coord, "Taunt message? [RET=clear] -> ", taunt)) {
-    return false;
-  }
-
-  char sbuf[Input::BUFFER_SIZE];
-  snprintf(sbuf, sizeof(sbuf), "T|%s|%s", type.c_str(), taunt.c_str());
-  return sendLine(sbuf);
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1163,21 +1223,21 @@ bool Client::clearMessages(const Coordinate& promptCoord) {
 
   std::string str;
   Coordinate coord(promptCoord);
-  if (!prompt(coord.south(), "Clear messages from which player? [A=All] -> ",
-              str))
-  {
+  Screen::print() << coord << ClearToScreenEnd
+                  << "Clear (A)ll messages or messages from one (P)layer -> "
+                  << Flush;
+  char ch = input.readChar(STDIN_FILENO);
+  if (ch <= 0) {
     return false;
   }
 
-  if (str.size()) {
-    if (strcasecmp(str.c_str(), "a") == 0) {
-      messages.clear();
-      return true;
-    }
-
-    if ((strcasecmp(str.c_str(), "me") != 0) &&
-        (strcasecmp(str.c_str(), "server") != 0))
-    {
+  ch = toupper(ch);
+  if (ch == 'A') {
+    messages.clear();
+  } else if (ch == 'P') {
+    if (!prompt(coord, "Which player? [RET=Abort] -> ", str)) {
+      return false;
+    } else if (str.size()) {
       Board* board = getBoard(str);
       if (board) {
         str = board->getPlayerName();
@@ -1185,21 +1245,21 @@ bool Client::clearMessages(const Coordinate& promptCoord) {
           str = "me";
         }
       }
-    }
 
-    std::vector<Message> tmp;
-    tmp.reserve(messages.size());
-    str = ("[" + str + "]");
-    for (unsigned i = 0; i < messages.size(); ++i) {
-      const Message& m = messages[i];
-      if (strncmp(m.getFrom().c_str(), str.c_str(), str.size()) != 0) {
-        tmp.push_back(m);
+      std::vector<Message> tmp;
+      tmp.reserve(messages.size());
+      for (unsigned i = 0; i < messages.size(); ++i) {
+        const Message& m = messages[i];
+        if (m.getFrom() != str) {
+          tmp.push_back(m);
+        }
       }
-    }
 
-    messages.clear();
-    messages.assign(tmp.begin(), tmp.end());
+      messages.clear();
+      messages.assign(tmp.begin(), tmp.end());
+    }
   }
+
   return true;
 }
 

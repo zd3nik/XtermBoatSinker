@@ -48,7 +48,8 @@ Server::~Server() {
 //-----------------------------------------------------------------------------
 bool Server::init() {
   const CommandArgs& args = CommandArgs::getInstance();
-  Logger::info() << args.get(0) << " version " << Server::VERSION;
+  Screen::get() << Clear << Coordinate(1, 1) << args.getProgramName()
+                << " version " << Server::VERSION << EL << Flush;
 
   const char* binAddr = args.getValueOf("-b", "--bind-address");
   if (Input::empty(binAddr)) {
@@ -163,21 +164,18 @@ bool Server::startListening(const int backlog) {
 bool Server::run() {
   Screen::get(true).clear().cursor(1, 1).flush();
 
+  Configuration gameConfig = getGameConfig();
+  if (!gameConfig.isValid()) {
+    return false;
+  }
+
   std::string gameTitle;
   if (!getGameTitle(gameTitle)) {
     return false;
   }
 
-  Configuration gameConfig = getGameConfig();
-  gameConfig.setName(gameTitle);
-  if (!gameConfig.isValid()) {
-    Logger::error() << "Invalid game config";
-    return false;
-  }
-
-  Game game(gameConfig);
+  Game game(gameConfig.setName(gameTitle));
   bool ok = true;
-
   try {
     if (!startListening(gameConfig.getMaxPlayers() * 2) ||
         !input.setCanonical(false))
@@ -210,6 +208,7 @@ bool Server::run() {
     ok = false;
   }
 
+  Screen::get(true) << EL << Flush;
   input.restoreTerminal();
   closeSocket();
   return ok;
@@ -232,7 +231,7 @@ bool Server::printPlayers(Game& game, Coordinate& coord) {
 
   for (unsigned int i = 0; i < game.getBoardCount(); ++i) {
     const Board* board = game.getBoardAtIndex(i);
-    bool toMove = (board == game.getBoardToMove());
+    const bool toMove = (board == game.getBoardToMove());
     std::string pstr = board->toString((i + 1), toMove, game.isStarted());
     Screen::print() << coord.south() << pstr;
   }
@@ -298,8 +297,16 @@ bool Server::sendMessage(Game& game, Coordinate& coord) {
   }
 
   std::string user;
-  if (!prompt(coord, "Enter recipient [RET=All] -> ", user)) {
+  if (!prompt(coord, "Enter recipient name or number [RET=All] -> ", user)) {
     return false;
+  }
+
+  Board* board = NULL;
+  if (user.size()) {
+    if (!(board = game.getBoardForPlayer(user))) {
+      Logger::error() << "Unknown player: " << user;
+      return true;
+    }
   }
 
   std::string msg;
@@ -308,7 +315,11 @@ bool Server::sendMessage(Game& game, Coordinate& coord) {
   }
 
   if (msg.size()) {
-    sendLineAll(game, ("M|" + user + "|" + msg));
+    if (!board) {
+      return sendLineAll(game, ("M||" + msg));
+    } else if (board->getHandle()) {
+      return sendLine(game, board->getHandle(), ("M||" + msg));
+    }
   }
   return true;
 }
@@ -344,18 +355,13 @@ bool Server::bootPlayer(Game& game, Coordinate& coord) {
     return true;
   }
 
-  std::string str;
-  if (!prompt(coord, "Enter name or number of player to boot -> ", str)) {
+  std::string user;
+  if (!prompt(coord, "Enter name or number of player to boot -> ", user)) {
     return false;
   }
 
-  if (str.size()) {
-    Board* board = NULL;
-    if (isdigit(str[0])) {
-      board = game.getBoardAtIndex((unsigned)atoi(str.c_str()) - 1);
-    } else {
-      board = game.getBoardForPlayer(str);
-    }
+  if (user.size()) {
+    Board* board = game.getBoardForPlayer(user);
     if (board) {
       removePlayer(game, board->getHandle(), BOOTED);
     }
@@ -369,18 +375,13 @@ bool Server::blacklistPlayer(Game& game, Coordinate& coord) {
     return true;
   }
 
-  std::string str;
-  if (!prompt(coord, "Enter name or number of player to blacklist -> ", str)) {
+  std::string user;
+  if (!prompt(coord, "Enter name or number of player to blacklist -> ", user)) {
     return false;
   }
 
-  if (str.size()) {
-    Board* board = NULL;
-    if (isdigit(str[0])) {
-      board = game.getBoardAtIndex((unsigned)atoi(str.c_str()) - 1);
-    } else {
-      board = game.getBoardForPlayer(str);
-    }
+  if (user.size()) {
+    Board* board = game.getBoardForPlayer(user);
     if (board) {
       blackList.insert(PLAYER_PREFIX + board->getPlayerName());
       removePlayer(game, board->getHandle(), BOOTED);
@@ -446,22 +447,22 @@ bool Server::sendGameResults(Game& game) {
            ((game.isFinished() && !game.isAborted()) ? "finished" : "aborted"),
            game.getTurnCount(), game.getBoardCount());
 
-  std::vector<Board*> boards;
+  std::vector<Board*> sortedBoards;
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
     Board* board = game.getBoardAtIndex(i);
-    boards.push_back(board);
+    sortedBoards.push_back(board);
     if (board->getHandle() >= 0) {
       sendLine(game, board->getHandle(), str);
     }
   }
 
-  std::stable_sort(boards.begin(), boards.end(), compareScore);
+  std::stable_sort(sortedBoards.begin(), sortedBoards.end(), compareScore);
 
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
     Board* board = game.getBoardAtIndex(i);
     if (board->getHandle() >= 0) {
-      for (unsigned x = 0; x < boards.size(); ++x) {
-        std::string ps = boards[x]->toString((x + 1), false, true);
+      for (unsigned x = 0; x < sortedBoards.size(); ++x) {
+        std::string ps = sortedBoards[x]->toString((x + 1), false, true);
         snprintf(str, sizeof(str), "R|%s", ps.c_str());
         sendLine(game, board->getHandle(), str);
       }
@@ -827,14 +828,15 @@ void Server::joinGame(Game& game, const int handle) {
 
 //-----------------------------------------------------------------------------
 bool Server::isValidPlayerName(const std::string& name) const {
-  return ((name.size() > 1) &&
-          isalpha(name[0]) &&
-          (strcasecmp(name.c_str(), "server") != 0) &&
-          (strcasecmp(name.c_str(), "all") != 0) &&
-          (strcasecmp(name.c_str(), "you") != 0) &&
-          (strcasecmp(name.c_str(), "me") != 0) &&
-          !strstr(name.c_str(), "->") &&
-          !strstr(name.c_str(), "<-"));
+  return ((name.size() > 1) && isalpha(name[0]) &&
+      (strcasecmp(name.c_str(), "server") != 0) &&
+      (strcasecmp(name.c_str(), "all") != 0) &&
+      (strcasecmp(name.c_str(), "you") != 0) &&
+      (strcasecmp(name.c_str(), "me") != 0) &&
+      !strchr(name.c_str(), '<') && !strchr(name.c_str(), '>') &&
+      !strchr(name.c_str(), '[') && !strchr(name.c_str(), ']') &&
+      !strchr(name.c_str(), '{') && !strchr(name.c_str(), '}') &&
+      !strchr(name.c_str(), '(') && !strchr(name.c_str(), ')'));
 }
 
 //-----------------------------------------------------------------------------
@@ -855,7 +857,7 @@ void Server::sendMessage(Game& game, const int handle) {
   }
 
   // TODO store last N message times per board
-  // TODO reject if too many messages too rappidly
+  // TODO reject if too many messages too rapidly
 
   const std::string recipient = Input::trim(input.getString(1, ""));
   const std::string message = Input::trim(input.getString(2, ""));
@@ -927,18 +929,27 @@ void Server::shoot(Game& game, const int handle) {
   Coordinate coord(input.getInt(2, 0), input.getInt(3, 0));
   if (target->shootAt(coord, id)) {
     char str[Input::BUFFER_SIZE];
+    sendBoard(game, target);
+    nextTurn(game);
     sender->incTurns();
     if (Boat::isValidID(id)) {
       sender->incScore();
-      snprintf(str, sizeof(str), "M|%s|HIT! %s",
-               target->getPlayerName().c_str(), target->getHitTaunt().c_str());
-    } else {
+      snprintf(str, sizeof(str), "M||%s HIT %s!",
+               sender->getPlayerName().c_str(),
+               target->getPlayerName().c_str());
+      sendLineAll(game, str);
+      if (target->hasHitTaunts()) {
+        snprintf(str, sizeof(str), "M|%s|HIT! %s",
+                 target->getPlayerName().c_str(),
+                 target->getHitTaunt().c_str());
+        sendLine(game, handle, str);
+      }
+    } else if (target->hasMissTaunts()) {
       snprintf(str, sizeof(str), "M|%s|MISS! %s",
-               target->getPlayerName().c_str(), target->getMissTaunt().c_str());
+               target->getPlayerName().c_str(),
+               target->getMissTaunt().c_str());
+      sendLine(game, handle, str);
     }
-    sendLine(game, handle, str);
-    sendBoard(game, target);
-    nextTurn(game);
   } else if (Boat::isHit(id) || Boat::isMiss(id)) {
     sendLine(game, handle, "M||that spot has already been shot");
   } else {
@@ -976,9 +987,17 @@ void Server::setTaunt(Game& game, const int handle) {
   std::string type = Input::trim(input.getString(1, ""));
   std::string taunt = Input::trim(input.getString(2, ""));
   if (strcasecmp(type.c_str(), "hit") == 0) {
-    sender->setHitTaunt(taunt);
+    if (taunt.empty()) {
+      sender->clearHitTaunts();
+    } else {
+      sender->addHitTaunt(taunt);
+    }
   } else if (strcasecmp(type.c_str(), "miss") == 0) {
-    sender->setMissTaunt(taunt);
+    if (taunt.empty()) {
+      sender->clearMissTaunts();
+    } else {
+      sender->addMissTaunt(taunt);
+    }
   }
 }
 

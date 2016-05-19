@@ -68,16 +68,20 @@ public:
   void incScore(const unsigned value = 1);
   void incTurns(const unsigned value = 1);
   void setHandle(const int handle);
-  void setHitTaunt(const std::string& value);
-  void setMissTaunt(const std::string& value);
+  void clearHitTaunts();
+  void clearMissTaunts();
+  void addHitTaunt(const std::string& value);
+  void addMissTaunt(const std::string& value);
   void setStatus(const std::string& str);
   std::string getPlayerName() const;
   std::string getAddress() const;
   std::string getStatus() const;
   std::string getDescriptor() const;
   std::string getMaskedDescriptor() const;
-  std::string getHitTaunt() const;
-  std::string getMissTaunt() const;
+  std::string getHitTaunt();
+  std::string getMissTaunt();
+  std::vector<std::string> getHitTaunts() const;
+  std::vector<std::string> getMissTaunts() const;
   std::string toString(const unsigned number, const bool toMove,
                        const bool gameStarted) const;
 
@@ -90,6 +94,8 @@ public:
   unsigned getScore() const;
   unsigned getTurns() const;
   bool addRandomBoats(const Configuration&);
+  bool hasHitTaunts() const;
+  bool hasMissTaunts() const;
   bool isDead() const;
   bool isValid() const;
   bool isValid(const Configuration&) const;
@@ -116,8 +122,8 @@ private:
   std::string playerName;
   std::string address;
   std::string status;
-  std::string hitTaunt;
-  std::string missTaunt;
+  std::vector<std::string> hitTaunts;
+  std::vector<std::string> missTaunts;
   unsigned score;
   unsigned turns;
   unsigned boatAreaWidth;

@@ -7,6 +7,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <string>
 
 namespace xbs
 {
@@ -24,12 +25,20 @@ public:
   const char* get(const int index) const;
   const char* getValueOf(const char* a, const char* b = NULL) const;
 
+  std::string getProgramName() const {
+    return progName;
+  }
+
 private:
   CommandArgs(const int argc, const char** argv)
     : argc(argc),
       argv(argv)
-  { }
+  {
+    const char* p = strrchr(argv[0], '/');
+    progName = (p ? (p + 1) : argv[0]);
+  }
 
+  std::string progName;
   const int argc;
   const char** argv;
 };

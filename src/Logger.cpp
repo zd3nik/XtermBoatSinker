@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "Logger.h"
 #include "CommandArgs.h"
+#include "Input.h"
 
 namespace xbs
 {
@@ -42,14 +43,15 @@ Logger::Logger()
   }
 
   const char* file = args.getValueOf("-f", "--log-file");
-  if (file) {
+  if (Input::empty(file)) {
+    appendToFile(args.getProgramName() + ".log");
+  } else {
     appendToFile(file);
   }
 }
 
 //-----------------------------------------------------------------------------
 Logger::~Logger() {
-  Mutex::Lock lock(mutex);
   if (fileStream.is_open()) {
     fileStream.close();
   }
@@ -57,7 +59,6 @@ Logger::~Logger() {
 
 //-----------------------------------------------------------------------------
 Logger& Logger::appendToFile(const std::string& file) {
-  Mutex::Lock lock(mutex);
   stream = &std::cout;
   logFile.clear();
   try {
@@ -76,7 +77,6 @@ Logger& Logger::appendToFile(const std::string& file) {
 
 //-----------------------------------------------------------------------------
 Logger& Logger::setLogLevel(const LogLevel logLevel) {
-  Mutex::Lock lock(mutex);
   this->logLevel = logLevel;
   return (*this);
 }
