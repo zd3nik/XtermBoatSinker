@@ -58,6 +58,7 @@ void Client::closeSocket() {
   messages.clear();
   boardMap.clear();
   boardList.clear();
+  yourboard = Board();
   gameStarted = false;
   gameFinished = false;
 }
@@ -217,17 +218,17 @@ bool Client::openSocket() {
 //-----------------------------------------------------------------------------
 bool Client::readGameInfo() {
   if (!isConnected()) {
-    Screen::print() << "Not connected, can't read game info" << EL << Flush;
+    Logger::printError() << "Not connected, can't read game info";
     return false;
   }
   if (input.readln(sock) <= 0) {
-    Screen::print() << "No game info received" << EL << Flush;
+    Logger::printError() << "No game info received";
     return false;
   }
 
   std::string str = input.getString(0, "");
   if (str != "G") {
-    Screen::print() << "Invalid response from server: " << str << EL << Flush;
+    Logger::printError() << "Invalid response from server: " << str;
     return false;
   }
 
@@ -320,6 +321,7 @@ bool Client::setupBoard(Coordinate& promptCoord) {
   Screen::get(true).clear().flush();
   boardMap.clear();
   boardList.clear();
+  yourboard = Board();
 
   int n;
   char ch;
@@ -402,7 +404,7 @@ bool Client::setupBoard(Coordinate& promptCoord) {
         }
       }
       if ((n > 0) && (n <= boards.size()) && (boards[n - 1].isValid(config))) {
-        boardMap[""] = boards[n - 1].setPlayerName("");
+        yourboard = boards[n - 1].setPlayerName("");
         Screen::print() << coord << ClearToScreenEnd << Flush;
         break;
       }
@@ -532,15 +534,14 @@ bool Client::joinGame(Coordinate& promptCoord, bool& retry) {
     return false;
   }
 
-  std::map<std::string, Board>::iterator it = boardMap.find("");
-  if (it == boardMap.end()) {
-    Logger::printError() << "No board selected!";
+  if (yourboard.getDescriptor().empty()) {
+    Logger::printError() << "Your board is not setup!";
     return false;
   }
 
   char sbuf[Input::BUFFER_SIZE];
   snprintf(sbuf, sizeof(sbuf), "J|%s|%s", userName.c_str(),
-           it->second.getDescriptor().c_str());
+           yourboard.getDescriptor().c_str());
 
   if (!sendLine(sbuf)) {
     Logger::printError() << "Failed to send join message to server";
@@ -559,9 +560,7 @@ bool Client::joinGame(Coordinate& promptCoord, bool& retry) {
       Logger::printError() << "Invalid response from server: " << str;
       return false;
     }
-    it->second.setPlayerName(userName);
-    boardMap[userName] = it->second;
-    boardMap.erase(it);
+    boardMap[userName] = yourboard.setPlayerName(userName);
     return true;
   }
 
@@ -590,16 +589,20 @@ bool Client::waitForGameStart() {
   Screen::get(true).clear();
 
   if (userName.empty()) {
-    Screen::print() << "Username not set!" << EL << Flush;
+    Logger::printError() << "Username not set!";
+    return false;
+  }
+  if (yourboard.getDescriptor().empty()) {
+    Logger::printError() << "Your board is not setup!";
     return false;
   }
   if (boardMap.find(userName) == boardMap.end()) {
-    Screen::print() << "No board selected!" << EL << Flush;
+    Logger::printError() << "No board selected!";
     return false;
   }
   if (!input.setCanonical(false)) {
-    Screen::print() << "Failed to disable terminal canonical mode: "
-                    << strerror(errno) << EL << Flush;
+    Logger::printError() << "Failed to disable terminal canonical mode: "
+                         << strerror(errno);
     return false;
   }
 
@@ -803,6 +806,8 @@ bool Client::handleServerMessage() {
     return removePlayer();
   } else if (str == "B") {
     return updateBoard();
+  } else if (str == "H") {
+    return hitScored();
   } else if (str == "N") {
     return nextTurn();
   } else if (str == "S") {
@@ -863,6 +868,7 @@ bool Client::updateBoard() {
   std::string name   = input.getString(2, "");
   std::string status = input.getString(3, "");
   std::string desc   = input.getString(4, "");
+  int score          = input.getInt(5);
   if ((state.size() != 1) || name.empty() || !boardMap.count(name) ||
       desc.empty())
   {
@@ -872,8 +878,42 @@ bool Client::updateBoard() {
 
   Board& board = boardMap[name];
   board.setStatus(status);
-  return (board.updateState((Board::PlayerState)state[0]) &&
-      board.updateBoatArea(desc));
+  if (score >= 0) {
+    board.setScore((unsigned)score);
+  }
+  if (board.updateState((Board::PlayerState)state[0]) &&
+      board.updateBoatArea(desc))
+  {
+    if (name == userName) {
+      if (!yourboard.addHitsAndMisses(desc)) {
+        Logger::printError() << "Board descriptor mismatch";
+        return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::hitScored() {
+  std::string shooter = input.getString(1, "");
+  std::string target  = input.getString(2, "");
+
+  if (!boardMap.count(shooter)) {
+    Logger::error() << "Invalid shooter name '" << shooter
+                    << "' in hit message from server";
+    return false;
+  }
+  if (target.empty()) {
+      Logger::error() << "Empty target name in hit message from server";
+      return false;
+  }
+
+  messages.push_back(Message("server", "", (shooter + " hit " + target)));
+  boardMap[shooter].incScore();
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1020,7 +1060,7 @@ bool Client::run() {
 
     for (unsigned i = 0; i < boardList.size(); ++i) {
       Board* board = boardList[i];
-      board->print();
+      board->print(true, &config);
       coord.set(board->getBottomRight());
     }
 
@@ -1045,8 +1085,8 @@ bool Client::run() {
       if (quitGame(coord)) {
         return false;
       }
-    } else if (ch == 'B') {
-      if (!blockMessages(coord)) {
+    } else if (ch == 'V') {
+      if (!viewBoard(coord)) {
         return false;
       }
     } else if (ch == 'C') {
@@ -1111,7 +1151,7 @@ bool Client::printGameOptions(const Coordinate& promptCoord) {
   Board& board = boardMap[userName];
 
   Screen::print() << promptCoord << ClearToScreenEnd
-                  << "(Q)uit, (R)edraw, (T)aunt, (M)essage";
+                  << "(Q)uit, (R)edraw, (V)iew Board, (T)aunt, (M)essage";
 
   if (messages.size()) {
     Screen::print() << ", (C)lear Messages";
@@ -1126,8 +1166,35 @@ bool Client::printGameOptions(const Coordinate& promptCoord) {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::blockMessages(const Coordinate& promptCoord) {
-  return true; // TODO
+bool Client::viewBoard(const Coordinate& promptCoord) {
+  if (!boardMap.count(userName)) {
+    Logger::printError() << "Your board is not in the map!";
+    return false;
+  }
+
+  Board& board = boardMap[userName];
+  if (!board.isValid()) {
+    Logger::printError() << "You board is invalid!";
+    return false;
+  }
+  if (yourboard.getDescriptor().size() != board.getDescriptor().size()) {
+    Logger::printError() << "Board descriptor lengths don't match!";
+    return false;
+  }
+
+  yourboard.set(board.getTopLeft(), board.getBottomRight());
+  if (!yourboard.print(false)) {
+    Logger::printError() << "Failed to print you board";
+    return false;
+  }
+
+  std::string str;
+  Coordinate coord(promptCoord);
+  if (!prompt(coord, "Press Enter", str)) {
+    return false;
+  }
+
+  return board.print(true, &config);
 }
 
 //-----------------------------------------------------------------------------

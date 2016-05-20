@@ -65,6 +65,7 @@ public:
 
   virtual ~Board();
   void clearBoatArea();
+  void setScore(const unsigned value);
   void incScore(const unsigned value = 1);
   void incTurns(const unsigned value = 1);
   void setHandle(const int handle);
@@ -93,13 +94,14 @@ public:
   unsigned getMissCount() const;
   unsigned getScore() const;
   unsigned getTurns() const;
+  bool addHitsAndMisses(const std::string& descriptor);
   bool addRandomBoats(const Configuration&);
   bool hasHitTaunts() const;
   bool hasMissTaunts() const;
   bool isDead() const;
   bool isValid() const;
   bool isValid(const Configuration&) const;
-  bool print(const bool masked = true) const;
+  bool print(const bool masked, const Configuration* = NULL) const;
   bool removeBoat(const Boat& boat);
   bool updateBoatArea(const std::string& newDescriptor);
   bool updateState(const PlayerState);

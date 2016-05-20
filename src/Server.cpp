@@ -500,11 +500,12 @@ bool Server::sendBoard(Game& game, const Board* board) {
     if (dest->getHandle() >= 0) {
       char state = (board == game.getBoardToMove()) ? Board::TO_MOVE
                                                     : board->getState();
-      snprintf(str, sizeof(str), "B|%c|%s|%s|%s",
+      snprintf(str, sizeof(str), "B|%c|%s|%s|%s|%u",
                state,
                board->getPlayerName().c_str(),
                board->getStatus().c_str(),
-               board->getMaskedDescriptor().c_str());
+               board->getMaskedDescriptor().c_str(),
+               board->getScore());
       sendLine(game, dest->getHandle(), str);
     }
   }
@@ -789,7 +790,7 @@ void Server::joinGame(Game& game, const int handle) {
     removePlayer(game, handle, INVALID_BOARD);
   } else if (!isValidPlayerName(playerName)) {
     sendLine(game, handle, INVALID_NAME);
-  } else if (playerName.size() > (2 * boardSize.getWidth())) {
+  } else if (playerName.size() > boardSize.getWidth()) {
     sendLine(game, handle, NAME_TOO_LONG);
   } else if (game.getBoardForPlayer(playerName)) {
     sendLine(game, handle, NAME_IN_USE);
@@ -934,7 +935,7 @@ void Server::shoot(Game& game, const int handle) {
     sender->incTurns();
     if (Boat::isValidID(id)) {
       sender->incScore();
-      snprintf(str, sizeof(str), "M||%s HIT %s!",
+      snprintf(str, sizeof(str), "H|%s|%s",
                sender->getPlayerName().c_str(),
                target->getPlayerName().c_str());
       sendLineAll(game, str);

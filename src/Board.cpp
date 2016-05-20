@@ -123,6 +123,11 @@ void Board::clearBoatArea() {
 }
 
 //-----------------------------------------------------------------------------
+void Board::setScore(const unsigned value) {
+  score = value;
+}
+
+//-----------------------------------------------------------------------------
 void Board::incScore(const unsigned value) {
   score += value;
 }
@@ -394,17 +399,23 @@ bool Board::addRandomBoats(const Configuration& config) {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::print(const bool masked) const {
+bool Board::print(const bool masked, const Configuration* config) const {
   Coordinate coord(getTopLeft());
   char sbuf[32];
 
   // print player name (row 1)
   if (state == TO_MOVE) {
-    Screen::print() << coord << ' ' << Red << (char)state << DefaultColor
-                    << ' ' << playerName << EL;
+    Screen::print() << coord << ' ' << Red << (char)state << DefaultColor;
   } else {
-    Screen::print() << coord << ' ' << (char)state << ' ' << playerName << EL;
+    Screen::print() << coord << ' ' << (char)state;
   }
+  Screen::print() << ' ' << playerName;
+  if (config) {
+    unsigned hits = getHitCount();
+    Screen::print() << " (" << score << ", "
+                    << ((100 * hits) / config->getPointGoal()) << "%)";
+  }
+  Screen::print() << EL;
 
   // print X coordinate header (row 2)
   Screen::print() << coord.south() << "  ";
@@ -451,6 +462,30 @@ bool Board::updateBoatArea(const std::string& desc) {
   }
   memcpy(descriptor, desc.c_str(), descriptorLength);
   return isValid();
+}
+
+//-----------------------------------------------------------------------------
+bool Board::addHitsAndMisses(const std::string& desc) {
+  if (desc.empty() || (desc.size() != descriptorLength)) {
+    return false;
+  }
+  bool ok = true;
+  for (unsigned i = 0; i < desc.size(); ++i) {
+    if (desc[i] == Boat::HIT_MASK) {
+      if (Boat::isValidID(descriptor[i])) {
+        descriptor[i] = Boat::HIT_MASK;
+      } else if (descriptor[i] != Boat::HIT_MASK) {
+        ok = false;
+      }
+    } else if (desc[i] == Boat::MISS) {
+      if (descriptor[i] == Boat::NONE) {
+        descriptor[i] = desc[i];
+      } else if (descriptor[i] != Boat::MISS) {
+        ok = false;
+      }
+    }
+  }
+  return ok;
 }
 
 //-----------------------------------------------------------------------------

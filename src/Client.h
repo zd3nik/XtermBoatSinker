@@ -37,13 +37,13 @@ private:
   char waitForInput(const int timeout = -1);
   bool addMessage();
   bool addPlayer();
-  bool blockMessages(const Coordinate& promptCoordinate);
   bool clearMessages(const Coordinate& promptCoordinate);
   bool endGame();
   bool getHostAddress();
   bool getHostPort();
   bool getUserName(Coordinate& promptCoordinate);
   bool handleServerMessage();
+  bool hitScored();
   bool joinGame(Coordinate& promptCoordinate, bool& retry);
   bool nextTurn();
   bool openSocket();
@@ -57,6 +57,7 @@ private:
   bool setTaunt(const Coordinate& promptCoordinate);
   bool setupBoard(Coordinate& promptCoordinate);
   bool shoot(const Coordinate& promptCoordinate);
+  bool viewBoard(const Coordinate& promptCoordinate);
   bool startGame();
   bool updateBoard();
   bool waitForGameStart();
@@ -80,6 +81,7 @@ private:
   std::vector<Message> messages;
   std::map<std::string, Board> boardMap;
   std::vector<Board*> boardList;
+  Board yourboard;
 };
 
 } // namespace xbs
