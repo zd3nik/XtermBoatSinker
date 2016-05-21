@@ -34,11 +34,26 @@ const std::string FLD_WIDTH = "width=";
 const std::string PROTOCOL_ERROR = "protocol error";
 
 //-----------------------------------------------------------------------------
+enum ControlKey {
+  KeyNone,
+  KeyUp,
+  KeyDown,
+  KeyHome,
+  KeyEnd,
+  KeyPageUp,
+  KeyPageDown,
+  KeyDel,
+  KeyBackspace,
+  KeyIncomplete
+};
+
+//-----------------------------------------------------------------------------
 Client::Client()
   : port(-1),
     sock(-1),
     gameStarted(false),
-    gameFinished(false)
+    gameFinished(false),
+    msgEnd(~0U)
 {
   input.addHandle(STDIN_FILENO);
 }
@@ -606,8 +621,11 @@ bool Client::waitForGameStart() {
     return false;
   }
 
+  char lastChar = 0;
   char ch;
-  while (!gameStarted) {
+  bool ok = true;
+
+  while (ok && !gameStarted) {
     Coordinate coord(1, 1);
     Screen::print() << coord << ClearToScreenEnd;
     config.print(coord);
@@ -623,18 +641,13 @@ bool Client::waitForGameStart() {
       }
     }
 
-    coord.setX(1);
+    Coordinate msgCoord(coord.setX(1));
     if (!printMessages(coord)) {
       return false;
     }
 
-    Screen::print() << coord.south(2) << "Waiting for start";
-    Screen::print() << coord.south() << "(Q)uit, (R)edraw";
-    if (boardMap.size() > 1) {
-      Screen::print() << ", (M)essage";
-    }
-    if (messages.size() > 0) {
-      Screen::print() << ", (C)lear Messages";
+    if (!printWaitOptions(coord)) {
+      return false;
     }
 
     Screen::print() << " -> " << Flush;
@@ -644,26 +657,59 @@ bool Client::waitForGameStart() {
       return false;
     }
 
-    ch = toupper(ch);
-    if (ch == 'Q') {
-      if (quitGame(coord)) {
-        return false;
-      }
-    } else if ((ch == 'M') && (boardMap.size() > 1)) {
-      if (!sendMessage(coord)) {
-        return false;
-      }
-    } else if (ch == 'C') {
-      if (!clearMessages(coord)) {
-        return false;
-      }
-    } else if (ch == 'R') {
-      Screen::get(true).clear();
+    switch (controlSequence(ch, lastChar)) {
+    case KeyNone:     ch = toupper(ch); break;
+    case KeyUp:       ch = 'U';         break;
+    case KeyDown:     ch = 'D';         break;
+    case KeyHome:     ch = 'H';         break;
+    case KeyEnd:      ch = 'E';         break;
+    case KeyPageUp:   ch = 'u';         break;
+    case KeyPageDown: ch = 'd';         break;
+    case KeyDel:
+    case KeyBackspace:
+    case KeyIncomplete:
+      continue;
+    }
+
+    switch (ch) {
+    case 'C': ok = clearMessages(coord); break;
+    case 'd': ok = pageDown(msgCoord);   break;
+    case 'D': ok = scrollDown();         break;
+    case 'E': ok = end();                break;
+    case 'H': ok = home();               break;
+    case 'M': ok = sendMessage(coord);   break;
+    case 'Q': ok = !quitGame(coord);     break;
+    case 'R': ok = clearScreen();        break;
+    case 'T': ok = setTaunt(coord);      break;
+    case 'u': ok = pageUp(msgCoord);     break;
+    case 'U': ok = scrollUp();           break;
+    default:
+      break;
     }
   }
 
-  return (gameStarted && !gameFinished);
+  return (ok && gameStarted && !gameFinished);
 }
+
+//-----------------------------------------------------------------------------
+bool Client::printWaitOptions(const Coordinate& promptCoord) {
+  Coordinate coord(promptCoord);
+  Board& board = boardMap[userName];
+
+  Screen::print() << coord.south(2) << "Waiting for start";
+  Screen::print() << coord.south() << "(Q)uit, (R)edraw, (T)aunt";
+  if (boardMap.size() > 1) {
+    Screen::print() << ", (M)essage";
+  }
+  if (messages.size()) {
+    Screen::print() << coord.south()
+                    << "(C)lear Messages, Scroll (U)p, (D)own, (H)ome, (E)nd";
+  }
+
+  Screen::print() << " -> " << Flush;
+  return true;
+}
+
 
 //-----------------------------------------------------------------------------
 bool Client::prompt(Coordinate& coord, const std::string& str,
@@ -696,6 +742,11 @@ bool Client::sendMessage(const Coordinate& promptCoord) {
   std::string name;
   std::string msg;
   Coordinate coord(promptCoord);
+
+  msgEnd = ~0U;
+  if (boardMap.size() < 2) {
+    return true;
+  }
 
   Screen::print() << coord.south() << ClearToScreenEnd;
   while (true) {
@@ -732,7 +783,65 @@ bool Client::sendMessage(const Coordinate& promptCoord) {
     return false;
   }
 
-  messages.push_back(Message("me", (name.size() ? name : "All"), msg));
+  Message message("me", (name.size() ? name : "All"), msg);
+  messages.push_back(message);
+  message.appendTo(msgBuffer, msgHeaderLen());
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::scrollUp() {
+  if ((msgEnd > 0) && (msgBuffer.size() > 0)) {
+    if (msgEnd >= msgBuffer.size()) {
+      msgEnd = (msgBuffer.size() - 1);
+    } else {
+      msgEnd--;
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::scrollDown() {
+  if (msgEnd < msgBuffer.size()) {
+    msgEnd++;
+  }
+  if (msgEnd >= msgBuffer.size()) {
+    msgEnd = ~0U;
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::pageUp(const Coordinate& promptCoord) {
+  unsigned height = msgWindowHeight(promptCoord);
+  if (msgEnd > msgBuffer.size()) {
+    msgEnd = msgBuffer.size();
+  }
+  msgEnd = (msgEnd > height) ? (msgEnd - height) : 0;
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::pageDown(const Coordinate& promptCoord) {
+  unsigned height = msgWindowHeight(promptCoord);
+  if (msgEnd != ~0U) {
+    if ((msgEnd += height) >= msgBuffer.size()) {
+      msgEnd = ~0U;
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::home() {
+  msgEnd = 0;
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::end() {
+  msgEnd = ~0U;
   return true;
 }
 
@@ -911,7 +1020,9 @@ bool Client::hitScored() {
       return false;
   }
 
-  messages.push_back(Message("server", "", (shooter + " hit " + target)));
+  Message message("server", "", (shooter + " hit " + target));
+  messages.push_back(message);
+  message.appendTo(msgBuffer, msgHeaderLen());
   boardMap[shooter].incScore();
   return true;
 }
@@ -943,6 +1054,11 @@ bool Client::nextTurn() {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Client::msgHeaderLen() const {
+  return (config.getBoardSize().getWidth() - 3);
+}
+
+//-----------------------------------------------------------------------------
 bool Client::addMessage() {
   std::string from = Input::trim(input.getString(1, ""));
   std::string msg = Input::trim(input.getString(2, ""));
@@ -950,6 +1066,7 @@ bool Client::addMessage() {
   Message message((from.size() ? from : "server"), to, msg);
   if (message.isValid()) {
     messages.push_back(message);
+    message.appendTo(msgBuffer, msgHeaderLen());
   }
   return true;
 }
@@ -1052,9 +1169,11 @@ bool Client::run() {
   }
 
   Screen::get(true).clear().flush();
+  char lastChar = 0;
   char ch = 0;
+  bool ok = true;
 
-  while (!gameFinished) {
+  while (ok && !gameFinished) {
     Coordinate coord(1, 1);
     Screen::print() << coord << ClearToScreenEnd;
 
@@ -1064,7 +1183,7 @@ bool Client::run() {
       coord.set(board->getBottomRight());
     }
 
-    coord.setX(1);
+    Coordinate msgCoord(coord.setX(1));
     if (!printMessages(coord)) {
       return false;
     }
@@ -1080,85 +1199,146 @@ bool Client::run() {
       return false;
     }
 
-    ch = toupper(ch);
-    if (ch == 'Q') {
-      if (quitGame(coord)) {
-        return false;
-      }
-    } else if (ch == 'V') {
-      if (!viewBoard(coord)) {
-        return false;
-      }
-    } else if (ch == 'C') {
-      if (!clearMessages(coord  )) {
-        return false;
-      }
-    } else if (ch == 'M') {
-      if (!sendMessage(coord)) {
-        return false;
-      }
-    } else if (ch == 'S') {
-      if (!shoot(coord)) {
-        return false;
-      }
-    } else if (ch == 'T') {
-      if (!setTaunt(coord)) {
-        return false;
-      }
-    } else if (ch == 'R') {
-      Screen::get(true).clear();
+    switch (controlSequence(ch, lastChar)) {
+    case KeyNone:     ch = toupper(ch); break;
+    case KeyUp:       ch = 'U';         break;
+    case KeyDown:     ch = 'D';         break;
+    case KeyHome:     ch = 'H';         break;
+    case KeyEnd:      ch = 'E';         break;
+    case KeyPageUp:   ch = 'u';         break;
+    case KeyPageDown: ch = 'd';         break;
+    case KeyDel:
+    case KeyBackspace:
+    case KeyIncomplete:
+      continue;
+    }
+
+    switch (ch) {
+    case 'C': ok = clearMessages(coord); break;
+    case 'd': ok = pageDown(msgCoord);   break;
+    case 'D': ok = scrollDown();         break;
+    case 'E': ok = end();                break;
+    case 'H': ok = home();               break;
+    case 'M': ok = sendMessage(coord);   break;
+    case 'Q': ok = !quitGame(coord);     break;
+    case 'R': ok = clearScreen();        break;
+    case 'S': ok = shoot(coord);         break;
+    case 'T': ok = setTaunt(coord);      break;
+    case 'u': ok = pageUp(msgCoord);     break;
+    case 'U': ok = scrollUp();           break;
+    case 'V': ok = viewBoard(coord);     break;
+    default:
+      break;
     }
   }
 
-  return true;
+  return ok;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::clearScreen() {
+  msgEnd = ~0U;
+  return Screen::get(true).clear();
+}
+
+//-----------------------------------------------------------------------------
+char Client::controlSequence(const char ch, char& lastChar) {
+  if ((lastChar == '3') && (ch == '~')) {
+    lastChar = 0;
+    return KeyBackspace;
+  } else if ((lastChar == '5') && (ch == '~')) {
+    lastChar = 0;
+    return KeyPageUp;
+  } else if ((lastChar == '6') && (ch == '~')) {
+    lastChar = 0;
+    return KeyPageDown;
+  } else if (lastChar == '[') {
+    switch (ch) {
+    case 'A':
+      lastChar = 0;
+      return KeyUp;
+    case 'B':
+      lastChar = 0;
+      return KeyDown;
+    case 'H':
+      lastChar = 0;
+      return KeyHome;
+    case 'F':
+      lastChar = 0;
+      return KeyEnd;
+    case '5':
+      lastChar = '5';
+      return KeyIncomplete;
+    case '6':
+      lastChar = '6';
+      return KeyIncomplete;
+    }
+  } else if ((lastChar == 27) && (ch == '[')) {
+    lastChar = '[';
+    return KeyIncomplete;
+  } else if (ch == 27) {
+    lastChar = 27;
+    return KeyIncomplete;
+  } else if (!lastChar) {
+    switch (ch) {
+    case 8:
+    case 127:
+      return KeyDel;
+    }
+  }
+
+  if (lastChar) {
+    lastChar = 0;
+    return KeyIncomplete;
+  }
+  lastChar = 0;
+  return KeyNone;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Client::msgWindowHeight(const Coordinate& coord) const {
+  unsigned height = Screen::get().getHeight();
+  if (height >= 5) {
+    height -= 5;
+    if (height >= coord.getY()) {
+      height -= coord.getY();
+    }
+  }
+  return height;
 }
 
 //-----------------------------------------------------------------------------
 bool Client::printMessages(Coordinate& coord) {
-  unsigned h = Screen::get().getHeight();
-  if (h >= 5) {
-    h -= 5;
-    if (h >= coord.getY()) {
-      h -= coord.getY();
-    }
-  }
+  unsigned height = msgWindowHeight(coord);
+  msgEnd = std::max<unsigned>(msgEnd, height);
 
-  unsigned nameLen = (config.getBoardSize().getWidth() - 3);
-  std::vector<std::string> buffer;
-  buffer.reserve(h);
-
-  unsigned i = (h > messages.size()) ? 0 : (messages.size() - h);
-  while (i < messages.size()) {
-    const Message& m = messages[i++];
-    m.appendTo(buffer, nameLen);
-  }
-
-  bool first = true;
-  i = (buffer.size() > h) ? (buffer.size() - h) : 0;
-  while (i < buffer.size()) {
+  unsigned end = std::min<unsigned>(msgEnd, msgBuffer.size());
+  unsigned idx = (end - std::min<unsigned>(height, end));
+  for (bool first = true; idx < end; ++idx) {
     if (first) {
       first = false;
       coord.south();
     }
-    Screen::print() << coord.south() << buffer[i++];
+    Screen::print() << coord.south() << msgBuffer[idx];
   }
-
   return true;
 }
 
 //-----------------------------------------------------------------------------
 bool Client::printGameOptions(const Coordinate& promptCoord) {
+  Coordinate coord(promptCoord);
   Board& board = boardMap[userName];
 
-  Screen::print() << promptCoord << ClearToScreenEnd
+  Screen::print() << coord << ClearToScreenEnd
                   << "(Q)uit, (R)edraw, (V)iew Board, (T)aunt, (M)essage";
-
-  if (messages.size()) {
-    Screen::print() << ", (C)lear Messages";
-  }
 
   if (board.getState() == Board::TO_MOVE) {
     Screen::print() << ", " << Cyan << "(S)hoot" << DefaultColor;
+  }
+
+  if (messages.size()) {
+    Screen::print() << coord.south()
+                    << "(C)lear Messages, Scroll (U)p, (D)own, (H)ome, (E)nd";
   }
 
   Screen::print() << " -> " << Flush;
@@ -1204,6 +1384,8 @@ bool Client::setTaunt(const Coordinate& /*promptCoord*/) {
   std::vector<std::string> taunts;
   std::string type;
   std::string taunt;
+
+  msgEnd = ~0U;
 
   while (true) {
     Coordinate coord(1, 1);
@@ -1284,6 +1466,8 @@ bool Client::setTaunt(const Coordinate& /*promptCoord*/) {
 
 //-----------------------------------------------------------------------------
 bool Client::clearMessages(const Coordinate& promptCoord) {
+  msgEnd = ~0U;
+
   if (messages.empty()) {
     return true;
   }
@@ -1301,6 +1485,7 @@ bool Client::clearMessages(const Coordinate& promptCoord) {
   ch = toupper(ch);
   if (ch == 'A') {
     messages.clear();
+    msgBuffer.clear();
   } else if (ch == 'P') {
     if (!prompt(coord, "Which player? [RET=Abort] -> ", str)) {
       return false;
@@ -1313,12 +1498,14 @@ bool Client::clearMessages(const Coordinate& promptCoord) {
         }
       }
 
+      msgBuffer.clear();
       std::vector<Message> tmp;
       tmp.reserve(messages.size());
       for (unsigned i = 0; i < messages.size(); ++i) {
         const Message& m = messages[i];
         if (m.getFrom() != str) {
           tmp.push_back(m);
+          m.appendTo(msgBuffer, msgHeaderLen());
         }
       }
 
@@ -1360,6 +1547,8 @@ Board* Client::getBoard(const std::string& str) {
 
 //-----------------------------------------------------------------------------
 bool Client::shoot(const Coordinate& promptCoord) {
+  msgEnd = ~0U;
+
   if (boardMap[userName].getState() != Board::TO_MOVE) {
     Logger::printError() << "It's not your turn";
     return true;

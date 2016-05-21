@@ -55,7 +55,7 @@ unsigned Message::setHeader(char* sbuf, const unsigned len,
     snprintf(format, sizeof(format), " %% %us: ", nameLen);
     n = snprintf(sbuf, len, format, from.c_str());
   } else {
-    snprintf(format, sizeof(format), " %% %us [%%s]: ", nameLen);
+    snprintf(format, sizeof(format), " %% %us:[%%s] ", nameLen);
     n = snprintf(sbuf, len, format, from.c_str(), to.c_str());
   }
   return (n <= 0) ? 0 : (unsigned)n;
