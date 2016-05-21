@@ -23,6 +23,7 @@ public:
   Game& addBoard(const Board&);
   bool isValid() const;
   bool isFinished() const;
+  bool hasOpenBoard() const;
   bool fitBoardsToScreen();
   bool start(const bool randomizeBoardOrder);
   void disconnectBoard(const int handle, const std::string& msg);

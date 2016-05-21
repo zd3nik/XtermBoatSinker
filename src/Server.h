@@ -58,6 +58,8 @@ private:
   bool printPlayers(Game&, Coordinate&);
   bool quitGame(Game&, Coordinate&);
   bool sendBoard(Game&, const Board*);
+  bool sendBoard(Game&, const int handle, const Board*);
+  bool sendYourBoard(Game&, const int handle, const Board*);
   bool sendGameResults(Game&);
   bool sendLineAll(Game&, const std::string& msg);
   bool sendLine(Game&, const int handle, const std::string& msg);

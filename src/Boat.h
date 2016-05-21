@@ -5,7 +5,10 @@
 #ifndef BOAT_H
 #define BOAT_H
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <ctype.h>
+#include <string>
 
 //-----------------------------------------------------------------------------
 class Boat
@@ -47,6 +50,14 @@ public:
     return isValidID(id) ? tolower(id) : id;
   }
 
+  static bool unHit(char& id) {
+    if (isHit(id)) {
+      id = toupper(id);
+      return true;
+    }
+    return false;
+  }
+
   Boat()
     : id(0),
       length(0)
@@ -66,6 +77,27 @@ public:
     id = other.id;
     length = other.length;
     return (*this);
+  }
+
+  std::string toString() const {
+    char sbuf[64] = {0};
+    if (isValid()) {
+      snprintf(sbuf, sizeof(sbuf), "%c%u", id, length);
+    }
+    return sbuf;
+  }
+
+  bool fromString(const std::string& str) {
+    id = 0;
+    length = 0;
+    if ((str.size() > 1) && isValidID(str[0]) && isdigit(str[1])) {
+      int len = atoi(str.c_str() + 1);
+      if (len > 0) {
+        id = str[0];
+        length = (unsigned)len;
+      }
+    }
+    return isValid();
   }
 
   bool isValid() const {

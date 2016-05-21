@@ -25,6 +25,7 @@ const std::string PLAYER_PREFIX("Player: ");
 const char* BOOTED = "booted";
 const char* COMM_ERROR = "comm error";
 const char* GAME_FULL = "game is full";
+const char* GAME_STARETD = "game is already started";
 const char* INVALID_BOARD = "invalid board";
 const char* INVALID_NAME = "E|invalid name";
 const char* NAME_IN_USE = "E|name in use";
@@ -60,7 +61,6 @@ bool Server::init() {
   }
 
   const char* portStr = args.getValueOf("-p", "--port");
-  char str[64];
   if (portStr && isdigit(*portStr)) {
     port = atoi(portStr);
   } else {
@@ -231,8 +231,7 @@ bool Server::printPlayers(Game& game, Coordinate& coord) {
 
   for (unsigned int i = 0; i < game.getBoardCount(); ++i) {
     const Board* board = game.getBoardAtIndex(i);
-    const bool toMove = (board == game.getBoardToMove());
-    std::string pstr = board->toString((i + 1), toMove, game.isStarted());
+    std::string pstr = board->toString((i + 1), game.isStarted());
     Screen::print() << coord.south() << pstr;
   }
 
@@ -442,17 +441,18 @@ static bool compareScore(const Board* a, const Board* b) {
 
 //-----------------------------------------------------------------------------
 bool Server::sendGameResults(Game& game) {
-  char str[Input::BUFFER_SIZE];
-  snprintf(str, sizeof(str), "F|status=%s|turns=%u|players=%u",
+  char sbuf[Input::BUFFER_SIZE];
+  snprintf(sbuf, sizeof(sbuf), "F|%s|%u|%u",
            ((game.isFinished() && !game.isAborted()) ? "finished" : "aborted"),
-           game.getTurnCount(), game.getBoardCount());
+           game.getTurnCount(),
+           game.getBoardCount());
 
   std::vector<Board*> sortedBoards;
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
     Board* board = game.getBoardAtIndex(i);
     sortedBoards.push_back(board);
     if (board->getHandle() >= 0) {
-      sendLine(game, board->getHandle(), str);
+      sendLine(game, board->getHandle(), sbuf);
     }
   }
 
@@ -462,9 +462,13 @@ bool Server::sendGameResults(Game& game) {
     Board* board = game.getBoardAtIndex(i);
     if (board->getHandle() >= 0) {
       for (unsigned x = 0; x < sortedBoards.size(); ++x) {
-        std::string ps = sortedBoards[x]->toString((x + 1), false, true);
-        snprintf(str, sizeof(str), "R|%s", ps.c_str());
-        sendLine(game, board->getHandle(), str);
+        Board* board = sortedBoards[x];
+        snprintf(sbuf, sizeof(sbuf), "R|%s|%u|%u|%s",
+                 board->getPlayerName().c_str(),
+                 board->getScore(),
+                 board->getTurns(),
+                 board->getStatus().c_str());
+        sendLine(game, board->getHandle(), sbuf);
       }
     }
   }
@@ -494,22 +498,40 @@ bool Server::sendStart(Game& game) {
 
 //-----------------------------------------------------------------------------
 bool Server::sendBoard(Game& game, const Board* board) {
-  char str[Input::BUFFER_SIZE];
+  char sbuf[Input::BUFFER_SIZE];
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
     Board* dest = game.getBoardAtIndex(i);
-    if (dest->getHandle() >= 0) {
-      char state = (board == game.getBoardToMove()) ? Board::TO_MOVE
-                                                    : board->getState();
-      snprintf(str, sizeof(str), "B|%c|%s|%s|%s|%u",
-               state,
-               board->getPlayerName().c_str(),
-               board->getStatus().c_str(),
-               board->getMaskedDescriptor().c_str(),
-               board->getScore());
-      sendLine(game, dest->getHandle(), str);
-    }
+    sendBoard(game, dest->getHandle(), board);
   }
   return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Server::sendBoard(Game& game, const int handle, const Board* board) {
+  if (board && (handle > 0)) {
+    char sbuf[Input::BUFFER_SIZE];
+    snprintf(sbuf, sizeof(sbuf), "B|%c|%s|%s|%s|%u",
+             ((board == game.getBoardToMove()) ? '*' : ' '),
+             board->getPlayerName().c_str(),
+             board->getStatus().c_str(),
+             board->getMaskedDescriptor().c_str(),
+             board->getScore());
+    return sendLine(game, handle, sbuf);
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool Server::sendYourBoard(Game& game, const int handle, const Board* board) {
+  if (board && (handle > 0)) {
+    char sbuf[Input::BUFFER_SIZE];
+    snprintf(sbuf, sizeof(sbuf), "Y|%s", board->getDescriptor().c_str());
+    for (unsigned i = 2; sbuf[i]; ++i) {
+      Boat::unHit(sbuf[i]);
+    }
+    return sendLine(game, handle, sbuf);
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -598,16 +620,16 @@ bool Server::addPlayerHandle(Game& game) {
       break;
     }
 
-    if (game.isStarted()) {
+    if (game.hasBoard(handle)) {
+      Logger::error() << "Duplicate handle " << handle << " created!";
+      return false;
+    }
+
+    if (!game.hasOpenBoard()) {
       Logger::debug() << "rejecting connnection because game in progress";
       shutdown(handle, SHUT_RDWR);
       close(handle);
       break;
-    }
-
-    if (game.hasBoard(handle)) {
-      Logger::error() << "Duplicate handle " << handle << " created!";
-      return false;
     }
 
     input.addHandle(handle, address);
@@ -676,31 +698,23 @@ bool Server::sendLine(Game& game, const int handle, const std::string& msg) {
     return false;
   }
 
-  char str[Input::BUFFER_SIZE];
-  if (snprintf(str, sizeof(str), "%s\n", msg.c_str()) >= sizeof(str)) {
+  char sbuf[Input::BUFFER_SIZE];
+  if (snprintf(sbuf, sizeof(sbuf), "%s\n", msg.c_str()) >= sizeof(sbuf)) {
     Logger::warn() << "message exceeds buffer size (" << msg << ")";
-    str[sizeof(str) - 2] = '\n';
-    str[sizeof(str) - 1] = 0;
+    sbuf[sizeof(sbuf) - 2] = '\n';
+    sbuf[sizeof(sbuf) - 1] = 0;
   }
 
-  unsigned len = strlen(str);
-  Logger::debug() << "Sending " << len << " bytes (" << str << ") to channel "
+  unsigned len = strlen(sbuf);
+  Logger::debug() << "Sending " << len << " bytes (" << sbuf << ") to channel "
                   << handle << " " << input.getHandleLabel(handle);
 
-  if (write(handle, str, len) != len) {
-    Logger::error() << "Failed to write " << len << " bytes (" << str
+  if (write(handle, sbuf, len) != len) {
+    Logger::error() << "Failed to write " << len << " bytes (" << sbuf
                     << ") to channel " << handle << " "
                     << input.getHandleLabel(handle) << ": " << strerror(errno);
 
-    if (game.isStarted()) {
-      game.disconnectBoard(handle, COMM_ERROR);
-    } else {
-      game.removeBoard(handle);
-    }
-
-    input.removeHandle(handle);
-    shutdown(handle, SHUT_RDWR);
-    close(handle);
+    removePlayer(game, handle, COMM_ERROR);
     return false;
   }
   return true;
@@ -710,20 +724,19 @@ bool Server::sendLine(Game& game, const int handle, const std::string& msg) {
 void Server::removePlayer(Game& game, const int handle,
                           const std::string& msg)
 {
-  char str[Input::BUFFER_SIZE];
+  char sbuf[Input::BUFFER_SIZE];
   Board* board = game.getBoardForHandle(handle);
   if (board) {
-    snprintf(str, sizeof(str), "L|%s|%s",
-             board->getPlayerName().c_str(), msg.c_str());
+    snprintf(sbuf, sizeof(sbuf), "L|%s|%s", board->getPlayerName().c_str(),
+             msg.c_str());
   }
 
-  bool closed = msg.size() ? !sendLine(game, handle, msg) : false;
+  bool closed = (msg.size() || (msg != COMM_ERROR))
+      ? !sendLine(game, handle, msg)
+      : false;
+
   if (game.isStarted()) {
     game.disconnectBoard(handle, msg);
-    if (board == game.getBoardToMove()) {
-      nextTurn(game);
-    }
-
   } else {
     game.removeBoard(handle);
   }
@@ -732,7 +745,11 @@ void Server::removePlayer(Game& game, const int handle,
     for (unsigned i = 0; i < game.getBoardCount(); ++i) {
       Board* b = game.getBoardAtIndex(i);
       if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
-        sendLine(game, b->getHandle(), str);
+        if (game.isStarted()) {
+          sendBoard(game, board);
+        } else {
+          sendLine(game, b->getHandle(), sbuf);
+        }
       }
     }
   }
@@ -747,12 +764,11 @@ void Server::removePlayer(Game& game, const int handle,
 //-----------------------------------------------------------------------------
 void Server::getGameInfo(Game& game, const int handle) {
   const Configuration& config = game.getConfiguration();
-  char str[Input::BUFFER_SIZE];
-  snprintf(str, sizeof(str),
-           "G|version=%s|title=%s|min=%u|max=%u|joined=%u|goal=%u|"
-           "width=%u|height=%u|boats=%u",
+  char sbuf[Input::BUFFER_SIZE];
+  snprintf(sbuf, sizeof(sbuf), "G|%s|%s|%s|%u|%u|%u|%u|%u|%u|%u",
            Server::VERSION,
            config.getName().c_str(),
+           (game.isStarted() ? "Y" : "N"),
            config.getMinPlayers(),
            config.getMaxPlayers(),
            game.getBoardCount(),
@@ -762,67 +778,134 @@ void Server::getGameInfo(Game& game, const int handle) {
            config.getBoatCount());
 
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
-    unsigned len = strlen(str);
-    snprintf((str + len), (sizeof(str) - len), "|boat=%c%u",
-             config.getBoat(i).getID(), config.getBoat(i).getLength());
+    unsigned len = strlen(sbuf);
+    snprintf((sbuf + len), (sizeof(sbuf) - len), "|%s",
+             config.getBoat(i).toString().c_str());
   }
 
-  sendLine(game, handle, str);
+  sendLine(game, handle, sbuf);
 }
 
 //-----------------------------------------------------------------------------
 void Server::joinGame(Game& game, const int handle) {
-  const std::string playerName = Input::trim(input.getString(1, ""));
-  const std::string boatDescriptor = input.getString(2, "");
   const Configuration& config = game.getConfiguration();
   const Container& boardSize = config.getBoardSize();
-  char str[Input::BUFFER_SIZE];
+  char sbuf[Input::BUFFER_SIZE];
+
+  const std::string playerName = Input::trim(input.getString(1, ""));
+  const std::string boatDescriptor = input.getString(2, "");
 
   if (game.hasBoard(handle)) {
     Logger::error() << "duplicate handle in join command!";
-  } else if (playerName.empty() || boatDescriptor.empty()) {
+    return;
+  } else if (playerName.empty()) {
     removePlayer(game, handle, PROTOCOL_ERROR);
+    return;
   } else if (blackList.count(PLAYER_PREFIX + playerName)) {
     removePlayer(game, handle, BOOTED);
-  } else if (game.getBoardCount() >= config.getMaxPlayers()) {
-    removePlayer(game, handle, GAME_FULL);
-  } else if (!config.isValidBoatDescriptor(boatDescriptor)) {
-    removePlayer(game, handle, INVALID_BOARD);
+    return;
   } else if (!isValidPlayerName(playerName)) {
     sendLine(game, handle, INVALID_NAME);
+    return;
   } else if (playerName.size() > boardSize.getWidth()) {
     sendLine(game, handle, NAME_TOO_LONG);
-  } else if (game.getBoardForPlayer(playerName)) {
-    sendLine(game, handle, NAME_IN_USE);
-  } else {
-    Board board(handle, playerName, input.getHandleLabel(handle),
-                boardSize.getWidth(), boardSize.getHeight());
+    return;
+  } else if (!game.hasOpenBoard()) {
+    removePlayer(game, handle, GAME_FULL);
+    return;
+  }
 
-    if (!board.updateBoatArea(boatDescriptor)) {
-      removePlayer(game, handle, INVALID_BOARD);
-    } else {
-      game.addBoard(board);
+  Board* tmp = game.getBoardForPlayer(playerName);
+  if (tmp) {
+    if (tmp->getHandle() >= 0) {
+      sendLine(game, handle, NAME_IN_USE);
+      return;
+    }
 
-      // send confirmation to playerName
-      snprintf(str, sizeof(str), "J|%s", playerName.c_str());
-      sendLine(game, handle, str);
+    tmp->setHandle(handle);
+    tmp->setStatus("");
 
-      // let other players know playerName has joined
-      for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-        Board* b = game.getBoardAtIndex(i);
-        if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
-          sendLine(game, b->getHandle(), str);
+    // send confirmation and yourboard info to playerName
+    snprintf(sbuf, sizeof(sbuf), "J|%s", playerName.c_str());
+    if (!sendLine(game, handle, sbuf) ||
+        !sendYourBoard(game, handle, tmp) ||
+        !sendBoard(game, handle, tmp))
+    {
+      return;
+    }
+
+    // send details about other players to playerName
+    std::string str = "S";
+    for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+      Board* b = game.getBoardAtIndex(i);
+      str += '|';
+      str += b->getPlayerName();
+      if (b != tmp) {
+        snprintf(sbuf, sizeof(sbuf), "J|%s", b->getPlayerName().c_str());
+        if (!sendLine(game, handle, sbuf) || !sendBoard(game, handle, b)) {
+          return;
         }
       }
+    }
 
-      // send list of other players to playerName
-      for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-        Board* b = game.getBoardAtIndex(i);
-        if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
-          snprintf(str, sizeof(str), "J|%s", b->getPlayerName().c_str());
-          sendLine(game, handle, str);
-        }
-      }
+    // send start game message
+    if (!sendLine(game, handle, str)) {
+      return;
+    }
+
+    // let playerName know who's turn it is
+    tmp = game.getBoardToMove();
+    if (!tmp) {
+      Logger::printError() << "Game state invalid!";
+      return;
+    }
+    snprintf(sbuf, sizeof(sbuf), "N|%s", tmp->getPlayerName().c_str());
+    if (!sendLine(game, handle, sbuf)) {
+      return;
+    }
+
+    // let other players know this player has re-connected
+    if (game.isStarted()) {
+      snprintf(sbuf, sizeof(sbuf), "M||%s reconnected", playerName.c_str());
+      sendLineAll(game, sbuf);
+    }
+    return;
+  } else if (game.isStarted()) {
+    removePlayer(game, handle, GAME_STARETD);
+    return;
+  } else if (!config.isValidBoatDescriptor(boatDescriptor)) {
+    removePlayer(game, handle, INVALID_BOARD);
+    return;
+  }
+
+  Board board(handle, playerName, input.getHandleLabel(handle),
+              boardSize.getWidth(), boardSize.getHeight());
+
+  if (!board.updateBoatArea(boatDescriptor)) {
+    removePlayer(game, handle, INVALID_BOARD);
+    return;
+  }
+
+  game.addBoard(board);
+
+  // send confirmation to playerName
+  snprintf(sbuf, sizeof(sbuf), "J|%s", playerName.c_str());
+  sendLine(game, handle, sbuf);
+
+  // let other players know playerName has joined
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    Board* b = game.getBoardAtIndex(i);
+    if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
+      sendLine(game, b->getHandle(), sbuf);
+    }
+  }
+
+  // send list of other players to playerName
+  for (unsigned i = 0; i < game.getBoardCount(); ++i) {
+    Board* b = game.getBoardAtIndex(i);
+    if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
+      snprintf(sbuf, sizeof(sbuf), "J|%s", b->getPlayerName().c_str());
+      sendLine(game, handle, sbuf);
     }
   }
 }
@@ -929,27 +1012,27 @@ void Server::shoot(Game& game, const int handle) {
   char id = 0;
   Coordinate coord(input.getInt(2, 0), input.getInt(3, 0));
   if (target->shootAt(coord, id)) {
-    char str[Input::BUFFER_SIZE];
+    char sbuf[Input::BUFFER_SIZE];
     sendBoard(game, target);
     nextTurn(game);
     sender->incTurns();
     if (Boat::isValidID(id)) {
       sender->incScore();
-      snprintf(str, sizeof(str), "H|%s|%s",
+      snprintf(sbuf, sizeof(sbuf), "H|%s|%s",
                sender->getPlayerName().c_str(),
                target->getPlayerName().c_str());
-      sendLineAll(game, str);
+      sendLineAll(game, sbuf);
       if (target->hasHitTaunts()) {
-        snprintf(str, sizeof(str), "M|%s|HIT! %s",
+        snprintf(sbuf, sizeof(sbuf), "M|%s|HIT! %s",
                  target->getPlayerName().c_str(),
                  target->getHitTaunt().c_str());
-        sendLine(game, handle, str);
+        sendLine(game, handle, sbuf);
       }
     } else if (target->hasMissTaunts()) {
-      snprintf(str, sizeof(str), "M|%s|MISS! %s",
+      snprintf(sbuf, sizeof(sbuf), "M|%s|MISS! %s",
                target->getPlayerName().c_str(),
                target->getMissTaunt().c_str());
-      sendLine(game, handle, str);
+      sendLine(game, handle, sbuf);
     }
   } else if (Boat::isHit(id) || Boat::isMiss(id)) {
     sendLine(game, handle, "M||that spot has already been shot");

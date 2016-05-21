@@ -33,11 +33,16 @@ public:
 private:
   unsigned msgHeaderLen() const;
   unsigned msgWindowHeight(const Coordinate& promptCoordinate) const;
-  void closeSocket();
-  void closeSocketHandle();
   char controlSequence(const char ch, char& lastChar);
   char getChar();
   char waitForInput(const int timeout = -1);
+  void closeSocket();
+  void closeSocketHandle();
+  void appendMessage(const Message&);
+  void appendMessage(const std::string& message,
+                     const std::string& from = std::string(),
+                     const std::string& to = std::string());
+
   bool addMessage();
   bool addPlayer();
   bool clearMessages(const Coordinate& promptCoordinate);
@@ -57,7 +62,7 @@ private:
   bool pageUp(const Coordinate& promptCoordinate);
   bool printGameOptions(const Coordinate& promptCoordinate);
   bool printMessages(Coordinate& promptCoordinate);
-  bool printWaitOptions(const Coordinate& promptCoordinate);
+  bool printWaitOptions(Coordinate& promptCoordinate);
   bool quitGame(const Coordinate& promptCoord);
   bool readGameInfo();
   bool removePlayer();
@@ -70,6 +75,7 @@ private:
   bool shoot(const Coordinate& promptCoordinate);
   bool startGame();
   bool updateBoard();
+  bool updateYourBoard();
   bool viewBoard(const Coordinate& promptCoordinate);
   bool waitForGameStart();
   bool manualSetup(std::vector<Boat>& boatsRemaining,
@@ -94,7 +100,7 @@ private:
   std::vector<std::string> msgBuffer;
   std::map<std::string, Board> boardMap;
   std::vector<Board*> boardList;
-  Board yourboard;
+  Board yourBoard;
 };
 
 } // namespace xbs

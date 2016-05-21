@@ -12,7 +12,7 @@ namespace xbs
 //-----------------------------------------------------------------------------
 Board::Board()
   : handle(-1),
-    state(DISCONNECTED),
+    toMove(false),
     score(0),
     turns(0),
     boatAreaWidth(0),
@@ -30,7 +30,7 @@ Board::Board(const int handle,
   : Container(Coordinate(1, 1),
               Coordinate((4 + (2 * boatAreaWidth)), (3 + boatAreaHeight))),
     handle(handle),
-    state((handle < 0) ? DISCONNECTED : NORMAL),
+    toMove(false),
     playerName(playerName),
     address(address),
     score(0),
@@ -47,7 +47,7 @@ Board::Board(const int handle,
 Board::Board(const Board& other)
   : Container(other.getTopLeft(), other.getBottomRight()),
     handle(other.handle),
-    state(other.state),
+    toMove(other.toMove),
     playerName(other.playerName),
     address(other.address),
     status(other.status),
@@ -70,7 +70,7 @@ Board::Board(const Board& other)
 Board& Board::operator=(const Board& other) {
   set(other.getTopLeft(), other.getBottomRight());
   handle = other.handle;
-  state = other.state;
+  toMove = other.toMove;
   playerName = other.playerName;
   address = other.address;
   status = other.status;
@@ -107,11 +107,11 @@ Board::~Board() {
 //-----------------------------------------------------------------------------
 void Board::setHandle(const int handle) {
   this->handle = handle;
-  if (handle < 0) {
-    state = DISCONNECTED;
-  } else if (state == DISCONNECTED) {
-    state = NORMAL;
-  }
+}
+
+//-----------------------------------------------------------------------------
+void Board::setToMove(const bool toMove) {
+  this->toMove = toMove;
 }
 
 //-----------------------------------------------------------------------------
@@ -214,26 +214,25 @@ std::vector<std::string> Board::getMissTaunts() const {
 
 //-----------------------------------------------------------------------------
 std::string Board::toString(const unsigned number,
-                            const bool toMove,
                             const bool gameStarted) const
 {
-  char str[1024];
-  char state = (handle < 0) ? DISCONNECTED : toMove ? TO_MOVE : NORMAL;
-  snprintf(str, sizeof(str), "%u: %c %s", number, state, playerName.c_str());
+  char sbuf[1024];
+  snprintf(sbuf, sizeof(sbuf), "%u: %c %s", number, (toMove ? '*' : ' '),
+           playerName.c_str());
 
-  unsigned len = strlen(str);
+  unsigned len = strlen(sbuf);
   if (status.size()) {
-    snprintf((str + len), (sizeof(str) - len), " (%s)", status.c_str());
-    len = strlen(str);
+    snprintf((sbuf + len), (sizeof(sbuf) - len), " (%s)", status.c_str());
+    len = strlen(sbuf);
   }
 
   if (gameStarted) {
-    snprintf((str + len), (sizeof(str) - len),
+    snprintf((sbuf + len), (sizeof(sbuf) - len),
              ", Score = %u, Turns = %u, Hit = %u of %u",
              score, turns, getHitCount(), getBoatPoints());
   }
 
-  return str;
+  return sbuf;
 }
 
 //-----------------------------------------------------------------------------
@@ -248,11 +247,6 @@ std::string Board::getMaskedDescriptor() const {
 //-----------------------------------------------------------------------------
 int Board::getHandle() const {
   return handle;
-}
-
-//-----------------------------------------------------------------------------
-Board::PlayerState Board::getState() const {
-  return state;
 }
 
 //-----------------------------------------------------------------------------
@@ -357,6 +351,10 @@ bool Board::isValid() const {
 }
 
 //-----------------------------------------------------------------------------
+bool Board::isToMove() const {
+  return toMove;
+}
+//-----------------------------------------------------------------------------
 bool Board::hasHitTaunts() const {
   return !hitTaunts.empty();
 }
@@ -399,30 +397,33 @@ bool Board::addRandomBoats(const Configuration& config) {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::print(const bool masked, const Configuration* config) const {
+bool Board::print(const bool masked, const bool percent) const {
   Coordinate coord(getTopLeft());
-  char sbuf[32];
+  char sbuf[1024];
 
   // print player name (row 1)
-  if (state == TO_MOVE) {
-    Screen::print() << coord << ' ' << Red << (char)state << DefaultColor;
+  if (toMove) {
+    Screen::print() << coord << ' ' << Red << '*' << DefaultColor;
   } else {
-    Screen::print() << coord << ' ' << (char)state;
+    Screen::print() << coord << "  ";
   }
+
   Screen::print() << ' ' << playerName;
-  if (config) {
-    unsigned hits = getHitCount();
-    Screen::print() << " (" << score << ", "
-                    << ((100 * hits) / config->getPointGoal()) << "%)";
+  if (status.size()) {
+    Screen::print() << " (" << status << ')';
+  } else if (percent) {
+    unsigned hits = (100 * getHitCount());
+    unsigned points = getBoatPoints();
+    if (points) {
+      Screen::print() << " (" << score << ", " << (hits / points) << "%)";
+    }
   }
-  Screen::print() << EL;
 
   // print X coordinate header (row 2)
   Screen::print() << coord.south() << "  ";
   for (unsigned x = 0; x < boatAreaWidth; ++x) {
     Screen::print() << ' ' << (char)('a' + x);
   }
-  Screen::print() << EL;
 
   // print boat area one row at a time
   for (unsigned y = 0; y < boatAreaHeight; ++y) {
@@ -436,23 +437,10 @@ bool Board::print(const bool masked, const Configuration* config) const {
         Screen::print() << ' ' << ch;
       }
     }
-    Screen::print() << EL;
   }
 
-  // print status line below boat area (final row)
-  return Screen::print() << coord.south() << "   " << status;
-}
-
-//-----------------------------------------------------------------------------
-bool Board::updateState(const PlayerState state) {
-  switch (state) {
-  case NORMAL:
-  case DISCONNECTED:
-  case TO_MOVE:
-    this->state = state;
-    return true;
-  }
-  return false;
+  coord.south();
+  return true;
 }
 
 //-----------------------------------------------------------------------------

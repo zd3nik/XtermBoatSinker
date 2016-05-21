@@ -20,7 +20,7 @@ namespace xbs
 // boat area, and one blank line bellow the boat area.
 //
 //     +-----------------------+
-//     |   PlayerName          | <- outer rectangle is Board container
+//     | * PlayerName          | <- outer rectangle is Board container
 //     |   A B C D E F G H I J |    topLeft is absolute screen position
 //     | 1 +-----------------+ |    used for printing to screen
 //     | 2 |                 | |
@@ -32,7 +32,7 @@ namespace xbs
 //     | 8 |                 | |    used for aiming not for printing
 //     | 9 |                 | |
 //     |10 +-----------------+ |
-//     |   status line         |
+//     |                       |
 //     +-----------------------+
 //
 // A boat descriptor is used to transfer a the boat area across the network.
@@ -47,12 +47,6 @@ namespace xbs
 class Board : public Container, DBObject
 {
 public:
-  enum PlayerState {
-    NORMAL = ' ',
-    TO_MOVE = '*',
-    DISCONNECTED = 'X'
-  };
-
   Board();
   Board(const int handle,
         const std::string& playerName,
@@ -64,30 +58,29 @@ public:
   Board& setPlayerName(const std::string& value);
 
   virtual ~Board();
+  void addHitTaunt(const std::string& value);
+  void addMissTaunt(const std::string& value);
   void clearBoatArea();
-  void setScore(const unsigned value);
+  void clearHitTaunts();
+  void clearMissTaunts();
   void incScore(const unsigned value = 1);
   void incTurns(const unsigned value = 1);
   void setHandle(const int handle);
-  void clearHitTaunts();
-  void clearMissTaunts();
-  void addHitTaunt(const std::string& value);
-  void addMissTaunt(const std::string& value);
+  void setScore(const unsigned value);
   void setStatus(const std::string& str);
-  std::string getPlayerName() const;
+  void setToMove(const bool toMove);
   std::string getAddress() const;
-  std::string getStatus() const;
   std::string getDescriptor() const;
-  std::string getMaskedDescriptor() const;
   std::string getHitTaunt();
+  std::string getMaskedDescriptor() const;
   std::string getMissTaunt();
+  std::string getPlayerName() const;
+  std::string getStatus() const;
   std::vector<std::string> getHitTaunts() const;
   std::vector<std::string> getMissTaunts() const;
-  std::string toString(const unsigned number, const bool toMove,
-                       const bool gameStarted) const;
+  std::string toString(const unsigned number, const bool gameStarted) const;
 
   int getHandle() const;
-  PlayerState getState() const;
   Container getBoatArea() const;
   unsigned getBoatPoints() const;
   unsigned getHitCount() const;
@@ -99,12 +92,12 @@ public:
   bool hasHitTaunts() const;
   bool hasMissTaunts() const;
   bool isDead() const;
+  bool isToMove() const;
   bool isValid() const;
   bool isValid(const Configuration&) const;
-  bool print(const bool masked, const Configuration* = NULL) const;
+  bool print(const bool masked, const bool percent = false) const;
   bool removeBoat(const Boat& boat);
   bool updateBoatArea(const std::string& newDescriptor);
-  bool updateState(const PlayerState);
   bool addBoat(const Boat& boat, Coordinate boatCoordinate,
                const Movement::Direction direction);
 
@@ -120,7 +113,7 @@ private:
   unsigned getBoatIndex(const Coordinate& boatCoordinate) const;
 
   int handle;
-  PlayerState state;
+  bool toMove;
   std::string playerName;
   std::string address;
   std::string status;

@@ -70,9 +70,25 @@ bool Game::isFinished() const {
         dead++;
       }
     }
-    return ((dead >= (boards.size() - 1)) ||
+    return ((dead >= boards.size()) ||
             ((maxScore >= config.getPointGoal()) &&
              (minTurns == maxTurns)));
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool Game::hasOpenBoard() const {
+  if (config.isValid() && !isFinished()) {
+    if (!started && (boards.size() < config.getMaxPlayers())) {
+      return true;
+    }
+    for (unsigned i = 0; i < boards.size(); ++i) {
+      const Board& board = boards[i];
+      if (board.getHandle() < 0) {
+        return true;
+      }
+    }
   }
   return false;
 }
@@ -105,6 +121,11 @@ bool Game::start(const bool randomize) {
   aborted = false;
   boardToMove = 0;
   turnCount = 0;
+
+  for (unsigned i = 0; i < boards.size(); ++i) {
+    boards[i].setToMove(i == boardToMove);
+  }
+
   return true;
 }
 
@@ -136,7 +157,7 @@ bool Game::fitBoardsToScreen() {
 void Game::disconnectBoard(const int handle, const std::string& msg) {
   Board* board = getBoardForHandle(handle);
   if (board) {
-    board->setStatus(msg);
+    board->setStatus(msg.size() ? msg : "disconnected");
     board->setHandle(-1);
   }
 }
@@ -156,12 +177,13 @@ void Game::removeBoard(const int handle) {
 
 //-----------------------------------------------------------------------------
 void Game::nextTurn() {
-  do {
-    turnCount += !boardToMove;
-    if (++boardToMove >= boards.size()) {
-      boardToMove = 0;
-    }
-  } while ((boards[boardToMove].getHandle() < 0) && !isFinished());
+  turnCount += !boardToMove;
+  if (++boardToMove >= boards.size()) {
+    boardToMove = 0;
+  }
+  for (unsigned i = 0; i < boards.size(); ++i) {
+    boards[i].setToMove(i == boardToMove);
+  }
 }
 
 //-----------------------------------------------------------------------------
