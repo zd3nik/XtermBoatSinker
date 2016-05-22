@@ -23,14 +23,15 @@ public:
   Client();
   virtual ~Client();
 
-  bool join();
-  bool run();
+  virtual bool join();
+  virtual bool run();
 
-  bool isConnected() const {
-    return (sock >= 0);
-  }
+protected:
+  virtual bool joinPrompt(const int playersJoined);
+  virtual bool getUserName();
+  virtual bool setupBoard();
+  virtual bool waitForGameStart();
 
-private:
   unsigned msgHeaderLen() const;
   unsigned msgWindowHeight(const Coordinate& promptCoordinate) const;
   char controlSequence(const char ch, char& lastChar);
@@ -51,11 +52,11 @@ private:
   bool endGame();
   bool getHostAddress();
   bool getHostPort();
-  bool getUserName(Coordinate& promptCoordinate);
   bool handleServerMessage();
-  bool hitScored();
+  bool hit();
   bool home();
-  bool joinGame(Coordinate& promptCoordinate, bool& retry);
+  bool isConnected() const;
+  bool joinGame(bool& retry);
   bool nextTurn();
   bool openSocket();
   bool pageDown(const Coordinate& promptCoordinate);
@@ -64,23 +65,21 @@ private:
   bool printMessages(Coordinate& promptCoordinate);
   bool printWaitOptions(Coordinate& promptCoordinate);
   bool quitGame(const Coordinate& promptCoord);
-  bool readGameInfo();
+  bool readGameInfo(int& playersJoined);
   bool removePlayer();
   bool scrollDown();
   bool scrollUp();
   bool sendLine(const std::string& msg);
   bool sendMessage(const Coordinate& promptCoord);
   bool setTaunt(const Coordinate& promptCoordinate);
-  bool setupBoard(Coordinate& promptCoordinate);
   bool shoot(const Coordinate& promptCoordinate);
   bool startGame();
   bool updateBoard();
   bool updateYourBoard();
   bool viewBoard(const Coordinate& promptCoordinate);
-  bool waitForGameStart();
   bool manualSetup(std::vector<Boat>& boatsRemaining,
                    std::vector<Board>& boards,
-                   Coordinate& promptCoordinate);
+                   const Coordinate& promptCoordinate);
 
   bool prompt(Coordinate& coord, const std::string& str, std::string& field1,
               const char fieldDelimeter = 0);

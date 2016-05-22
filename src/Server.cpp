@@ -49,8 +49,6 @@ Server::~Server() {
 //-----------------------------------------------------------------------------
 bool Server::init() {
   const CommandArgs& args = CommandArgs::getInstance();
-  Screen::get() << Clear << Coordinate(1, 1) << args.getProgramName()
-                << " version " << Server::VERSION << EL << Flush;
 
   const char* binAddr = args.getValueOf("-b", "--bind-address");
   if (Input::empty(binAddr)) {
@@ -1115,35 +1113,3 @@ Configuration Server::getGameConfig() {
 }
 
 } // namespace xbs
-
-//-----------------------------------------------------------------------------
-int main(const int argc, const char* argv[]) {
-  try {
-    srand((unsigned)time(NULL));
-    xbs::CommandArgs::initialize(argc, argv);
-    xbs::Server server;
-
-    // TODO setup signal handlers
-
-    if (!server.init()) {
-      return 1;
-    }
-
-    while (server.run()) {
-      // TODO save game
-      if (xbs::CommandArgs::getInstance().indexOf("-r", "--repeat") < 0) {
-        break;
-      }
-    }
-
-    xbs::Screen::get(true).clear() << xbs::EL << xbs::EL << xbs::Flush;
-    return 0;
-  }
-  catch (const std::exception& e) {
-    xbs::Logger::error() << e.what();
-  }
-  catch (...) {
-    xbs::Logger::error() << "unhandled exception";
-  }
-  return 1;
-}

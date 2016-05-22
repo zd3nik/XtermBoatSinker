@@ -388,7 +388,7 @@ bool Board::addRandomBoats(const Configuration& config) {
         boatCount++;
         break;
       } else if (tries >= maxTries) {
-        Logger::error() << "failed random boat placement";
+        Logger::printError() << "failed random boat placement";
         return false;
       }
     }
@@ -397,7 +397,7 @@ bool Board::addRandomBoats(const Configuration& config) {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::print(const bool masked, const bool percent) const {
+bool Board::print(const bool masked, const Configuration* config) const {
   Coordinate coord(getTopLeft());
   char sbuf[1024];
 
@@ -411,9 +411,9 @@ bool Board::print(const bool masked, const bool percent) const {
   Screen::print() << ' ' << playerName;
   if (status.size()) {
     Screen::print() << " (" << status << ')';
-  } else if (percent) {
+  } else if (config) {
     unsigned hits = (100 * getHitCount());
-    unsigned points = getBoatPoints();
+    unsigned points = config->getPointGoal();
     if (points) {
       Screen::print() << " (" << score << ", " << (hits / points) << "%)";
     }

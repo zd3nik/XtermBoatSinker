@@ -95,7 +95,7 @@ public:
   bool isToMove() const;
   bool isValid() const;
   bool isValid(const Configuration&) const;
-  bool print(const bool masked, const bool percent = false) const;
+  bool print(const bool masked, const Configuration* = NULL) const;
   bool removeBoat(const Boat& boat);
   bool updateBoatArea(const std::string& newDescriptor);
   bool addBoat(const Boat& boat, Coordinate boatCoordinate,
