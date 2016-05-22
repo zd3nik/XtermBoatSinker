@@ -54,6 +54,10 @@ public:
     return (*this);
   }
 
+  LogStream& operator<<(const Coordinate& x) {
+    return operator<<(x.toString());
+  }
+
   LogStream& operator<<(const Version& x) {
     return operator<<(x.toString());
   }

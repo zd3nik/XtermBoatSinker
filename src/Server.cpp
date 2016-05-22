@@ -16,7 +16,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version SERVER_VERSION(1, 1);
+const Version SERVER_VERSION("1.1");
 const char* ANY_ADDRESS = "0.0.0.0";
 
 //-----------------------------------------------------------------------------
@@ -519,17 +519,28 @@ bool Server::sendGameResults(Game& game) {
 
 //-----------------------------------------------------------------------------
 bool Server::sendStart(Game& game) {
-  std::string str = "S";
+  Board* toMove = game.getBoardToMove();
+  if (!toMove) {
+    Logger::printError() << "No board set to move";
+    return false;
+  }
+
+  std::string startStr = "S";
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
     Board* board = game.getBoardAtIndex(i);
-    str += '|';
-    str += board->getPlayerName();
+    startStr += '|';
+    startStr += board->getPlayerName();
     if (!sendBoard(game, board)) {
       return false;
     }
   }
+
+  std::string toMoveStr = ("N|" + toMove->getPlayerName());
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-    sendLine(game, game.getBoardAtIndex(i)->getHandle(), str);
+    Board* board = game.getBoardAtIndex(i);
+    if (sendLine(game, board->getHandle(), startStr)) {
+      sendLine(game, board->getHandle(), toMoveStr);
+    }
   }
   return true;
 }
@@ -548,8 +559,7 @@ bool Server::sendBoard(Game& game, const Board* board) {
 bool Server::sendBoard(Game& game, const int handle, const Board* board) {
   if (board && (handle > 0)) {
     char sbuf[Input::BUFFER_SIZE];
-    snprintf(sbuf, sizeof(sbuf), "B|%c|%s|%s|%s|%u|%u",
-             ((board == game.getBoardToMove()) ? '*' : ' '),
+    snprintf(sbuf, sizeof(sbuf), "B|%s|%s|%s|%u|%u",
              board->getPlayerName().c_str(),
              board->getStatus().c_str(),
              board->getMaskedDescriptor().c_str(),
@@ -856,22 +866,19 @@ void Server::joinGame(Game& game, const int handle) {
     return;
   }
 
-  Board* tmp = game.getBoardForPlayer(playerName);
-  if (tmp) {
-    if (tmp->getHandle() >= 0) {
+  Board* rejoin = game.getBoardForPlayer(playerName);
+  if (rejoin) {
+    if (rejoin->getHandle() >= 0) {
       sendLine(game, handle, NAME_IN_USE);
       return;
     }
 
-    tmp->setHandle(handle);
-    tmp->setStatus("");
+    rejoin->setHandle(handle);
+    rejoin->setStatus("");
 
     // send confirmation and yourboard info to playerName
     snprintf(sbuf, sizeof(sbuf), "J|%s", playerName.c_str());
-    if (!sendLine(game, handle, sbuf) ||
-        !sendYourBoard(game, handle, tmp) ||
-        !sendBoard(game, handle, tmp))
-    {
+    if (!sendLine(game, handle, sbuf) || !sendYourBoard(game, handle, rejoin)) {
       return;
     }
 
@@ -881,7 +888,7 @@ void Server::joinGame(Game& game, const int handle) {
       Board* b = game.getBoardAtIndex(i);
       str += '|';
       str += b->getPlayerName();
-      if (b != tmp) {
+      if (b != rejoin) {
         snprintf(sbuf, sizeof(sbuf), "J|%s", b->getPlayerName().c_str());
         if (!sendLine(game, handle, sbuf) || !sendBoard(game, handle, b)) {
           return;
@@ -895,15 +902,18 @@ void Server::joinGame(Game& game, const int handle) {
     }
 
     // let playerName know who's turn it is
-    tmp = game.getBoardToMove();
-    if (!tmp) {
+    Board* toMove = game.getBoardToMove();
+    if (!toMove) {
       Logger::printError() << "Game state invalid!";
       return;
     }
-    snprintf(sbuf, sizeof(sbuf), "N|%s", tmp->getPlayerName().c_str());
+    snprintf(sbuf, sizeof(sbuf), "N|%s", toMove->getPlayerName().c_str());
     if (!sendLine(game, handle, sbuf)) {
       return;
     }
+
+    // update rejoined player board
+    sendBoard(game, rejoin);
 
     // let other players know this player has re-connected
     if (game.isStarted()) {

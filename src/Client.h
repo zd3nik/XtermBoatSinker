@@ -22,16 +22,21 @@ public:
   Client();
   virtual ~Client();
 
+  virtual Version getVersion() const;
+  virtual bool isCompatibleWith(const Version& serverVersion) const;
   virtual bool join();
   virtual bool run();
 
-  Version getVersion() const;
-
 protected:
+  static unsigned randomIndex(const unsigned bound);
+
   virtual bool joinPrompt(const int playersJoined);
   virtual bool getUserName();
   virtual bool setupBoard();
   virtual bool waitForGameStart();
+  virtual bool addMessage();
+  virtual bool nextTurn();
+  virtual bool hit();
 
   unsigned msgHeaderLen() const;
   unsigned msgWindowHeight(const Coordinate& promptCoordinate) const;
@@ -45,7 +50,6 @@ protected:
                      const std::string& from = std::string(),
                      const std::string& to = std::string());
 
-  bool addMessage();
   bool addPlayer();
   bool clearMessages(const Coordinate& promptCoordinate);
   bool clearScreen();
@@ -54,11 +58,9 @@ protected:
   bool getHostAddress();
   bool getHostPort();
   bool handleServerMessage();
-  bool hit();
   bool home();
   bool isConnected() const;
   bool joinGame(bool& retry);
-  bool nextTurn();
   bool openSocket();
   bool pageDown(const Coordinate& promptCoordinate);
   bool pageUp(const Coordinate& promptCoordinate);

@@ -17,8 +17,8 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version CLIENT_VERSION(1, 1);
-const Version MIN_VERSION(1, 1);
+const Version CLIENT_VERSION("1.1");
+const Version MIN_VERSION("1.1");
 const Version MAX_VERSION(~0U, ~0U, ~0U);
 
 //-----------------------------------------------------------------------------
@@ -34,6 +34,11 @@ enum ControlKey {
   KeyBackspace,
   KeyIncomplete
 };
+
+//-----------------------------------------------------------------------------
+unsigned Client::randomIndex(const unsigned bound) {
+  return ((((unsigned)(rand() >> 3)) & 0x7FFFU) % bound);
+}
 
 //-----------------------------------------------------------------------------
 Client::Client()
@@ -54,6 +59,11 @@ Client::~Client() {
 //-----------------------------------------------------------------------------
 Version Client::getVersion() const {
   return CLIENT_VERSION;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::isCompatibleWith(const Version& ver) const {
+  return ((ver >= MIN_VERSION) && (ver <= MAX_VERSION));
 }
 
 //-----------------------------------------------------------------------------
@@ -246,7 +256,7 @@ bool Client::readGameInfo(int& playersJoined) {
   int height          = input.getInt(n++);
   int boatCount       = input.getInt(n++);
 
-  Version serverVer(version);
+  Version serverVersion(version);
 
   if (str != "G") {
     Logger::printError() << "Invalid message type from server: " << str;
@@ -254,11 +264,11 @@ bool Client::readGameInfo(int& playersJoined) {
   } else if (version.empty()) {
     Logger::printError() << "Empty version in game info message from server";
     return false;
-  } else if (!serverVer.isValid()) {
+  } else if (!serverVersion.isValid()) {
     Logger::printError() << "Invalid version in game info message from server";
     return false;
-  } else if ((serverVer < MIN_VERSION) || (serverVer > MAX_VERSION)) {
-    Logger::printError() << "Incompatible server version: " << serverVer;
+  } else if (!isCompatibleWith(serverVersion)) {
+    Logger::printError() << "Incompatible server version: " << serverVersion;
     return false;
   } else if (title.empty()) {
     Logger::printError() << "Empty title in game info message from server";
@@ -996,12 +1006,11 @@ bool Client::removePlayer() {
 
 //-----------------------------------------------------------------------------
 bool Client::updateBoard() {
-  std::string toMove = input.getString(1, "");
-  std::string name   = input.getString(2, "");
-  std::string status = input.getString(3, "");
-  std::string desc   = input.getString(4, "");
-  int score          = input.getInt(5);
-  int skips          = input.getInt(6);
+  std::string name   = input.getString(1, "");
+  std::string status = input.getString(2, "");
+  std::string desc   = input.getString(3, "");
+  int score          = input.getInt(4);
+  int skips          = input.getInt(5);
 
   if (name.empty() || !boardMap.count(name) || desc.empty()) {
     Logger::printError() << "Invalid updateBoard message from server";
@@ -1009,7 +1018,6 @@ bool Client::updateBoard() {
   }
 
   Board& board = boardMap[name];
-  board.setToMove(toMove == "*");
   board.setStatus(status);
   if (score >= 0) {
     board.setScore((unsigned)score);
