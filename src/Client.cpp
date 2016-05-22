@@ -17,7 +17,9 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const char* Client::VERSION = "1.0";
+const Version CLIENT_VERSION(1, 1);
+const Version MIN_VERSION(1, 1);
+const Version MAX_VERSION(~0U, ~0U, ~0U);
 
 //-----------------------------------------------------------------------------
 enum ControlKey {
@@ -47,6 +49,11 @@ Client::Client()
 //-----------------------------------------------------------------------------
 Client::~Client() {
   closeSocket();
+}
+
+//-----------------------------------------------------------------------------
+Version Client::getVersion() const {
+  return CLIENT_VERSION;
 }
 
 //-----------------------------------------------------------------------------
@@ -239,11 +246,19 @@ bool Client::readGameInfo(int& playersJoined) {
   int height          = input.getInt(n++);
   int boatCount       = input.getInt(n++);
 
+  Version serverVer(version);
+
   if (str != "G") {
     Logger::printError() << "Invalid message type from server: " << str;
     return false;
   } else if (version.empty()) {
     Logger::printError() << "Empty version in game info message from server";
+    return false;
+  } else if (!serverVer.isValid()) {
+    Logger::printError() << "Invalid version in game info message from server";
+    return false;
+  } else if ((serverVer < MIN_VERSION) || (serverVer > MAX_VERSION)) {
+    Logger::printError() << "Incompatible server version: " << serverVer;
     return false;
   } else if (title.empty()) {
     Logger::printError() << "Empty title in game info message from server";
@@ -925,6 +940,8 @@ bool Client::handleServerMessage() {
     return updateYourBoard();
   } else if (str == "H") {
     return hit();
+  } else if (str == "K") {
+    return skip();
   } else if (str == "N") {
     return nextTurn();
   } else if (str == "S") {
@@ -984,6 +1001,7 @@ bool Client::updateBoard() {
   std::string status = input.getString(3, "");
   std::string desc   = input.getString(4, "");
   int score          = input.getInt(5);
+  int skips          = input.getInt(6);
 
   if (name.empty() || !boardMap.count(name) || desc.empty()) {
     Logger::printError() << "Invalid updateBoard message from server";
@@ -995,6 +1013,9 @@ bool Client::updateBoard() {
   board.setStatus(status);
   if (score >= 0) {
     board.setScore((unsigned)score);
+  }
+  if (skips >= 0) {
+    board.setSkips((unsigned)skips);
   }
   if (board.updateBoatArea(desc)) {
     if ((name == userName) && !yourBoard.addHitsAndMisses(desc)) {
@@ -1033,6 +1054,26 @@ bool Client::hit() {
 
   appendMessage(shooter + " hit " + target);
   boardMap[shooter].incScore();
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::skip() {
+  std::string user   = input.getString(1, "");
+  std::string reason = Input::trim(input.getString(2, ""));
+
+  if (!boardMap.count(user)) {
+    Logger::error() << "Invalid name '" << user
+                    << "' in skip message from server";
+    return false;
+  }
+
+  if (reason.size()) {
+    appendMessage(user + " was skipped because " + reason);
+  } else {
+    appendMessage(user + " skipped a turn");
+  }
+  boardMap[user].incSkips();
   return true;
 }
 
@@ -1137,12 +1178,14 @@ bool Client::endGame() {
     std::string type = input.getString(0, "");
     std::string name = input.getString(1, "");
     int score        = input.getInt(2);
-    int turns        = input.getInt(3);
-    status           = input.getString(4, "");
+    int skips        = input.getInt(3);
+    int turns        = input.getInt(4);
+    status           = input.getString(5, "");
 
     if ((type == "R") && (name.size())) {
       Screen::print() << coord.south() << name
                       << ", score = " << score
+                      << ", skips = " << skips
                       << ", turns = " << turns
                       << " " << status;
     }
@@ -1214,6 +1257,7 @@ bool Client::run() {
     case 'Q': ok = !quitGame(coord);     break;
     case 'R': ok = clearScreen();        break;
     case 'S': ok = shoot(coord);         break;
+    case 'K': ok = skip(coord);          break;
     case 'T': ok = setTaunt(coord);      break;
     case 'u': ok = pageUp(msgCoord);     break;
     case 'U': ok = scrollUp();           break;
@@ -1324,7 +1368,7 @@ bool Client::printGameOptions(const Coordinate& promptCoord) {
                   << "(Q)uit, (R)edraw, (V)iew Board, (T)aunts, (M)essage";
 
   if (board.isToMove()) {
-    Screen::print() << ", " << Cyan << "(S)hoot" << DefaultColor;
+    Screen::print() << ", S(k)ip, " << Cyan << "(S)hoot" << DefaultColor;
   }
 
   if (messages.size()) {
@@ -1594,6 +1638,31 @@ bool Client::shoot(const Coordinate& promptCoord) {
   char sbuf[Input::BUFFER_SIZE];
   snprintf(sbuf, sizeof(sbuf), "S|%s|%u|%u", board->getPlayerName().c_str(),
            shotCoord.getX(), shotCoord.getY());
+  return sendLine(sbuf);
+}
+
+//-----------------------------------------------------------------------------
+bool Client::skip(const Coordinate& promptCoord) {
+  msgEnd = ~0U;
+
+  Board& board = boardMap[userName];
+  if (!board.isToMove()) {
+    Logger::printError() << "It's not your turn";
+    return true;
+  }
+
+  Coordinate coord(promptCoord);
+  std::string str;
+  if (!prompt(coord.south(), "Skip your turn? y/N -> ", str)) {
+    return false;
+  } else if (toupper(*str.c_str()) != 'Y') {
+    return true;
+  }
+
+  board.incSkips();
+
+  char sbuf[Input::BUFFER_SIZE];
+  snprintf(sbuf, sizeof(sbuf), "K|%s", userName.c_str());
   return sendLine(sbuf);
 }
 

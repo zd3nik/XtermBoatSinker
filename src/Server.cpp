@@ -16,8 +16,8 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const char* Server::VERSION = "1.0";
-const char* Server::ANY_ADDRESS = "0.0.0.0";
+const Version SERVER_VERSION(1, 1);
+const char* ANY_ADDRESS = "0.0.0.0";
 
 //-----------------------------------------------------------------------------
 const std::string ADDRESS_PREFIX("Adress: ");
@@ -44,6 +44,11 @@ Server::Server()
 //-----------------------------------------------------------------------------
 Server::~Server() {
   closeSocket();
+}
+
+//-----------------------------------------------------------------------------
+Version Server::getVersion() const {
+  return SERVER_VERSION;
 }
 
 //-----------------------------------------------------------------------------
@@ -241,15 +246,15 @@ bool Server::printOptions(Game& game, Coordinate& coord) {
   const Configuration& config = game.getConfiguration();
 
   Screen::print() << coord << ClearToScreenEnd
-                  << "(Q)uit, (R)edraw, Blacklist (A)ddress";
+                  << "(Q)uit, (R)edraw, (M)essage, Blacklist (A)ddress";
+
+  if (blackList.size()) {
+    Screen::print() << ", (C)lear blacklist";
+  }
 
   if (game.getBoardCount()) {
     Screen::print() << coord.south()
-                    << "(M)essage, (B)oot Player, Blacklist (P)layer";
-  }
-
-  if (blackList.size()) {
-    Screen::print() << coord.south() << "(C)lear blacklist";
+                    << "(B)oot Player, Blacklist (P)layer, Skip (T)urn";
   }
 
   if (!game.isStarted() &&
@@ -259,7 +264,7 @@ bool Server::printOptions(Game& game, Coordinate& coord) {
     Screen::print() << coord.south() << "(S)tart Game";
   }
 
-  return Screen::print() << coord.south() << "-> " << Flush;
+  return Screen::print() << " -> " << Flush;
 }
 
 //-----------------------------------------------------------------------------
@@ -280,10 +285,44 @@ bool Server::handleUserInput(Game& game, Coordinate& coord) {
   case 'Q': return quitGame(game, coord);
   case 'R': return Screen::get(true).clear().flush();
   case 'S': return startGame(game, coord);
+  case 'T': return skipTurn(game, coord);
   default:
     break;
   }
 
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Server::skipTurn(Game& game, Coordinate& coord) {
+  Board* board = game.getBoardToMove();
+  if (!board || !board->isToMove()) {
+    return true;
+  }
+
+  char sbuf[Input::BUFFER_SIZE];
+  snprintf(sbuf, sizeof(sbuf), "Skip %s's turn? y/N -> ",
+           board->getPlayerName().c_str());
+
+  std::string str;
+  if (!prompt(coord, sbuf, str)) {
+    return false;
+  } else if (toupper(*str.c_str()) != 'Y') {
+    return true;
+  }
+
+  if (!prompt(coord, "Enter reason [RET=Abort] -> ", str)) {
+    return false;
+  } else if (str.size() && board->isToMove() &&
+             (board == game.getBoardToMove()))
+  {
+    board->incSkips();
+    board->incTurns();
+    snprintf(sbuf, sizeof(sbuf), "K|%s|%s",
+             board->getPlayerName().c_str(), str.c_str());
+    sendLineAll(game, sbuf);
+    return nextTurn(game);
+  }
   return true;
 }
 
@@ -457,16 +496,17 @@ bool Server::sendGameResults(Game& game) {
   std::stable_sort(sortedBoards.begin(), sortedBoards.end(), compareScore);
 
   for (unsigned i = 0; i < game.getBoardCount(); ++i) {
-    Board* board = game.getBoardAtIndex(i);
-    if (board->getHandle() >= 0) {
+    Board* recipient = game.getBoardAtIndex(i);
+    if (recipient->getHandle() >= 0) {
       for (unsigned x = 0; x < sortedBoards.size(); ++x) {
         Board* board = sortedBoards[x];
-        snprintf(sbuf, sizeof(sbuf), "R|%s|%u|%u|%s",
+        snprintf(sbuf, sizeof(sbuf), "R|%s|%u|%u|%u|%s",
                  board->getPlayerName().c_str(),
                  board->getScore(),
+                 board->getSkips(),
                  board->getTurns(),
                  board->getStatus().c_str());
-        sendLine(game, board->getHandle(), sbuf);
+        sendLine(game, recipient->getHandle(), sbuf);
       }
     }
   }
@@ -508,12 +548,13 @@ bool Server::sendBoard(Game& game, const Board* board) {
 bool Server::sendBoard(Game& game, const int handle, const Board* board) {
   if (board && (handle > 0)) {
     char sbuf[Input::BUFFER_SIZE];
-    snprintf(sbuf, sizeof(sbuf), "B|%c|%s|%s|%s|%u",
+    snprintf(sbuf, sizeof(sbuf), "B|%c|%s|%s|%s|%u|%u",
              ((board == game.getBoardToMove()) ? '*' : ' '),
              board->getPlayerName().c_str(),
              board->getStatus().c_str(),
              board->getMaskedDescriptor().c_str(),
-             board->getScore());
+             board->getScore(),
+             board->getSkips());
     return sendLine(game, handle, sbuf);
   }
   return false;
@@ -657,6 +698,8 @@ void Server::getPlayerInput(Game& game, const int handle) {
     ping(game, handle);
   } else if (str == "S") {
     shoot(game, handle);
+  } else if (str == "K") {
+    skip(game, handle);
   } else if (str == "T") {
     setTaunt(game, handle);
   } else if (game.hasBoard(handle)) {
@@ -764,7 +807,7 @@ void Server::getGameInfo(Game& game, const int handle) {
   const Configuration& config = game.getConfiguration();
   char sbuf[Input::BUFFER_SIZE];
   snprintf(sbuf, sizeof(sbuf), "G|%s|%s|%s|%u|%u|%u|%u|%u|%u|%u",
-           Server::VERSION,
+           getVersion().toString().c_str(),
            config.getName().c_str(),
            (game.isStarted() ? "Y" : "N"),
            config.getMinPlayers(),
@@ -986,12 +1029,10 @@ void Server::shoot(Game& game, const int handle) {
   if (!game.isStarted()) {
     sendLine(game, handle, "M||game hasn't started");
     return;
-  }
-  if (game.isFinished()) {
+  } else if (game.isFinished()) {
     sendLine(game, handle, "M||game is already finished");
     return;
-  }
-  if (sender != game.getBoardToMove()) {
+  } else if (sender != game.getBoardToMove()) {
     sendLine(game, handle, "M||it is not your turn!");
     return;
   }
@@ -1001,8 +1042,7 @@ void Server::shoot(Game& game, const int handle) {
   if (!target) {
     sendLine(game, handle, "M||invalid target player name");
     return;
-  }
-  if (target == sender) {
+  } else if (target == sender) {
     sendLine(game, handle, "M||don't shoot at yourself stupid!");
     return;
   }
@@ -1036,6 +1076,29 @@ void Server::shoot(Game& game, const int handle) {
     sendLine(game, handle, "M||that spot has already been shot");
   } else {
     sendLine(game, handle, "M||illegal coordinates");
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Server::skip(Game& game, const int handle) {
+  Board* board = game.getBoardForHandle(handle);
+  if (!board) {
+    Logger::error() << "no board for channel " << handle << " "
+                    << input.getHandleLabel(handle);
+    removePlayer(game, handle, PROTOCOL_ERROR);
+    return;
+  }
+
+  if (!game.isStarted()) {
+    sendLine(game, handle, "M||game hasn't started");
+  } else if (game.isFinished()) {
+    sendLine(game, handle, "M||game is already finished");
+  } else if (!board->isToMove() || (board != game.getBoardToMove())) {
+    sendLine(game, handle, "M||it is not your turn!");
+  } else {
+    board->incSkips();
+    board->incTurns();
+    nextTurn(game);
   }
 }
 

@@ -7,6 +7,7 @@
 
 #include <string>
 #include "Container.h"
+#include "Version.h"
 
 namespace xbs
 {
@@ -134,6 +135,10 @@ public:
     char sbuf[32];
     snprintf(sbuf, sizeof(sbuf), "%lf", x);
     return str(sbuf);
+  }
+
+  Screen& operator<<(const Version& x) {
+    return str(x.toString().c_str());
   }
 
 private:

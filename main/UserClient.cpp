@@ -18,8 +18,8 @@ int main(const int argc, const char* argv[]) {
     Client client;
 
     const CommandArgs& args = CommandArgs::getInstance();
-    Screen::get() << EL << args.getProgramName() << " version "
-                  << Client::VERSION << EL << Flush;
+    Screen::get() << args.getProgramName() << " version "
+                  << client.getVersion() << EL << Flush;
 
     // TODO setup signal handlers
 

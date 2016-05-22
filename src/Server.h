@@ -11,6 +11,7 @@
 #include "Configuration.h"
 #include "Input.h"
 #include "Game.h"
+#include "Version.h"
 
 namespace xbs
 {
@@ -18,9 +19,9 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Server {
 public:
-  enum { DEFAULT_PORT = 7948 };
-  static const char* VERSION;
-  static const char* ANY_ADDRESS;
+  enum {
+    DEFAULT_PORT = 7948
+  };
 
   static bool isValidPort(const int port) {
     return ((port > 0) && (port <= 0x7FFF));
@@ -28,10 +29,11 @@ public:
 
   Server();
   virtual ~Server();
-  bool init();
+  Version getVersion() const;
   void closeSocket();
   bool openSocket();
   bool startListening(const int backlog = 10);
+  bool init();
   bool run();
 
   bool isConnected() const {
@@ -59,12 +61,13 @@ private:
   bool quitGame(Game&, Coordinate&);
   bool sendBoard(Game&, const Board*);
   bool sendBoard(Game&, const int handle, const Board*);
-  bool sendYourBoard(Game&, const int handle, const Board*);
   bool sendGameResults(Game&);
   bool sendLineAll(Game&, const std::string& msg);
   bool sendLine(Game&, const int handle, const std::string& msg);
   bool sendMessage(Game&, Coordinate&);
   bool sendStart(Game&);
+  bool sendYourBoard(Game&, const int handle, const Board*);
+  bool skipTurn(Game&, Coordinate&);
   bool startGame(Game&, Coordinate&);
   bool prompt(Coordinate&, const std::string& str, std::string& field1,
               const char fieldDelimeter = 0);
@@ -77,6 +80,7 @@ private:
   void sendMessage(Game&, const int handle);
   void setTaunt(Game&, const int handle);
   void shoot(Game&, const int handle);
+  void skip(Game&, const int handle);
   void removePlayer(Game&, const int handle,
                     const std::string& msg = std::string());
 

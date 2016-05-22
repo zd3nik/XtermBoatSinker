@@ -7,6 +7,7 @@
 
 #include <ostream>
 #include "Screen.h"
+#include "Version.h"
 
 namespace xbs
 {
@@ -53,11 +54,16 @@ public:
     return (*this);
   }
 
+  LogStream& operator<<(const Version& x) {
+    return operator<<(x.toString());
+  }
+
 private:
   std::ostream* stream;
   const bool print;
 };
 
 } // namespace xbs
+
 
 #endif // LOGSTREAM_H

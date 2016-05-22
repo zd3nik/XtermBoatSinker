@@ -14,6 +14,7 @@ Board::Board()
   : handle(-1),
     toMove(false),
     score(0),
+    skips(0),
     turns(0),
     boatAreaWidth(0),
     boatAreaHeight(0),
@@ -34,6 +35,7 @@ Board::Board(const int handle,
     playerName(playerName),
     address(address),
     score(0),
+    skips(0),
     turns(0),
     boatAreaWidth(boatAreaWidth),
     boatAreaHeight(boatAreaHeight),
@@ -52,6 +54,7 @@ Board::Board(const Board& other)
     address(other.address),
     status(other.status),
     score(0),
+    skips(0),
     turns(0),
     boatAreaWidth(other.boatAreaWidth),
     boatAreaHeight(other.boatAreaHeight),
@@ -75,6 +78,7 @@ Board& Board::operator=(const Board& other) {
   address = other.address;
   status = other.status;
   score = other.score;
+  skips = other.skips;
   turns = other.turns;
   boatAreaWidth = other.boatAreaWidth;
   boatAreaHeight = other.boatAreaHeight;
@@ -128,8 +132,23 @@ void Board::setScore(const unsigned value) {
 }
 
 //-----------------------------------------------------------------------------
+void Board::setSkips(const unsigned value) {
+  skips= value;
+}
+
+//-----------------------------------------------------------------------------
+void Board::setTurns(const unsigned value) {
+  turns = value;
+}
+
+//-----------------------------------------------------------------------------
 void Board::incScore(const unsigned value) {
   score += value;
+}
+
+//-----------------------------------------------------------------------------
+void Board::incSkips(const unsigned value) {
+  skips += value;
 }
 
 //-----------------------------------------------------------------------------
@@ -228,8 +247,8 @@ std::string Board::toString(const unsigned number,
 
   if (gameStarted) {
     snprintf((sbuf + len), (sizeof(sbuf) - len),
-             ", Score = %u, Turns = %u, Hit = %u of %u",
-             score, turns, getHitCount(), getBoatPoints());
+             ", Score = %u, Skips = %u, Turns = %u, Hit = %u of %u",
+             score, skips, turns, getHitCount(), getBoatPoints());
   }
 
   return sbuf;
@@ -259,6 +278,11 @@ Container Board::getBoatArea() const {
 //-----------------------------------------------------------------------------
 unsigned Board::getScore() const {
   return score;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::getSkips() const {
+  return skips;
 }
 
 //-----------------------------------------------------------------------------
@@ -412,11 +436,16 @@ bool Board::print(const bool masked, const Configuration* config) const {
   if (status.size()) {
     Screen::print() << " (" << status << ')';
   } else if (config) {
-    unsigned hits = (100 * getHitCount());
+    unsigned numerator = (100 * getHitCount());
     unsigned points = config->getPointGoal();
-    if (points) {
-      Screen::print() << " (" << score << ", " << (hits / points) << "%)";
+    Screen::print() << " (" << score;
+    if (skips) {
+      Screen::print() << ", " << skips;
     }
+    if (points) {
+      Screen::print() << ", " << (numerator / points) << '%';
+    }
+    Screen::print() << ')';
   }
 
   // print X coordinate header (row 2)

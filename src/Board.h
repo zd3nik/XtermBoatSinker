@@ -64,9 +64,12 @@ public:
   void clearHitTaunts();
   void clearMissTaunts();
   void incScore(const unsigned value = 1);
+  void incSkips(const unsigned value = 1);
   void incTurns(const unsigned value = 1);
   void setHandle(const int handle);
   void setScore(const unsigned value);
+  void setSkips(const unsigned value);
+  void setTurns(const unsigned value);
   void setStatus(const std::string& str);
   void setToMove(const bool toMove);
   std::string getAddress() const;
@@ -86,6 +89,7 @@ public:
   unsigned getHitCount() const;
   unsigned getMissCount() const;
   unsigned getScore() const;
+  unsigned getSkips() const;
   unsigned getTurns() const;
   bool addHitsAndMisses(const std::string& descriptor);
   bool addRandomBoats(const Configuration&);
@@ -120,6 +124,7 @@ private:
   std::vector<std::string> hitTaunts;
   std::vector<std::string> missTaunts;
   unsigned score;
+  unsigned skips;
   unsigned turns;
   unsigned boatAreaWidth;
   unsigned boatAreaHeight;

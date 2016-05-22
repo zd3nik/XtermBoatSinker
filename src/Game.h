@@ -18,22 +18,22 @@ class Game : public DBObject
 public:
   Game();
   Game(const Configuration&);
-  Game& setConfiguration(const Configuration&);
-  Game& clearBoards();
   Game& addBoard(const Board&);
-  bool isValid() const;
-  bool isFinished() const;
-  bool hasOpenBoard() const;
+  Game& clearBoards();
+  Game& setConfiguration(const Configuration&);
   bool fitBoardsToScreen();
+  bool hasOpenBoard() const;
+  bool isFinished() const;
+  bool isValid() const;
   bool start(const bool randomizeBoardOrder);
   void disconnectBoard(const int handle, const std::string& msg);
-  void removeBoard(const int handle);
   void nextTurn();
+  void removeBoard(const int handle);
   Board* getBoardAtIndex(const unsigned index);
   Board* getBoardForHandle(const int handle);
   Board* getBoardForPlayer(const std::string& name);
-  Board* getFirstBoardForAddress(const std::string& address);
   Board* getBoardToMove();
+  Board* getFirstBoardForAddress(const std::string& address);
 
   const Configuration& getConfiguration() const {
     return config;

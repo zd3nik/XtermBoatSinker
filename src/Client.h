@@ -10,6 +10,7 @@
 #include "Board.h"
 #include "Configuration.h"
 #include "Message.h"
+#include "Version.h"
 
 namespace xbs
 {
@@ -18,13 +19,13 @@ namespace xbs
 class Client
 {
 public:
-  static const char* VERSION;
-
   Client();
   virtual ~Client();
 
   virtual bool join();
   virtual bool run();
+
+  Version getVersion() const;
 
 protected:
   virtual bool joinPrompt(const int playersJoined);
@@ -73,6 +74,8 @@ protected:
   bool sendMessage(const Coordinate& promptCoord);
   bool setTaunt(const Coordinate& promptCoordinate);
   bool shoot(const Coordinate& promptCoordinate);
+  bool skip(const Coordinate& promptCoordinate);
+  bool skip();
   bool startGame();
   bool updateBoard();
   bool updateYourBoard();
