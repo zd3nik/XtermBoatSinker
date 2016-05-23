@@ -37,6 +37,7 @@ enum ControlKey {
 
 //-----------------------------------------------------------------------------
 unsigned Client::randomIndex(const unsigned bound) {
+  srand(clock());
   return ((((unsigned)(rand() >> 3)) & 0x7FFFU) % bound);
 }
 

@@ -204,6 +204,7 @@ std::string Board::getDescriptor() const {
 //-----------------------------------------------------------------------------
 std::string Board::getHitTaunt() {
   if (hitTaunts.size()) {
+    srand(clock());
     std::vector<std::string>::iterator it = hitTaunts.begin();
     std::advance(it, (((unsigned)rand()) % hitTaunts.size()));
     return (*it);
@@ -214,6 +215,7 @@ std::string Board::getHitTaunt() {
 //-----------------------------------------------------------------------------
 std::string Board::getMissTaunt() {
   if (missTaunts.size()) {
+    srand(clock());
     std::vector<std::string>::iterator it = missTaunts.begin();
     std::advance(it, (((unsigned)rand()) % missTaunts.size()));
     return (*it);
@@ -407,6 +409,7 @@ bool Board::isDead() const {
 
 //-----------------------------------------------------------------------------
 bool Board::addRandomBoats(const Configuration& config) {
+  srand(clock());
   clearBoatArea();
   unsigned maxTries = (10 * boatAreaWidth * boatAreaHeight);
   unsigned boatCount = 0;
