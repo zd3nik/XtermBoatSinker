@@ -91,6 +91,7 @@ public:
   unsigned getScore() const;
   unsigned getSkips() const;
   unsigned getTurns() const;
+  char getSquare(const Coordinate&) const;
   bool addHitsAndMisses(const std::string& descriptor);
   bool addRandomBoats(const Configuration&);
   bool hasHitTaunts() const;

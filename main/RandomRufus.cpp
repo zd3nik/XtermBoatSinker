@@ -98,13 +98,13 @@ bool RandomRufus::myTurn() {
     return false;
   }
 
-  Board* target = getRandomBoard();
+  Board* target = getTargetBoard();
   if (!target) {
     Logger::printError() << "failed to select random board";
     return false;
   }
 
-  Coordinate coord = getRandomCoordinate(*target);
+  Coordinate coord = getTargetCoordinate(*target);
   if (!target->getBoatArea().contains(coord)) {
     Logger::printError() << "failed to select random coordinate";
     return false;
@@ -117,7 +117,7 @@ bool RandomRufus::myTurn() {
 }
 
 //-----------------------------------------------------------------------------
-Board* RandomRufus::getRandomBoard() {
+Board* RandomRufus::getTargetBoard() {
   if (boardList.size() < 2) {
     return NULL;
   }
@@ -143,11 +143,11 @@ Board* RandomRufus::getRandomBoard() {
     }
   }
 
-  return boards.size() ? boards[randomIndex(boards.size())] : NULL;
+  return (boards.size() ? boards[randomIndex(boards.size())] : NULL);
 }
 
 //-----------------------------------------------------------------------------
-Coordinate RandomRufus::getRandomCoordinate(const Board& board) {
+Coordinate RandomRufus::getTargetCoordinate(const Board& board) {
   const unsigned w = config.getBoardSize().getWidth();
   const unsigned h = config.getBoardSize().getHeight();
 
@@ -165,7 +165,7 @@ Coordinate RandomRufus::getRandomCoordinate(const Board& board) {
     }
   }
 
-  return coords.size() ? coords[randomIndex(coords.size())] : Coordinate();
+  return (coords.size() ? coords[randomIndex(coords.size())] : Coordinate());
 }
 
 //-----------------------------------------------------------------------------
@@ -184,10 +184,10 @@ int main(const int argc, const char* argv[]) {
     return (rufus.join() && rufus.run()) ? 0 : 1;
   }
   catch (const std::exception& e) {
-    Logger::printError() << e.what();
+    std::cerr << e.what() << std::endl;
   }
   catch (...) {
-    Logger::printError() << "Unhandles exception";
+    std::cerr << "Unhandles exception" << std::endl;
   }
   return 1;
 }

@@ -98,21 +98,14 @@ bool Game::start(const bool randomize) {
   if (!isValid()) {
     Logger::error() << "can't start game because it is not valid";
     return false;
-  }
-  if (isStarted()) {
+  } else if (isStarted()) {
     Logger::error() << "can't start game because it is already started";
     return false;
-  }
-  if (isFinished()) {
+  } else if (isFinished()) {
     Logger::error() << "can't start game because it is has finished";
     return false;
-  }
-  if (randomize && !randomizeBoardOrder()) {
+  } else if (randomize && !randomizeBoardOrder()) {
     Logger::error() << "cannot randomize board order, game already started!";
-    return false;
-  }
-  if (!fitBoardsToScreen()) {
-    Logger::error() << "failed to fit boards to screen";
     return false;
   }
 
@@ -125,7 +118,6 @@ bool Game::start(const bool randomize) {
   for (unsigned i = 0; i < boards.size(); ++i) {
     boards[i].setToMove(i == boardToMove);
   }
-
   return true;
 }
 
@@ -136,21 +128,6 @@ bool Game::randomizeBoardOrder() {
   }
   std::random_shuffle(boards.begin(), boards.end());
   return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Game::fitBoardsToScreen() {
-  if (boards.empty()) {
-    return true;
-  }
-
-  std::vector<Container*> children;
-  for (unsigned i = 0; i < boards.size(); ++i) {
-    Board& board = boards[i];
-    children.push_back(&board);
-  }
-
-  return Screen::get(true).arrangeChildren(children);
 }
 
 //-----------------------------------------------------------------------------
@@ -207,7 +184,7 @@ Board* Game::getBoardForHandle(const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-Board* Game::getBoardForPlayer(const std::string& name) {
+Board* Game::getBoardForPlayer(const std::string& name, const bool exact) {
   Board* board = NULL;
   if (name.size()) {
     if (isdigit(name[0])) {
@@ -218,6 +195,11 @@ Board* Game::getBoardForPlayer(const std::string& name) {
     } else {
       for (unsigned i = 0; i < boards.size(); ++i) {
         std::string playerName = boards[i].getPlayerName();
+        if (playerName == name) {
+          return &(boards[i]);
+        } else if (exact) {
+          continue;
+        }
         if (strncasecmp(name.c_str(), playerName.c_str(), name.size()) == 0) {
           if (board) {
             return NULL;

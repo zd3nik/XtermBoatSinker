@@ -8,6 +8,8 @@
 #include <ostream>
 #include "Screen.h"
 #include "Version.h"
+#include "Coordinate.h"
+#include "ScoredCoordinate.h"
 
 namespace xbs
 {
@@ -52,6 +54,10 @@ public:
       Screen::print() << x;
     }
     return (*this);
+  }
+
+  LogStream& operator<<(const ScoredCoordinate& x) {
+    return operator<<(x.toString());
   }
 
   LogStream& operator<<(const Coordinate& x) {

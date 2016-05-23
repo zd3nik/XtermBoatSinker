@@ -330,6 +330,18 @@ unsigned Board::getBoatPoints() const {
 }
 
 //-----------------------------------------------------------------------------
+char Board::getSquare(const Coordinate& coord) const {
+  if ((descriptorLength > 0) && coord.isValid() &&
+      (coord.getX() <= boatAreaWidth) &&
+      (coord.getY() <= boatAreaHeight))
+  {
+    unsigned i = ((coord.getX() - 1) + (boatAreaWidth * (coord.getY() - 1)));
+    return descriptor[i];
+  }
+  return 0;
+}
+
+//-----------------------------------------------------------------------------
 bool Board::isValid(const Configuration& config) const {
   if (!isValid()) {
     return false;

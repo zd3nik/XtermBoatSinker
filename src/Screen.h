@@ -8,6 +8,7 @@
 #include <string>
 #include "Container.h"
 #include "Version.h"
+#include "Coordinate.h"
 
 namespace xbs
 {

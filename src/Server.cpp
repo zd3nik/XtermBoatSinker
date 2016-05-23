@@ -760,7 +760,7 @@ bool Server::sendLine(Game& game, const int handle, const std::string& msg) {
   Logger::debug() << "Sending " << len << " bytes (" << sbuf << ") to channel "
                   << handle << " " << input.getHandleLabel(handle);
 
-  if (write(handle, sbuf, len) != len) {
+  if (send(handle, sbuf, len, MSG_NOSIGNAL) != len) {
     Logger::error() << "Failed to write " << len << " bytes (" << sbuf
                     << ") to channel " << handle << " "
                     << input.getHandleLabel(handle) << ": " << strerror(errno);
@@ -782,7 +782,7 @@ void Server::removePlayer(Game& game, const int handle,
              msg.c_str());
   }
 
-  bool closed = (msg.size() || (msg != COMM_ERROR))
+  bool closed = (msg.size() && (msg != COMM_ERROR))
       ? !sendLine(game, handle, msg)
       : false;
 
@@ -793,10 +793,11 @@ void Server::removePlayer(Game& game, const int handle,
   }
 
   if (board) {
+    bool inProgress = (game.isStarted() && !game.isFinished());
     for (unsigned i = 0; i < game.getBoardCount(); ++i) {
       Board* b = game.getBoardAtIndex(i);
       if ((b->getHandle() >= 0) && (b->getHandle() != handle)) {
-        if (game.isStarted()) {
+        if (inProgress) {
           sendBoard(game, board);
         } else {
           sendLine(game, b->getHandle(), sbuf);
@@ -866,7 +867,7 @@ void Server::joinGame(Game& game, const int handle) {
     return;
   }
 
-  Board* rejoin = game.getBoardForPlayer(playerName);
+  Board* rejoin = game.getBoardForPlayer(playerName, true);
   if (rejoin) {
     if (rejoin->getHandle() >= 0) {
       sendLine(game, handle, NAME_IN_USE);

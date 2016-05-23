@@ -21,7 +21,6 @@ public:
   Game& addBoard(const Board&);
   Game& clearBoards();
   Game& setConfiguration(const Configuration&);
-  bool fitBoardsToScreen();
   bool hasOpenBoard() const;
   bool isFinished() const;
   bool isValid() const;
@@ -31,7 +30,7 @@ public:
   void removeBoard(const int handle);
   Board* getBoardAtIndex(const unsigned index);
   Board* getBoardForHandle(const int handle);
-  Board* getBoardForPlayer(const std::string& name);
+  Board* getBoardForPlayer(const std::string& name, const bool exact = false);
   Board* getBoardToMove();
   Board* getFirstBoardForAddress(const std::string& address);
 

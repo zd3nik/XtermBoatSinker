@@ -901,7 +901,7 @@ bool Client::sendLine(const std::string& msg) {
   unsigned len = strlen(sbuf);
   Logger::debug() << "Sending " << len << " bytes (" << sbuf << ") to server";
 
-  if (write(sock, sbuf, len) != len) {
+  if (send(sock, sbuf, len, MSG_NOSIGNAL) != len) {
     Logger::printError() << "Failed to write " << len << " bytes (" << sbuf
                          << ") to server: " << strerror(errno);
     return false;

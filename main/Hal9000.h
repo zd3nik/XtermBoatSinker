@@ -1,17 +1,19 @@
 //-----------------------------------------------------------------------------
-// RandomRufus.h
+// Hal9000.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef RANDOM_RUFUS_H
-#define RANDOM_RUFUS_H
+#ifndef HAL9000_H
+#define HAL9000_H
 
+#include <vector>
 #include "Client.h"
+#include "ScoredCoordinate.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class RandomRufus : public Client {
+class Hal9000: public Client {
 public:
   virtual Version getVersion() const;
 
@@ -21,10 +23,11 @@ private:
   virtual bool nextTurn();
 
   bool myTurn();
-  Board* getTargetBoard();
-  Coordinate getTargetCoordinate(const Board&);
+  Board* getTargetBoard(ScoredCoordinate&);
+  ScoredCoordinate getTargetCoordinate(const Board&);
+  void setScores(std::vector<ScoredCoordinate>&, const Board&);
 };
 
 } // namespace xbs
 
-#endif // RANDOM_RUFUS_H
+#endif // HAL9000_H

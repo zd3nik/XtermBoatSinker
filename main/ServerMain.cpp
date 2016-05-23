@@ -3,6 +3,7 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include <stdlib.h>
+#include <signal.h>
 #include "CommandArgs.h"
 #include "Server.h"
 #include "Logger.h"
@@ -22,6 +23,7 @@ int main(const int argc, const char* argv[]) {
                   << server.getVersion() << EL << Flush;
 
     // TODO setup signal handlers
+    signal(SIGPIPE, SIG_IGN);
 
     if (!server.init()) {
       return 1;
@@ -37,10 +39,10 @@ int main(const int argc, const char* argv[]) {
     return 0;
   }
   catch (const std::exception& e) {
-    Logger::error() << e.what();
+    std::cerr << e.what() << std::endl;
   }
   catch (...) {
-    Logger::error() << "unhandled exception";
+    std::cerr << "Unhandles exception" << std::endl;
   }
   return 1;
 }

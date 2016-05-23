@@ -26,10 +26,10 @@ int main(const int argc, const char* argv[]) {
     return (client.join() && client.run()) ? 0 : 1;
   }
   catch (const std::exception& e) {
-    Logger::printError() << e.what();
+    std::cerr << e.what() << std::endl;
   }
   catch (...) {
-    Logger::printError() << "Unhandles exception";
+    std::cerr << "Unhandles exception" << std::endl;
   }
   return 1;
 }
