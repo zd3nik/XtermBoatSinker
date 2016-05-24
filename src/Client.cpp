@@ -95,6 +95,7 @@ void Client::closeSocketHandle() {
     sock = -1;
   }
 }
+
 //-----------------------------------------------------------------------------
 bool Client::join() {
   while (getHostAddress() && getHostPort()) {
@@ -915,6 +916,9 @@ char Client::waitForInput(const int timeout) {
   std::set<int> ready;
   if (!input.waitForData(ready, timeout)) {
     return -1;
+  } else if (ready.empty()) {
+    redrawScreen();
+    return 0;
   }
 
   char userInput = 0;
@@ -1289,7 +1293,8 @@ bool Client::clearScreen() {
 bool Client::redrawScreen() {
   msgEnd = ~0U;
   std::vector<Container*> children(boardList.begin(), boardList.end());
-  return Screen::get(true).clear().arrangeChildren(children);
+  Screen::get(true).arrangeChildren(children);
+  return true;
 }
 
 //-----------------------------------------------------------------------------

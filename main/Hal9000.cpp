@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <stdio.h>
 #include <math.h>
 #include <errno.h>
@@ -282,6 +283,11 @@ void Hal9000::setScores(std::vector<ScoredCoordinate>& coords, const Board& b) {
 }
 
 //-----------------------------------------------------------------------------
+void termSizeChanged(int) {
+  Screen::get(true);
+}
+
+//-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
     srand((unsigned)time(NULL));
@@ -292,7 +298,8 @@ int main(const int argc, const char* argv[]) {
     Screen::get() << args.getProgramName() << " version "
                   << rufus.getVersion() << EL << Flush;
 
-    // TODO setup signal handlers
+    signal(SIGWINCH, termSizeChanged);
+    signal(SIGPIPE, SIG_IGN);
 
     return (rufus.join() && rufus.run()) ? 0 : 1;
   }

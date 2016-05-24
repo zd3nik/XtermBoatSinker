@@ -12,6 +12,11 @@
 using namespace xbs;
 
 //-----------------------------------------------------------------------------
+void termSizeChanged(int) {
+  Screen::get(true);
+}
+
+//-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
     srand((unsigned)time(NULL));
@@ -22,7 +27,7 @@ int main(const int argc, const char* argv[]) {
     Screen::get() << args.getProgramName() << " version "
                   << server.getVersion() << EL << Flush;
 
-    // TODO setup signal handlers
+    signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 
     if (!server.init()) {

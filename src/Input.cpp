@@ -160,11 +160,8 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
     ret = select((maxFd + 1), &set, NULL, NULL, (timeout_ms < 0) ? NULL : &tv);
     if (ret < 0) {
       if (errno == EINTR) {
-        Logger::debug() << "Input select interrupted, retrying";
-        if ((timeout_ms > 0) && !tv.tv_sec && !tv.tv_usec) {
-          tv.tv_usec = 1000;
-        }
-        continue;
+        Logger::debug() << "Input select interrupted";
+        return true;
       }
       Logger::error() << "Input select failed: " << strerror(errno);
       return false;

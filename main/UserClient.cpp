@@ -3,12 +3,18 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include <stdlib.h>
+#include <signal.h>
 #include "CommandArgs.h"
 #include "Client.h"
 #include "Logger.h"
 #include "Screen.h"
 
 using namespace xbs;
+
+//-----------------------------------------------------------------------------
+void termSizeChanged(int) {
+  Screen::get(true);
+}
 
 //-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
@@ -21,7 +27,8 @@ int main(const int argc, const char* argv[]) {
     Screen::get() << args.getProgramName() << " version "
                   << client.getVersion() << EL << Flush;
 
-    // TODO setup signal handlers
+    signal(SIGWINCH, termSizeChanged);
+    signal(SIGPIPE, SIG_IGN);
 
     return (client.join() && client.run()) ? 0 : 1;
   }

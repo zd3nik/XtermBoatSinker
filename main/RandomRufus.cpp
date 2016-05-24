@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <stdio.h>
 #include <errno.h>
 #include "CommandArgs.h"
@@ -169,6 +170,11 @@ Coordinate RandomRufus::getTargetCoordinate(const Board& board) {
 }
 
 //-----------------------------------------------------------------------------
+void termSizeChanged(int) {
+  Screen::get(true);
+}
+
+//-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
     srand((unsigned)time(NULL));
@@ -179,7 +185,8 @@ int main(const int argc, const char* argv[]) {
     Screen::get() << args.getProgramName() << " version "
                   << rufus.getVersion() << EL << Flush;
 
-    // TODO setup signal handlers
+    signal(SIGWINCH, termSizeChanged);
+    signal(SIGPIPE, SIG_IGN);
 
     return (rufus.join() && rufus.run()) ? 0 : 1;
   }
