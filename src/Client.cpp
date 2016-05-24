@@ -701,7 +701,7 @@ bool Client::waitForGameStart() {
     case 'H': ok = home();               break;
     case 'M': ok = sendMessage(coord);   break;
     case 'Q': ok = !quitGame(coord);     break;
-    case 'R': ok = clearScreen();        break;
+    case 'R': ok = redrawScreen();       break;
     case 'T': ok = setTaunt(coord);      break;
     case 'u': ok = pageUp(msgCoord);     break;
     case 'U': ok = scrollUp();           break;
@@ -1264,7 +1264,7 @@ bool Client::run() {
     case 'H': ok = home();               break;
     case 'M': ok = sendMessage(coord);   break;
     case 'Q': ok = !quitGame(coord);     break;
-    case 'R': ok = clearScreen();        break;
+    case 'R': ok = redrawScreen();       break;
     case 'S': ok = shoot(coord);         break;
     case 'K': ok = skip(coord);          break;
     case 'T': ok = setTaunt(coord);      break;
@@ -1283,6 +1283,13 @@ bool Client::run() {
 bool Client::clearScreen() {
   msgEnd = ~0U;
   return Screen::get(true).clear();
+}
+
+//-----------------------------------------------------------------------------
+bool Client::redrawScreen() {
+  msgEnd = ~0U;
+  std::vector<Container*> children(boardList.begin(), boardList.end());
+  return Screen::get(true).clear().arrangeChildren(children);
 }
 
 //-----------------------------------------------------------------------------

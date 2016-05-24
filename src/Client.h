@@ -69,6 +69,7 @@ protected:
   bool printWaitOptions(Coordinate& promptCoordinate);
   bool quitGame(const Coordinate& promptCoord);
   bool readGameInfo(int& playersJoined);
+  bool redrawScreen();
   bool removePlayer();
   bool scrollDown();
   bool scrollUp();
@@ -76,8 +77,8 @@ protected:
   bool sendMessage(const Coordinate& promptCoord);
   bool setTaunt(const Coordinate& promptCoordinate);
   bool shoot(const Coordinate& promptCoordinate);
-  bool skip(const Coordinate& promptCoordinate);
   bool skip();
+  bool skip(const Coordinate& promptCoordinate);
   bool startGame();
   bool updateBoard();
   bool updateYourBoard();
