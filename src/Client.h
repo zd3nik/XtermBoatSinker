@@ -30,6 +30,7 @@ public:
 protected:
   static unsigned randomIndex(const unsigned bound);
 
+  virtual void showHelp();
   virtual bool joinPrompt(const int playersJoined);
   virtual bool getUserName();
   virtual bool setupBoard();

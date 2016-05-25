@@ -299,10 +299,6 @@ int main(const int argc, const char* argv[]) {
     CommandArgs::initialize(argc, argv);
     Hal9000 hal;
 
-    const CommandArgs& args = CommandArgs::getInstance();
-    Screen::get() << args.getProgramName() << " version "
-                  << hal.getVersion() << EL << Flush;
-
     signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 

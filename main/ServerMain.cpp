@@ -23,10 +23,6 @@ int main(const int argc, const char* argv[]) {
     CommandArgs::initialize(argc, argv);
     Server server;
 
-    const CommandArgs& args = CommandArgs::getInstance();
-    Screen::get() << args.getProgramName() << " version "
-                  << server.getVersion() << EL << Flush;
-
     signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 
@@ -36,7 +32,7 @@ int main(const int argc, const char* argv[]) {
 
     while (server.run()) {
       // TODO save game
-      if (CommandArgs::getInstance().indexOf("-r", "--repeat") < 0) {
+      if (!server.isRepeatOn()) {
         break;
       }
     }

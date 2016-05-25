@@ -23,10 +23,6 @@ int main(const int argc, const char* argv[]) {
     CommandArgs::initialize(argc, argv);
     Client client;
 
-    const CommandArgs& args = CommandArgs::getInstance();
-    Screen::get() << args.getProgramName() << " version "
-                  << client.getVersion() << EL << Flush;
-
     signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 

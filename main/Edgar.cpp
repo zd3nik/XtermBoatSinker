@@ -284,10 +284,6 @@ int main(const int argc, const char* argv[]) {
     CommandArgs::initialize(argc, argv);
     Edgar edgar;
 
-    const CommandArgs& args = CommandArgs::getInstance();
-    Screen::get() << args.getProgramName() << " version "
-                  << edgar.getVersion() << EL << Flush;
-
     signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 

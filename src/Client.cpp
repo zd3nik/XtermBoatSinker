@@ -97,7 +97,36 @@ void Client::closeSocketHandle() {
 }
 
 //-----------------------------------------------------------------------------
+void Client::showHelp() {
+  Screen::get()
+      << EL
+      << "Options:" << EL
+      << EL
+      << "  --help                 Show help and exit" << EL
+      << "  -h <addr>," << EL
+      << "  --host <addr>          Connect to game server at given address" << EL
+      << "  -p <port>," << EL
+      << "  --port <port>          Connect to game server at given port" << EL
+      << "  -u <name>," << EL
+      << "  --user <name>          Join using given user/player name" << EL
+      << "  -l <level>," << EL
+      << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
+      << "  -f <file>," << EL
+      << "  --log-file <file>      Log messages to given file" << EL
+      << EL << Flush;
+}
+
+//-----------------------------------------------------------------------------
 bool Client::join() {
+  const CommandArgs& args = CommandArgs::getInstance();
+  Screen::get() << args.getProgramName() << " version " << getVersion()
+                << EL << Flush;
+
+  if (args.indexOf("--help") > 0) {
+    showHelp();
+    return false;
+  }
+
   while (getHostAddress() && getHostPort()) {
     int playersJoined = 0;
     if (openSocket() && readGameInfo(playersJoined)) {
@@ -113,6 +142,7 @@ bool Client::join() {
       break;
     }
   }
+
   closeSocket();
   return false;
 }

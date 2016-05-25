@@ -30,14 +30,15 @@ public:
   Server();
   virtual ~Server();
   Version getVersion() const;
+  void showHelp();
   void closeSocket();
   bool openSocket();
   bool startListening(const int backlog = 10);
   bool init();
   bool run();
 
-  bool isConnected() const {
-    return (sock >= 0);
+  bool isRepeatOn() const {
+    return repeat;
   }
 
 private:
@@ -89,6 +90,8 @@ private:
   std::string bindAddress;
   int port;
   int sock;
+  bool autoStart;
+  bool repeat;
   struct sockaddr_in addr;
 };
 

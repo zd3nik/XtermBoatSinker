@@ -36,7 +36,9 @@ const char* PROTOCOL_ERROR = "protocol error";
 //-----------------------------------------------------------------------------
 Server::Server()
   : port(-1),
-    sock(-1)
+    sock(-1),
+    autoStart(false),
+    repeat(false)
 {
   input.addHandle(STDIN_FILENO);
 }
@@ -52,8 +54,38 @@ Version Server::getVersion() const {
 }
 
 //-----------------------------------------------------------------------------
+void Server::showHelp() {
+  Screen::get()
+      << EL
+      << "Options:" << EL
+      << EL
+      << "  --help                 Show help and exit" << EL
+      << "  -a, --auto-start       Auto start game if max players joined" << EL
+      << "  -r, --repeat           Repeat game when done" << EL
+      << "  -b <addr>," << EL
+      << "  --bind-address <addr>  Bind server to given IP address" << EL
+      << "  -p <port>," << EL
+      << "  --port <port>          Listen for connections on given port" << EL
+      << "  -t <title>," << EL
+      << "  --title <title>        Set game title to given value" << EL
+      << "  -l <level>," << EL
+      << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
+      << "  -f <file>," << EL
+      << "  --log-file <file>      Log messages to given file" << EL
+      << EL << Flush;
+}
+
+//-----------------------------------------------------------------------------
 bool Server::init() {
   const CommandArgs& args = CommandArgs::getInstance();
+
+  Screen::get() << args.getProgramName() << " version " << getVersion()
+                << EL << Flush;
+
+  if (args.indexOf("--help") > 0) {
+    showHelp();
+    return false;
+  }
 
   const char* binAddr = args.getValueOf("-b", "--bind-address");
   if (Input::empty(binAddr)) {
@@ -70,6 +102,8 @@ bool Server::init() {
     port = DEFAULT_PORT;
   }
 
+  autoStart = (args.indexOf("-a", "--auto-start") > 0);
+  repeat = (args.indexOf("-r", "--repeat") > 0);
   return true;
 }
 
@@ -90,10 +124,7 @@ void Server::closeSocket() {
 
 //-----------------------------------------------------------------------------
 bool Server::openSocket() {
-  if (isConnected()) {
-    Logger::warn() << "Already connected to " << bindAddress << ":" << port;
-    return true;
-  }
+  closeSocket();
 
   if (bindAddress.empty()) {
     Logger::error() << "bind address is not set";
@@ -254,7 +285,7 @@ bool Server::printOptions(Game& game, Coordinate& coord) {
 
   if (game.getBoardCount()) {
     Screen::print() << coord.south()
-                    << "(B)oot Player, Blacklist (P)layer, Skip (T)urn";
+                    << "(B)oot Player, Blacklist (P)layer, S(k)ip Player Turn";
   }
 
   if (!game.isStarted() &&
@@ -278,14 +309,14 @@ bool Server::handleUserInput(Game& game, Coordinate& coord) {
   std::string str;
   switch (toupper(ch)) {
   case 'A': return blacklistAddress(game, coord);
-  case 'C': return clearBlacklist(game, coord);
   case 'B': return bootPlayer(game, coord);
+  case 'C': return clearBlacklist(game, coord);
+  case 'K': return skipTurn(game, coord);
   case 'M': return sendMessage(game, coord);
   case 'P': return blacklistPlayer(game, coord);
   case 'Q': return quitGame(game, coord);
   case 'R': return Screen::get(true).clear().flush();
   case 'S': return startGame(game, coord);
-  case 'T': return skipTurn(game, coord);
   default:
     break;
   }
@@ -959,6 +990,13 @@ void Server::joinGame(Game& game, const int handle) {
       snprintf(sbuf, sizeof(sbuf), "J|%s", b->getPlayerName().c_str());
       sendLine(game, handle, sbuf);
     }
+  }
+
+  if (autoStart && !game.isStarted() &&
+      (game.getBoardCount() == config.getMaxPlayers()) &&
+      game.start(true))
+  {
+    sendStart(game);
   }
 }
 

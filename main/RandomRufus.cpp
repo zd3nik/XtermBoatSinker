@@ -186,10 +186,6 @@ int main(const int argc, const char* argv[]) {
     CommandArgs::initialize(argc, argv);
     RandomRufus rufus;
 
-    const CommandArgs& args = CommandArgs::getInstance();
-    Screen::get() << args.getProgramName() << " version "
-                  << rufus.getVersion() << EL << Flush;
-
     signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 
