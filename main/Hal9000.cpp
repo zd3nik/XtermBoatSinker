@@ -14,7 +14,8 @@
 #include "Logger.h"
 #include "Screen.h"
 
-using namespace xbs;
+namespace xbs
+{
 
 //-----------------------------------------------------------------------------
 const Version HAL_VERSION("9000.0");
@@ -281,6 +282,10 @@ void Hal9000::setScores(std::vector<ScoredCoordinate>& coords, const Board& b) {
     coord.setScore(score);
   }
 }
+
+} // namespace xbs
+
+using namespace xbs;
 
 //-----------------------------------------------------------------------------
 void termSizeChanged(int) {

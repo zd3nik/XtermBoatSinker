@@ -7,13 +7,12 @@
 
 #include "Board.h"
 #include "Configuration.h"
-#include "DBObject.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Game : public DBObject
+class Game
 {
 public:
   Game();

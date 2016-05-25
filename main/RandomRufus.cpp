@@ -12,7 +12,8 @@
 #include "Logger.h"
 #include "Screen.h"
 
-using namespace xbs;
+namespace xbs
+{
 
 //-----------------------------------------------------------------------------
 const Version RUFUS_VERSION("1.0");
@@ -168,6 +169,10 @@ Coordinate RandomRufus::getTargetCoordinate(const Board& board) {
 
   return (coords.size() ? coords[randomIndex(coords.size())] : Coordinate());
 }
+
+} // namespace xbs
+
+using namespace xbs;
 
 //-----------------------------------------------------------------------------
 void termSizeChanged(int) {

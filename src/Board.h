@@ -9,7 +9,6 @@
 #include "Boat.h"
 #include "Container.h"
 #include "Configuration.h"
-#include "DBObject.h"
 
 namespace xbs
 {
@@ -44,7 +43,7 @@ namespace xbs
 //                    +------+
 // Boat descriptor: .X..X.0X0..0...0X. (row1row2row3)
 //-----------------------------------------------------------------------------
-class Board : public Container, DBObject
+class Board : public Container
 {
 public:
   Board();

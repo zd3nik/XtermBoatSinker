@@ -14,7 +14,7 @@
 #include "Logger.h"
 #include "Screen.h"
 
-using namespace xbs;
+namespace xbs {
 
 //-----------------------------------------------------------------------------
 const Version EDGAR_VERSION("1.0");
@@ -267,6 +267,10 @@ void Edgar::setScores(std::vector<ScoredCoordinate>& coords, const Board& b) {
     coords[i].setScore(score);
   }
 }
+
+} // namespace xbs
+
+using namespace xbs;
 
 //-----------------------------------------------------------------------------
 void termSizeChanged(int) {

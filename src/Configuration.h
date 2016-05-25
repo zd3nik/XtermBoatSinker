@@ -8,15 +8,14 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "Container.h"
 #include "Boat.h"
-#include "DBObject.h"
+#include "Container.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Configuration : public DBObject
+class Configuration
 {
 public:
   static Configuration getDefaultConfiguration();
