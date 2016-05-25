@@ -332,6 +332,40 @@ unsigned Board::getBoatPoints() const {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Board::horizontalHits(const Coordinate& coord) const
+{
+  unsigned count = 0;
+  char ch = getSquare(coord);
+  if (ch == Boat::HIT_MASK) {
+    count++;
+    for (Coordinate c(coord); (ch = getSquare(c.west())) == Boat::HIT_MASK;) {
+      count++;
+    }
+    for (Coordinate c(coord); (ch = getSquare(c.east())) == Boat::HIT_MASK;) {
+      count++;
+    }
+  }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::verticalHits(const Coordinate& coord) const
+{
+  unsigned count = 0;
+  char ch = getSquare(coord);
+  if (ch == Boat::HIT_MASK) {
+    count++;
+    for (Coordinate c(coord); (ch = getSquare(c.north())) == Boat::HIT_MASK;) {
+      count++;
+    }
+    for (Coordinate c(coord); (ch = getSquare(c.south())) == Boat::HIT_MASK;) {
+      count++;
+    }
+  }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
 char Board::getSquare(const Coordinate& coord) const {
   if ((descriptorLength > 0) && coord.isValid() &&
       (coord.getX() <= boatAreaWidth) &&
@@ -421,8 +455,7 @@ bool Board::addRandomBoats(const Configuration& config) {
     for (unsigned tries = 0;; ++tries) {
       unsigned x = (((unsigned)rand()) % config.getBoardSize().getWidth());
       unsigned y = (((unsigned)rand()) % config.getBoardSize().getWidth());
-      Movement::Direction dir = (rand() & 0x4) ? Movement::South
-                                               : Movement::East;
+      Direction dir = (rand() & 0x4) ? South : East;
       if (addBoat(boat, Coordinate((x + 1), (y + 1)), dir)) {
         boatCount++;
         break;
@@ -536,7 +569,7 @@ bool Board::removeBoat(const Boat& boat) {
 
 //-----------------------------------------------------------------------------
 bool Board::addBoat(const Boat& boat, Coordinate coord,
-                    const Movement::Direction direction)
+                    const Direction direction)
 {
   if (!boat.isValid() || !coord.isValid() || !isValid()) {
     return false;

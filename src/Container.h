@@ -104,7 +104,7 @@ public:
   bool arrangeChildren(std::vector<Container*>& children) const;
   bool moveCoordinate(Coordinate& coordinate, const Movement& movement) const;
   bool moveCoordinate(Coordinate& coordinate,
-                      const Movement::Direction direction,
+                      const Direction direction,
                       const unsigned distance) const;
 
 private:

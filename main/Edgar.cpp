@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Hal9000.cpp
+// Edgar.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include <unistd.h>
@@ -10,30 +10,31 @@
 #include <errno.h>
 #include <algorithm>
 #include "CommandArgs.h"
-#include "Hal9000.h"
+#include "Edgar.h"
 #include "Logger.h"
 #include "Screen.h"
 
 using namespace xbs;
 
 //-----------------------------------------------------------------------------
-const Version HAL_VERSION("9000.0");
+const Version EDGAR_VERSION("1.0");
 
 //-----------------------------------------------------------------------------
-Version Hal9000::getVersion() const {
-  return HAL_VERSION;
+Version Edgar::getVersion() const {
+  return EDGAR_VERSION;
 }
 
 //-----------------------------------------------------------------------------
-bool Hal9000::joinPrompt(const int /*playersJoined*/) {
+bool Edgar::joinPrompt(const int /*playersJoined*/) {
   return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Hal9000::setupBoard() {
+bool Edgar::setupBoard() {
   boardMap.clear();
   boardList.clear();
-  yourBoard = Board(-1, "rufus", "local",
+
+  yourBoard = Board(-1, "edgar", "local",
                     config.getBoardSize().getWidth(),
                     config.getBoardSize().getHeight());
 
@@ -53,7 +54,7 @@ bool Hal9000::setupBoard() {
 }
 
 //-----------------------------------------------------------------------------
-bool Hal9000::nextTurn() {
+bool Edgar::nextTurn() {
   std::string name = input.getString(1, "");
   if (name.empty()) {
     Logger::printError() << "Incomplete nextTurn message from server";
@@ -83,7 +84,7 @@ bool Hal9000::nextTurn() {
 }
 
 //-----------------------------------------------------------------------------
-bool Hal9000::myTurn() {
+bool Edgar::myTurn() {
   if (!gameStarted) {
     Logger::printError() << "myTurn() game has not started";
     return false;
@@ -118,38 +119,16 @@ bool Hal9000::myTurn() {
 }
 
 //-----------------------------------------------------------------------------
-/*
-class BoardCompare {
-public:
-  BoardCompare(const Configuration& c)
-    : goal(c.getPointGoal()),
-      total(c.getBoardSize().getWidth() * c.getBoardSize().getHeight())
-  { }
-
-  bool operator()(const Board* a, const Board* b) {
-    unsigned aHits = a->getHitCount();
-    unsigned aMiss = a->getMissCount();
-    unsigned aRemain = (goal - aHits);
-
-    unsigned bHits = b->getHitCount();
-    unsigned bMiss = b->getMissCount();
-    unsigned bRemain = (goal - bHits);
-
-    double aScore = (aRemain * log(total - aHits - aMiss));
-    double bScore = (bRemain * log(total - bHits - bMiss));
-    return (aScore >= bScore);
-  }
-
-private:
-  const unsigned goal;
-  const unsigned total;
-};
-*/
-
-//-----------------------------------------------------------------------------
-Board* Hal9000::getTargetBoard(ScoredCoordinate& bestCoord) {
+Board* Edgar::getTargetBoard(ScoredCoordinate& bestCoord) {
   Board* bestBoard = NULL;
   if (boardList.size() > 1) {
+    shortBoat = ~0U;
+    longBoat = 0;
+    for (unsigned i = 0; i < config.getBoatCount(); ++i) {
+      const Boat& boat = config.getBoat(i);
+      shortBoat = std::min<unsigned>(shortBoat, boat.getLength());
+      longBoat = std::max<unsigned>(longBoat, boat.getLength());
+    }
     std::vector<Board*> boards(boardList.begin(), boardList.end());
     std::random_shuffle(boards.begin(), boards.end());
     for (unsigned i = 0; i < boards.size(); ++i) {
@@ -172,7 +151,7 @@ bool coordCompare(const ScoredCoordinate* a, const ScoredCoordinate* b) {
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Hal9000::getTargetCoordinate(const Board& board) {
+ScoredCoordinate Edgar::getTargetCoordinate(const Board& board) {
   const unsigned w = config.getBoardSize().getWidth();
   const unsigned h = config.getBoardSize().getHeight();
 
@@ -218,67 +197,74 @@ ScoredCoordinate Hal9000::getTargetCoordinate(const Board& board) {
 }
 
 //-----------------------------------------------------------------------------
-void Hal9000::setScores(std::vector<ScoredCoordinate>& coords, const Board& b) {
+void Edgar::setScores(std::vector<ScoredCoordinate>& coords, const Board& b) {
+  const unsigned remain = (config.getPointGoal() - b.getHitCount());
   const Container area = b.getBoatArea();
-  const unsigned goal = config.getPointGoal();
-  const unsigned w = area.getWidth();
-  const unsigned h = area.getHeight();
-  const unsigned hits = b.getHitCount();
-  const unsigned miss = b.getMissCount();
-  const unsigned remain = (goal - hits);
-  const unsigned open = ((w * h) - hits - miss);
 
   for (unsigned i = 0; i < coords.size(); ++i) {
-    ScoredCoordinate& coord = coords[i];
-    Coordinate north(coord);
-    Coordinate south(coord);
-    Coordinate east(coord);
-    Coordinate west(coord);
+    const ScoredCoordinate& coord = coords[i];
+    unsigned open[4] = {0};
+    unsigned hit[4] = {0};
+    unsigned maxHits = 0;
     unsigned adjacent = 0;
-    unsigned vertical = 0;
-    unsigned horizont = 0;
+    double score = 0;
 
-    north.north();
-    south.south();
-    east.east();
-    west.west();
-
-    if (b.getSquare(north) == Boat::NONE) {
-      adjacent++;
-    }
-    if (b.getSquare(south) == Boat::NONE) {
-      adjacent++;
-    }
-    if (b.getSquare(east) == Boat::NONE) {
-      adjacent++;
-    }
-    if (b.getSquare(west) == Boat::NONE) {
-      adjacent++;
-    }
-    for (Coordinate c(north); Boat::isHit(b.getSquare(c)); c.north()) {
-      vertical++;
-    }
-    for (Coordinate c(south); Boat::isHit(b.getSquare(c)); c.south()) {
-      vertical++;
-    }
-    for (Coordinate c(east); Boat::isHit(b.getSquare(c)); c.east()) {
-      horizont++;
-    }
-    for (Coordinate c(west); Boat::isHit(b.getSquare(c)); c.west()) {
-      horizont++;
+    for (unsigned d = North; d <= West; ++d) {
+      const Direction dir = static_cast<Direction>(d);
+      char type = 0;
+      char sqr;
+      for (Coordinate c(coord); (sqr = b.getSquare(c.shift(dir))); ) {
+        if (sqr == Boat::MISS) {
+          break;
+        } else if (!type) {
+          type = sqr;
+        } else if (sqr != type) {
+          break;
+        }
+        if (sqr == Boat::NONE) {
+          adjacent += !open[dir];
+          open[dir]++;
+        } else {
+          hit[dir]++;
+          maxHits = std::max<unsigned>(maxHits, hit[dir]);
+        }
+      }
     }
 
-    double score;
-    if (vertical | horizont) {
-      score = log(4 + vertical + horizont);
-    } else {
+    if (maxHits > 1) {
+      score = 7; // on end of one or more hit lines
+    } else if (maxHits == 1) {
+      unsigned nc = b.horizontalHits(coord + North);
+      unsigned sc = b.horizontalHits(coord + South);
+      unsigned ec = b.verticalHits(coord + East);
+      unsigned wc = b.verticalHits(coord + West);
+      if ((nc + sc + ec + wc) == 1) {
+        // adjacent to loner hit
+        score = 5;
+      } else if ((!nc + !sc + !ec + !wc) == 3) {
+        // adjacent to single line
+        score = log(3);
+      } else if (((nc == 1) && (sc == 1)) || ((wc == 1) && (ec == 1))) {
+        // between vertical or horizontal single hits
+        score = 6;
+      } else if (!(nc | sc) == !(ec | wc)) {
+        // elbow configuration
+        score = log(3.5);
+      } else if ((nc == 1) || (sc == 1) || (ec == 1) || (wc == 1)) {
+        // between single hit and a line
+        score = 5.1;
+      } else {
+        // sandwiched between 2 lines
+        score = log(2);
+      }
+    } else if (adjacent) {
       score = log(adjacent);
     }
 
     if (score > 0) {
       score *= log(remain + 1);
     }
-    coord.setScore(score);
+    coords[i].setScore(score);
   }
 }
 
@@ -292,16 +278,16 @@ int main(const int argc, const char* argv[]) {
   try {
     srand((unsigned)time(NULL));
     CommandArgs::initialize(argc, argv);
-    Hal9000 hal;
+    Edgar edgar;
 
     const CommandArgs& args = CommandArgs::getInstance();
     Screen::get() << args.getProgramName() << " version "
-                  << hal.getVersion() << EL << Flush;
+                  << edgar.getVersion() << EL << Flush;
 
     signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 
-    return (hal.join() && hal.run()) ? 0 : 1;
+    return (edgar.join() && edgar.run()) ? 0 : 1;
   }
   catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;

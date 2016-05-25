@@ -5,18 +5,22 @@
 #ifndef MOVEMENT_H
 #define MOVEMENT_H
 
+namespace xbs
+{
+
+//-----------------------------------------------------------------------------
+enum Direction {
+  North,
+  East,
+  South,
+  West
+};
+
 //-----------------------------------------------------------------------------
 class Movement
 {
 public:
-  enum Direction {
-    North,
-    East,
-    South,
-    West
-  };
-
-  Movement(const Direction Direction, const unsigned distance)
+  Movement(const Direction direction, const unsigned distance)
     : direction(direction),
       distance(distance)
   { }
@@ -46,5 +50,7 @@ private:
   const Direction direction;
   const unsigned distance;
 };
+
+} // namespace xbs
 
 #endif // MOVEMENT_H

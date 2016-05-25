@@ -53,27 +53,27 @@ bool Container::moveCoordinate(Coordinate& c, const Movement& m) const {
 
 //-----------------------------------------------------------------------------
 bool Container::moveCoordinate(Coordinate& coord,
-                               const Movement::Direction direction,
+                               const Direction direction,
                                const unsigned distance) const
 {
   if (contains(coord)) {
     switch (direction) {
-    case Movement::North:
+    case North:
       if (coord.getY() >= (getMinY() + distance)) {
         return contains(coord.setY(coord.getY() - distance));
       }
       break;
-    case Movement::East:
+    case East:
       if ((coord.getX() + distance) <= getMaxX()) {
         return contains(coord.setX(coord.getX() + distance));
       }
       break;
-    case Movement::South:
+    case South:
       if ((coord.getY() + distance) <= getMaxY()) {
         return contains(coord.setY(coord.getY() + distance));
       }
       break;
-    case Movement::West:
+    case West:
       if (coord.getX() >= (getMinX() + distance)) {
         return contains(coord.setX(coord.getX() - distance));
       }

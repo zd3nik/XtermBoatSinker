@@ -91,6 +91,8 @@ public:
   unsigned getScore() const;
   unsigned getSkips() const;
   unsigned getTurns() const;
+  unsigned horizontalHits(const Coordinate&) const;
+  unsigned verticalHits(const Coordinate&) const;
   char getSquare(const Coordinate&) const;
   bool addHitsAndMisses(const std::string& descriptor);
   bool addRandomBoats(const Configuration&);
@@ -104,7 +106,7 @@ public:
   bool removeBoat(const Boat& boat);
   bool updateBoatArea(const std::string& newDescriptor);
   bool addBoat(const Boat& boat, Coordinate boatCoordinate,
-               const Movement::Direction direction);
+               const Direction direction);
 
   /**
    * @brief Shoot at a coordinate within the boat area

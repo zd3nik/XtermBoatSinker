@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <string>
+#include "Movement.h"
 
 namespace xbs
 {
@@ -78,6 +79,22 @@ public:
   Coordinate& west(const unsigned count = 1) {
     x = (x >= count) ? (x - count) : 0;
     return (*this);
+  }
+
+  Coordinate& shift(const Direction dir, const unsigned count = 1) {
+    switch (dir) {
+    case North: return north(count);
+    case East:  return east(count);
+    case South: return south(count);
+    case West:  return west(count);
+    default:
+      break;
+    }
+    return (*this);
+  }
+
+  Coordinate operator+(const Direction dir) const {
+    return Coordinate(*this).shift(dir);
   }
 
   bool operator==(const Coordinate& other) const {

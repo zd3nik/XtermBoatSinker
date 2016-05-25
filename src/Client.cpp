@@ -462,7 +462,7 @@ bool Client::manualSetup(std::vector<Boat>& boats,
 {
   Board& board = boards.front();
   std::vector<Boat> history;
-  Movement::Direction dir;
+  Direction dir;
   Coordinate coord;
   std::string str;
   char sbuf[64];
@@ -508,7 +508,7 @@ bool Client::manualSetup(std::vector<Boat>& boats,
       if (input.readln(STDIN_FILENO) < 0) {
         return false;
       }
-      dir = (ch == 'S') ? Movement::South : Movement::East;
+      dir = (ch == 'S') ? South : East;
       str = Input::trim(input.getString(0, ""));
       if (coord.fromString(str) &&
           board.contains(coord) &&
