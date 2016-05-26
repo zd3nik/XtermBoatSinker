@@ -28,6 +28,7 @@ public:
 
   virtual std::vector<int> getInts(const std::string& fld) const;
   virtual int getInt(const std::string& fld) const;
+  virtual int incInt(const std::string& fld, const int inc = 1);
   virtual bool setInt(const std::string& fld, const int val);
   virtual int addInt(const std::string& fld, const int val);
   virtual int addInts(const std::string& fld,
@@ -35,10 +36,18 @@ public:
 
   virtual std::vector<unsigned> getUInts(const std::string& fld) const;
   virtual unsigned getUInt(const std::string& fld) const;
+  virtual unsigned incUInt(const std::string& fld, const unsigned inc = 1);
   virtual bool setUInt(const std::string& fld, const unsigned val);
   virtual int addUInt(const std::string& fld, const unsigned val);
   virtual int addUInts(const std::string& fld,
                        const std::vector<unsigned>& values);
+
+  virtual std::vector<bool> getBools(const std::string& fld) const;
+  virtual bool getBool(const std::string& fld) const;
+  virtual bool setBool(const std::string& fld, const bool val);
+  virtual int addBool(const std::string& fld, const bool val);
+  virtual int addBools(const std::string& fld,
+                       const std::vector<bool>& values);
 };
 
 } // namespace xbs

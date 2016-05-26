@@ -7,6 +7,7 @@
 
 #include "Board.h"
 #include "Configuration.h"
+#include "Database.h"
 
 namespace xbs
 {
@@ -27,6 +28,7 @@ public:
   void disconnectBoard(const int handle, const std::string& msg);
   void nextTurn();
   void removeBoard(const int handle);
+  void saveResults(Database&);
   Board* getBoardAtIndex(const unsigned index);
   Board* getBoardForHandle(const int handle);
   Board* getBoardForPlayer(const std::string& name, const bool exact = false);

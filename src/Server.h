@@ -60,6 +60,7 @@ private:
   bool printOptions(Game&, Coordinate&);
   bool printPlayers(Game&, Coordinate&);
   bool quitGame(Game&, Coordinate&);
+  bool saveResult(Game&);
   bool sendBoard(Game&, const Board*);
   bool sendBoard(Game&, const int handle, const Board*);
   bool sendGameResults(Game&);
@@ -88,6 +89,7 @@ private:
   Input input;
   std::set<std::string> blackList;
   std::string bindAddress;
+  std::string dbDir;
   int port;
   int sock;
   bool autoStart;

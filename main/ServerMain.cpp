@@ -31,12 +31,10 @@ int main(const int argc, const char* argv[]) {
     }
 
     while (server.run()) {
-      // TODO save game
       if (!server.isRepeatOn()) {
         break;
       }
     }
-
     return 0;
   }
   catch (const std::exception& e) {

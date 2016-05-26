@@ -11,6 +11,8 @@
 #include "CommandArgs.h"
 #include "Logger.h"
 #include "Screen.h"
+#include "FileSysDatabase.h"
+#include "DBRecord.h"
 
 namespace xbs
 {
@@ -68,6 +70,8 @@ void Server::showHelp() {
       << "  --port <port>          Listen for connections on given port" << EL
       << "  -t <title>," << EL
       << "  --title <title>        Set game title to given value" << EL
+      << "  -d <dir>," << EL
+      << "  --db-dir <dir>         Save game stats to given directory" << EL
       << "  -l <level>," << EL
       << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
       << "  -f <file>," << EL
@@ -100,6 +104,11 @@ bool Server::init() {
     port = atoi(portStr);
   } else {
     port = DEFAULT_PORT;
+  }
+
+  const char* dir = args.getValueOf("-d", "--db_dir");
+  if (dir && *dir) {
+    dbDir = dir;
   }
 
   autoStart = (args.indexOf("-a", "--auto-start") > 0);
@@ -233,9 +242,10 @@ bool Server::run() {
 
     if (!sendGameResults(game) ||
         !printGameInfo(game, coord.set(1, 1)) ||
-        !printPlayers(game, coord))
+        !printPlayers(game, coord) ||
+        !saveResult(game))
     {
-      throw 1;
+      ok = false;
     }
   }
   catch (const int) {
@@ -245,6 +255,7 @@ bool Server::run() {
   Screen::get(true) << EL << Flush;
   input.restoreTerminal();
   closeSocket();
+
   return ok;
 }
 
@@ -1223,6 +1234,28 @@ bool Server::getGameTitle(std::string& title) {
 Configuration Server::getGameConfig() {
   // TODO let user choose (or get config name from command args)
   return Configuration::getDefaultConfiguration();
+}
+
+//-----------------------------------------------------------------------------
+bool Server::saveResult(Game& game) {
+  FileSysDatabase db;
+  try {
+    if (game.isStarted() && game.isFinished()) {
+      db.open(dbDir);
+      game.saveResults(db);
+      db.sync();
+      return true;
+    }
+  }
+  catch (const std::exception& e) {
+    Logger::error() << "Failed to save game stats to '" << db.getHomeDir()
+                    << "': " << e.what();
+  }
+  catch (...) {
+    Logger::error() << "Failed to save game stats to '" << db.getHomeDir()
+                    << "'";
+  }
+  return false;
 }
 
 } // namespace xbs

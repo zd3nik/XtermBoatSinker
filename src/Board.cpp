@@ -647,4 +647,72 @@ unsigned Board::getBoatIndex(const Coordinate& coord) const {
   return (coord.getX() - 1 + (boatAreaWidth * (coord.getY() - 1)));
 }
 
+//-----------------------------------------------------------------------------
+void Board::addStatsTo(DBRecord& stats, const bool first, const bool last)
+const {
+  char fld[1024];
+  const char* name = playerName.c_str();
+
+  snprintf(fld, sizeof(fld), "player.%s.total.firstPlace", name);
+  stats.incUInt(fld, (first ? 1 : 0));
+
+  snprintf(fld, sizeof(fld), "player.%s.total.lastPlace", name);
+  stats.incUInt(fld, (last ? 1 : 0));
+
+  snprintf(fld, sizeof(fld), "player.%s.last.firstPlace", name);
+  stats.setBool(fld, first);
+
+  snprintf(fld, sizeof(fld), "player.%s.last.lastPlace", name);
+  stats.setBool(fld, last);
+
+  snprintf(fld, sizeof(fld), "player.%s.total.score", name);
+  stats.incUInt(fld, score);
+
+  snprintf(fld, sizeof(fld), "player.%s.last.score", name);
+  stats.setUInt(fld, score);
+
+  snprintf(fld, sizeof(fld), "player.%s.total.skips", name);
+  stats.incUInt(fld, skips);
+
+  snprintf(fld, sizeof(fld), "player.%s.last.skips", name);
+  stats.setUInt(fld, skips);
+
+  snprintf(fld, sizeof(fld), "player.%s.total.turns", name);
+  stats.incUInt(fld, turns);
+
+  snprintf(fld, sizeof(fld), "player.%s.last.turns", name);
+  stats.setUInt(fld, turns);
+}
+
+//-----------------------------------------------------------------------------
+void Board::saveTo(DBRecord& rec, const unsigned opponents,
+                   const bool first, const bool last) const
+{
+  rec.setString("playerName", playerName);
+  rec.setString("lastAddress", address);
+  rec.setString("lastStatus", status);
+  rec.incUInt("gamesPlayed");
+
+  unsigned hitCount = getHitCount();
+  unsigned missCount = getMissCount();
+
+  rec.incUInt("total.firstPlace", (first ? 1 : 0));
+  rec.incUInt("total.lastPlace", (last ? 1 : 0));
+  rec.incUInt("total.opponents", opponents);
+  rec.incUInt("total.score", score);
+  rec.incUInt("total.skips", skips);
+  rec.incUInt("total.turns", turns);
+  rec.incUInt("total.hitCount", hitCount);
+  rec.incUInt("total.missCount", missCount);
+
+  rec.setBool("last.firstPlace", first);
+  rec.setBool("last.lasPlace", last);
+  rec.setUInt("last.opponents", opponents);
+  rec.setUInt("last.score", score);
+  rec.setUInt("last.skips", skips);
+  rec.setUInt("last.turns", turns);
+  rec.setUInt("last.hitCount", hitCount);
+  rec.setUInt("last.missCount", missCount);
+}
+
 } // namespace xbs

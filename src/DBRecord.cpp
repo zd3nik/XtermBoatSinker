@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include "DBRecord.h"
 
@@ -24,6 +25,15 @@ std::vector<int> DBRecord::getInts(const std::string& fld) const {
 //-----------------------------------------------------------------------------
 int DBRecord::getInt(const std::string& fld) const {
   return atoi(getString(fld).c_str());
+}
+
+//-----------------------------------------------------------------------------
+int DBRecord::incInt(const std::string& fld, const int inc) {
+  int val = getInt(fld);
+  if (setInt(fld, (val + inc))) {
+    return (val + inc);
+  }
+  return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -83,6 +93,15 @@ unsigned DBRecord::getUInt(const std::string& fld) const {
 }
 
 //-----------------------------------------------------------------------------
+unsigned DBRecord::incUInt(const std::string& fld, const unsigned inc) {
+  unsigned val = getUInt(fld);
+  if (setUInt(fld, (val + inc))) {
+    return (val + inc);
+  }
+  return 0;
+}
+
+//-----------------------------------------------------------------------------
 bool DBRecord::setUInt(const std::string& fld, const unsigned val) {
   char sbuf[32];
   snprintf(sbuf, sizeof(sbuf), "%u", val);
@@ -106,6 +125,52 @@ int DBRecord::addUInts(const std::string& fld,
   for (unsigned i = 0; i < values.size(); ++i) {
     snprintf(sbuf, sizeof(sbuf), "%u", values[i]);
     strValues.push_back(sbuf);
+  }
+  return addStrings(fld, strValues);
+}
+
+//-----------------------------------------------------------------------------
+bool strToBool(const std::string& str) {
+  return ((strcasecmp("true", str.c_str()) == 0) ||
+          (strcasecmp("yes", str.c_str()) == 0) ||
+          (strcasecmp("y", str.c_str()) == 0) ||
+          (strToUInt(str) != 0));
+}
+
+//-----------------------------------------------------------------------------
+std::vector<bool> DBRecord::getBools(const std::string& fld) const {
+  std::vector<std::string> strValues = getStrings(fld);
+  std::vector<bool> values;
+  values.reserve(strValues.size());
+  for (unsigned i = 0; i < strValues.size(); ++i) {
+    values.push_back(strToBool(strValues[i]));
+  }
+  return values;
+}
+
+//-----------------------------------------------------------------------------
+bool DBRecord::getBool(const std::string& fld) const {
+  return strToBool(getString(fld));
+}
+
+//-----------------------------------------------------------------------------
+bool DBRecord::setBool(const std::string& fld, const bool val) {
+  return setString(fld, (val ? "true" : "false"));
+}
+
+//-----------------------------------------------------------------------------
+int DBRecord::addBool(const std::string& fld, const bool val) {
+  return addString(fld, (val ? "true" : "false"));
+}
+
+//-----------------------------------------------------------------------------
+int DBRecord::addBools(const std::string& fld,
+                       const std::vector<bool>& values)
+{
+  std::vector<std::string> strValues;
+  strValues.reserve(values.size());
+  for (unsigned i = 0; i < values.size(); ++i) {
+    strValues.push_back(values[i] ? "true" : "false");
   }
   return addStrings(fld, strValues);
 }

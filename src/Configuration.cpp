@@ -2,7 +2,9 @@
 // Configuration.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
+#include <stdexcept>
 #include "Configuration.h"
+#include "DBRecord.h"
 #include "Screen.h"
 
 namespace xbs
@@ -223,6 +225,50 @@ bool Configuration::isValidBoatDescriptor(const std::string& descriptor) const {
   }
 
   return boatMap.empty();
+}
+
+//-----------------------------------------------------------------------------
+void Configuration::saveTo(DBRecord& record) {
+  record.setString("name", name);
+  record.setUInt("minPlayers", minPlayers);
+  record.setUInt("maxPlayers", maxPlayers);
+  record.setUInt("pointGoal", pointGoal);
+  record.setUInt("width", boardSize.getWidth());
+  record.setUInt("height", boardSize.getHeight());
+
+  record.clear("boat");
+  for (unsigned i = 0; i < boats.size(); ++i) {
+    const Boat& boat = boats[i];
+    record.addString("boat", boat.toString());
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Configuration::loadFrom(DBRecord& record) {
+  clear();
+
+  name = record.getString("name");
+  minPlayers = record.getUInt("minPlayers");
+  maxPlayers = record.getUInt("maxPlayers");
+  pointGoal = record.getUInt("pointGoal");
+
+  unsigned w = record.getUInt("width");
+  unsigned h = record.getUInt("height");
+  boardSize.set(Coordinate(1, 1), Coordinate(w, h));
+
+  std::vector<std::string> values = record.getStrings("boat");
+  for (unsigned i = 0; i < values.size(); ++i) {
+    Boat boat;
+    if (boat.fromString(values[i])) {
+      boats.push_back(boat);
+    } else {
+      throw std::runtime_error("Invalid boat string: " + values[i]);
+    }
+  }
+
+  if (!isValid()) {
+    throw std::runtime_error("Invalid configuration in " + record.getID());
+  }
 }
 
 } // namespace xbs

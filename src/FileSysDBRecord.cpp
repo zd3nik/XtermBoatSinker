@@ -177,8 +177,13 @@ bool FileSysDBRecord::setString(const std::string& fld,
   if (strchr(val.c_str(), '\n')) {
     Logger::error() << "Newline characters not supported";
   } else if (fld.size()) {
-    FieldIterator it = fieldCache.insert(fieldCache.end(),
-                                       std::make_pair(fld, StringVector()));
+    FieldIterator it = fieldCache.find(fld);
+    if (it != fieldCache.end()) {
+      it->second.clear();
+    } else {
+      it = fieldCache.insert(fieldCache.end(),
+                             std::make_pair(fld, StringVector()));
+    }
     it->second.push_back(val);
     return true;
   }

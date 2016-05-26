@@ -6,6 +6,7 @@
 #include "Game.h"
 #include "Screen.h"
 #include "Logger.h"
+#include "DBRecord.h"
 
 namespace xbs
 {
@@ -231,6 +232,69 @@ Board* Game::getBoardToMove() {
     return getBoardAtIndex(boardToMove);
   }
   return NULL;
+}
+
+//-----------------------------------------------------------------------------
+void Game::saveResults(Database& db) {
+  if (!isValid()) {
+    throw std::runtime_error("Cannot save invalid game");
+  }
+
+  unsigned hits = 0;
+  unsigned highScore = 0;
+  unsigned lowScore = ~0U;
+  for (unsigned i = 0; i < boards.size(); ++i) {
+    const Board& board = boards[i];
+    hits += board.getScore();
+    highScore = std::max<unsigned>(highScore, board.getScore());
+    lowScore = std::min<unsigned>(lowScore, board.getScore());
+  }
+
+  unsigned ties = 0;
+  for (unsigned i = 0; i < boards.size(); ++i) {
+    const Board& board = boards[i];
+    ties += (board.getScore() == highScore);
+  }
+  if (ties > 0) {
+    ties--;
+  } else {
+    throw std::runtime_error("Error calculating ties");
+  }
+
+  DBRecord* stats = db.get(("game." + config.getName()), true);
+  if (!stats) {
+    throw std::runtime_error("Failed to get game stats record");
+  }
+
+  config.saveTo(*stats);
+  if (!stats->incUInt("gameCount")) {
+    throw std::runtime_error("Failed to increment game count");
+  }
+
+  stats->incUInt("total.aborted", (aborted ? 1 : 0));
+  stats->incUInt("total.turnCount", turnCount);
+  stats->incUInt("total.playerCount", boards.size());
+  stats->incUInt("total.hits", hits);
+  stats->incUInt("total.ties", ties);
+
+  stats->setBool("last.aborted", aborted);
+  stats->setUInt("last.turnCount", turnCount);
+  stats->setUInt("last.playerCount", boards.size());
+  stats->setUInt("last.hits", hits);
+  stats->setUInt("last.ties", ties);
+
+  for (unsigned i = 0; i < boards.size(); ++i) {
+    const Board& board = boards[i];
+    const bool first = (board.getScore() == highScore);
+    const bool last = (board.getScore() == lowScore);
+    board.addStatsTo(*stats, first, last);
+
+    DBRecord* player = db.get(("player." + board.getPlayerName()), true);
+    if (!player) {
+      throw std::runtime_error("Failed to get player record");
+    }
+    board.saveTo(*player, (boards.size() - 1), first, last);
+  }
 }
 
 } // namespace xbs

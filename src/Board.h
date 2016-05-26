@@ -9,6 +9,7 @@
 #include "Boat.h"
 #include "Container.h"
 #include "Configuration.h"
+#include "DBRecord.h"
 
 namespace xbs
 {
@@ -59,6 +60,7 @@ public:
   virtual ~Board();
   void addHitTaunt(const std::string& value);
   void addMissTaunt(const std::string& value);
+  void addStatsTo(DBRecord&, const bool first, const bool last) const;
   void clearBoatArea();
   void clearHitTaunts();
   void clearMissTaunts();
@@ -71,6 +73,9 @@ public:
   void setTurns(const unsigned value);
   void setStatus(const std::string& str);
   void setToMove(const bool toMove);
+  void saveTo(DBRecord&, const unsigned opponents,
+              const bool first, const bool last) const;
+
   std::string getAddress() const;
   std::string getDescriptor() const;
   std::string getHitTaunt();

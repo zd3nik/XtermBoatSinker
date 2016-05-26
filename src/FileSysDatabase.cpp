@@ -86,7 +86,7 @@ bool FileSysDatabase::loadCache() {
         continue;
       }
 
-      std::string recordID = (name.c_str() + name.size() - 4);
+      std::string recordID(name.c_str(), 0, (name.size() - 4));
       if (!isalnum(*recordID.c_str())) {
         continue;
       }
