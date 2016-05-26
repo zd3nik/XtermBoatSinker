@@ -11,6 +11,7 @@
 #include "Configuration.h"
 #include "Message.h"
 #include "Version.h"
+#include "FileSysDBRecord.h"
 
 namespace xbs
 {
@@ -24,6 +25,7 @@ public:
 
   virtual Version getVersion() const;
   virtual bool isCompatibleWith(const Version& serverVersion) const;
+  virtual bool init();
   virtual bool join();
   virtual bool run();
 
@@ -106,6 +108,7 @@ protected:
   std::vector<std::string> msgBuffer;
   std::map<std::string, Board> boardMap;
   std::vector<Board*> boardList;
+  FileSysDBRecord* taunts;
   Board yourBoard;
 };
 

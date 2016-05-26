@@ -16,7 +16,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version SERVER_VERSION("1.1");
+const Version SERVER_VERSION("1.2");
 const char* ANY_ADDRESS = "0.0.0.0";
 
 //-----------------------------------------------------------------------------
@@ -1105,18 +1105,19 @@ void Server::shoot(Game& game, const int handle) {
     sender->incTurns();
     if (Boat::isValidID(id)) {
       sender->incScore();
-      snprintf(sbuf, sizeof(sbuf), "H|%s|%s",
+      snprintf(sbuf, sizeof(sbuf), "H|%s|%s|%s",
                sender->getPlayerName().c_str(),
-               target->getPlayerName().c_str());
+               target->getPlayerName().c_str(),
+               coord.toString().c_str());
       sendLineAll(game, sbuf);
       if (target->hasHitTaunts()) {
-        snprintf(sbuf, sizeof(sbuf), "M|%s|HIT! %s",
+        snprintf(sbuf, sizeof(sbuf), "M|%s|%s",
                  target->getPlayerName().c_str(),
                  target->getHitTaunt().c_str());
         sendLine(game, handle, sbuf);
       }
     } else if (target->hasMissTaunts()) {
-      snprintf(sbuf, sizeof(sbuf), "M|%s|MISS! %s",
+      snprintf(sbuf, sizeof(sbuf), "M|%s|%s",
                target->getPlayerName().c_str(),
                target->getMissTaunt().c_str());
       sendLine(game, handle, sbuf);

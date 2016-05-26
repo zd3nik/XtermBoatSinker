@@ -53,6 +53,8 @@ Board::Board(const Board& other)
     playerName(other.playerName),
     address(other.address),
     status(other.status),
+    hitTaunts(other.hitTaunts.begin(), other.hitTaunts.end()),
+    missTaunts(other.missTaunts.begin(), other.missTaunts.end()),
     score(0),
     skips(0),
     turns(0),
@@ -77,6 +79,8 @@ Board& Board::operator=(const Board& other) {
   playerName = other.playerName;
   address = other.address;
   status = other.status;
+  hitTaunts.assign(other.hitTaunts.begin(), other.hitTaunts.end());
+  missTaunts.assign(other.missTaunts.begin(), other.missTaunts.end());
   score = other.score;
   skips = other.skips;
   turns = other.turns;

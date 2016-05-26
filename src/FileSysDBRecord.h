@@ -16,11 +16,16 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class FileSysDBRecord : public DBRecord {
 public:
+  static const unsigned BUFFER_SIZE = 16384U;
+
   FileSysDBRecord(const std::string& recordID, const std::string& filePath);
 
   std::string getID() const;
   std::string getFilePath() const;
   void clear(const std::string& fld);
+  void clear();
+  void load();
+  void store();
 
   std::vector<std::string> getStrings(const std::string& fld) const;
   std::string getString(const std::string& fld) const;
@@ -30,14 +35,6 @@ public:
                  const std::vector<std::string>& values);
 
 private:
-  friend class FileSysDatabase;
-
-  static const unsigned BUFFER_SIZE = 16384U;
-
-  void clear();
-  void load();
-  void store();
-
   std::string recordID;
   std::string filePath;
   std::map<std::string, std::vector<std::string> > fieldCache;

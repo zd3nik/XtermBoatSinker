@@ -47,7 +47,8 @@ Client::Client()
     sock(-1),
     gameStarted(false),
     gameFinished(false),
-    msgEnd(~0U)
+    msgEnd(~0U),
+    taunts(NULL)
 {
   input.addHandle(STDIN_FILENO);
 }
@@ -55,6 +56,9 @@ Client::Client()
 //-----------------------------------------------------------------------------
 Client::~Client() {
   closeSocket();
+
+  delete taunts;
+  taunts = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -109,6 +113,8 @@ void Client::showHelp() {
       << "  --port <port>          Connect to game server at given port" << EL
       << "  -u <name>," << EL
       << "  --user <name>          Join using given user/player name" << EL
+      << "  -t <file>," << EL
+      << "  --taunt-file <file>    Load taunts from given file" << EL
       << "  -l <level>," << EL
       << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
       << "  -f <file>," << EL
@@ -117,7 +123,7 @@ void Client::showHelp() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::join() {
+bool Client::init() {
   const CommandArgs& args = CommandArgs::getInstance();
   Screen::get() << args.getProgramName() << " version " << getVersion()
                 << EL << Flush;
@@ -127,6 +133,17 @@ bool Client::join() {
     return false;
   }
 
+  const char* tauntFile = args.getValueOf("-t", "--taunt-file");
+  if (tauntFile && (*tauntFile)) {
+    taunts = new FileSysDBRecord("taunts", tauntFile);
+  }
+
+  closeSocket();
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::join() {
   while (getHostAddress() && getHostPort()) {
     int playersJoined = 0;
     if (openSocket() && readGameInfo(playersJoined)) {
@@ -142,7 +159,6 @@ bool Client::join() {
       break;
     }
   }
-
   closeSocket();
   return false;
 }
@@ -631,6 +647,25 @@ bool Client::joinGame(bool& retry) {
       return false;
     }
     boardMap[userName] = yourBoard.setPlayerName(userName);
+    if (taunts) {
+      Board& b = boardMap[userName];
+      std::vector<std::string> list = taunts->getStrings("hit");
+      for (unsigned i = 0; i < list.size(); ++i) {
+        snprintf(sbuf, sizeof(sbuf), "T|hit|%s", list[i].c_str());
+        if (!sendLine(sbuf)) {
+          return false;
+        }
+        b.addHitTaunt(list[i]);
+      }
+      list = taunts->getStrings("miss");
+      for (unsigned i = 0; i < list.size(); ++i) {
+        snprintf(sbuf, sizeof(sbuf), "T|miss|%s", list[i].c_str());
+        if (!sendLine(sbuf)) {
+          return false;
+        }
+        b.addMissTaunt(list[i]);
+      }
+    }
     return true;
   }
 
@@ -1085,6 +1120,7 @@ bool Client::updateYourBoard() {
 bool Client::hit() {
   std::string shooter = input.getString(1, "");
   std::string target  = input.getString(2, "");
+  std::string square  = Input::trim(input.getString(3, ""));
 
   if (!boardMap.count(shooter)) {
     Logger::error() << "Invalid shooter name '" << shooter
@@ -1095,7 +1131,13 @@ bool Client::hit() {
     return false;
   }
 
-  appendMessage(shooter + " hit " + target);
+  std::string msg = (shooter + " hit " + target);
+  if (square.size()) {
+    msg += " at ";
+    msg += square;
+  }
+
+  appendMessage(msg);
   boardMap[shooter].incScore();
   return true;
 }

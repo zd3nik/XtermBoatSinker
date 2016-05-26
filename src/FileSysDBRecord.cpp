@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include "FileSysDBRecord.h"
 #include "Logger.h"
+#include "Input.h"
 
 namespace xbs
 {
@@ -60,7 +61,7 @@ void FileSysDBRecord::load() {
     while (fgets(sbuf, sizeof(sbuf), fp)) {
       const char* begin = sbuf;
       while ((*begin) && isspace(*begin)) ++begin;
-      if ((*begin) == '#') {
+      if (!(*begin) || ((*begin) == '#')) {
         continue;
       }
 
@@ -71,12 +72,12 @@ void FileSysDBRecord::load() {
         continue;
       }
 
-      const char* value = (equal + 1);
-      while ((*value) && isspace(*value)) ++value;
+      std::string fld(Input::trim(std::string(begin, 0, (equal - begin))));
+      if (fld.empty()) {
+        continue;
+      }
 
-      std::string fld(begin, 0, (equal - end));
-      std::string val(value);
-
+      std::string val(Input::trim(equal + 1));
       FieldIterator it = fieldCache.find(fld);
       if (it == fieldCache.end()) {
         it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
