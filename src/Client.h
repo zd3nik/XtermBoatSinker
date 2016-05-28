@@ -12,6 +12,8 @@
 #include "Message.h"
 #include "Version.h"
 #include "FileSysDBRecord.h"
+#include "ScoredCoordinate.h"
+#include "TargetingComputer.h"
 
 namespace xbs
 {
@@ -26,26 +28,20 @@ public:
   virtual Version getVersion() const;
   virtual bool isCompatibleWith(const Version& serverVersion) const;
   virtual bool init();
+  virtual bool test();
   virtual bool join();
   virtual bool run();
 
 protected:
   static unsigned randomIndex(const unsigned bound);
 
-  virtual void showHelp();
-  virtual bool joinPrompt(const int playersJoined);
-  virtual bool getUserName();
-  virtual bool setupBoard();
-  virtual bool waitForGameStart();
-  virtual bool addMessage();
-  virtual bool nextTurn();
-  virtual bool hit();
-
   unsigned msgHeaderLen() const;
   unsigned msgWindowHeight(const Coordinate& promptCoordinate) const;
   char controlSequence(const char ch, char& lastChar);
   char getChar();
   char waitForInput(const int timeout = -1);
+  void showHelp();
+  void showBots();
   void closeSocket();
   void closeSocketHandle();
   void appendMessage(const Message&);
@@ -53,6 +49,7 @@ protected:
                      const std::string& from = std::string(),
                      const std::string& to = std::string());
 
+  bool addMessage();
   bool addPlayer();
   bool clearMessages(const Coordinate& promptCoordinate);
   bool clearScreen();
@@ -60,10 +57,14 @@ protected:
   bool endGame();
   bool getHostAddress();
   bool getHostPort();
+  bool getUserName();
   bool handleServerMessage();
+  bool hit();
   bool home();
   bool isConnected() const;
   bool joinGame(bool& retry);
+  bool joinPrompt(const int playersJoined);
+  bool nextTurn();
   bool openSocket();
   bool pageDown(const Coordinate& promptCoordinate);
   bool pageUp(const Coordinate& promptCoordinate);
@@ -79,6 +80,7 @@ protected:
   bool sendLine(const std::string& msg);
   bool sendMessage(const Coordinate& promptCoord);
   bool setTaunt(const Coordinate& promptCoordinate);
+  bool setupBoard();
   bool shoot(const Coordinate& promptCoordinate);
   bool skip();
   bool skip(const Coordinate& promptCoordinate);
@@ -86,6 +88,7 @@ protected:
   bool updateBoard();
   bool updateYourBoard();
   bool viewBoard(const Coordinate& promptCoordinate);
+  bool waitForGameStart();
   bool manualSetup(std::vector<Boat>& boatsRemaining,
                    std::vector<Board>& boards,
                    const Coordinate& promptCoordinate);
@@ -95,21 +98,27 @@ protected:
 
   Board* getBoard(const std::string& nameOrNumber);
 
-  Input input;
-  std::string host;
   int port;
   int sock;
   bool gameStarted;
   bool gameFinished;
+  bool showTestBoard;
+  bool testBot;
   unsigned msgEnd;
-  Configuration config;
+  unsigned testIterations;
+  FileSysDBRecord* taunts;
+  TargetingComputer* bot;
+
+  std::string host;
   std::string userName;
+  std::string testDir;
   std::vector<Message> messages;
   std::vector<std::string> msgBuffer;
   std::map<std::string, Board> boardMap;
   std::vector<Board*> boardList;
-  FileSysDBRecord* taunts;
+  Configuration config;
   Board yourBoard;
+  Input input;
 };
 
 } // namespace xbs

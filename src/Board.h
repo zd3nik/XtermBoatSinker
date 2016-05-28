@@ -98,6 +98,7 @@ public:
   unsigned horizontalHits(const Coordinate&) const;
   unsigned verticalHits(const Coordinate&) const;
   char getSquare(const Coordinate&) const;
+  char setSquare(const Coordinate&, const char newValue);
   bool addHitsAndMisses(const std::string& descriptor);
   bool addRandomBoats(const Configuration&);
   bool hasHitTaunts() const;

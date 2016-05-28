@@ -382,6 +382,20 @@ char Board::getSquare(const Coordinate& coord) const {
 }
 
 //-----------------------------------------------------------------------------
+char Board::setSquare(const Coordinate& coord, const char ch) {
+  if ((descriptorLength > 0) && coord.isValid() &&
+      (coord.getX() <= boatAreaWidth) &&
+      (coord.getY() <= boatAreaHeight))
+  {
+    unsigned i = ((coord.getX() - 1) + (boatAreaWidth * (coord.getY() - 1)));
+    char prev = descriptor[i];
+    descriptor[i] = ch;
+    return prev;
+  }
+  return 0;
+}
+
+//-----------------------------------------------------------------------------
 bool Board::isValid(const Configuration& config) const {
   if (!isValid()) {
     return false;
@@ -446,21 +460,39 @@ bool Board::isDead() const {
 }
 
 //-----------------------------------------------------------------------------
+unsigned random(const unsigned bound) {
+  return ((((unsigned)(rand() >> 3)) & 0x7FFFU) % bound);
+}
+
+//-----------------------------------------------------------------------------
 bool Board::addRandomBoats(const Configuration& config) {
   srand(clock());
   clearBoatArea();
   unsigned maxTries = (10 * boatAreaWidth * boatAreaHeight);
   unsigned boatCount = 0;
+  std::vector<Direction> dirs;
+  dirs.push_back(North);
+  dirs.push_back(South);
+  dirs.push_back(East);
+  dirs.push_back(West);
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     const Boat& boat = config.getBoat(i);
     if (!boat.isValid()) {
       return false;
     }
     for (unsigned tries = 0;; ++tries) {
-      unsigned x = (((unsigned)rand()) % config.getBoardSize().getWidth());
-      unsigned y = (((unsigned)rand()) % config.getBoardSize().getWidth());
-      Direction dir = (rand() & 0x4) ? South : East;
-      if (addBoat(boat, Coordinate((x + 1), (y + 1)), dir)) {
+      unsigned x = random(config.getBoardSize().getWidth());
+      unsigned y = random(config.getBoardSize().getWidth());
+      Coordinate coord((x + 1), (y + 1));
+      std::swap(dirs[random(3)], dirs[3]);
+      std::swap(dirs[random(3)], dirs[3]);
+      std::swap(dirs[random(3)], dirs[3]);
+      std::swap(dirs[random(3)], dirs[3]);
+      if (addBoat(boat, coord, dirs[0]) ||
+          addBoat(boat, coord, dirs[1]) ||
+          addBoat(boat, coord, dirs[2]) ||
+          addBoat(boat, coord, dirs[3]))
+      {
         boatCount++;
         break;
       } else if (tries >= maxTries) {
@@ -614,31 +646,21 @@ bool Board::addBoat(const Boat& boat, Coordinate coord,
 
 //-----------------------------------------------------------------------------
 bool Board::shootAt(const Coordinate& coord, char& previous) {
-  previous = 0;
-  if (!coord.isValid() || !isValid()) {
-    return false;
+  if ((descriptorLength > 0) && coord.isValid() &&
+      (coord.getX() <= boatAreaWidth) &&
+      (coord.getY() <= boatAreaHeight))
+  {
+    unsigned i = ((coord.getX() - 1) + (boatAreaWidth * (coord.getY() - 1)));
+    if ((previous = descriptor[i]) == Boat::NONE) {
+      descriptor[i] = Boat::MISS;
+      return true;
+    } else if (Boat::isValidID(previous)) {
+      descriptor[i] = Boat::hit(previous);
+      return true;
+    }
+  } else {
+    previous = 0;
   }
-
-  Container boatArea = getBoatArea();
-  if (!boatArea.contains(coord)) {
-    return false;
-  }
-
-  unsigned i = getBoatIndex(coord);
-  if (i >= descriptorLength) {
-    Logger::error() << "boat offset exceeds descriptor length";
-    return false;
-  }
-
-  previous = descriptor[i];
-  if (previous == Boat::NONE) {
-    descriptor[i] = Boat::MISS;
-    return true;
-  } else if (Boat::isValidID(previous)) {
-    descriptor[i] = Boat::hit(previous);
-    return true;
-  }
-
   return false;
 }
 

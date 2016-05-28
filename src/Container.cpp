@@ -3,9 +3,19 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Container.h"
+#include "Screen.h"
 
 namespace xbs
 {
+
+//-----------------------------------------------------------------------------
+bool Container::shift(const Direction dir, const unsigned count) {
+  if (count) {
+    begin.shift(dir, count);
+    end.shift(dir, count);
+  }
+  return Screen::get().contains(*this);
+}
 
 //-----------------------------------------------------------------------------
 bool Container::arrangeChildren(std::vector<Container*>& children) const {

@@ -6,29 +6,22 @@
 #define EDGAR_H
 
 #include <vector>
-#include "Client.h"
 #include "ScoredCoordinate.h"
+#include "Sal9000.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Edgar: public Client {
+class Edgar: public Sal9000
+{
 public:
+  virtual std::string getName() const;
   virtual Version getVersion() const;
 
-private:
-  virtual bool joinPrompt(const int playersJoined);
-  virtual bool setupBoard();
-  virtual bool nextTurn();
-
-  bool myTurn();
-  Board* getTargetBoard(ScoredCoordinate&);
-  ScoredCoordinate getTargetCoordinate(const Board&);
-  void setScores(std::vector<ScoredCoordinate>&, const Board&);
-
-  unsigned shortBoat;
-  unsigned longBoat;
+protected:
+  virtual ScoredCoordinate hitTarget(const Board&);
+  //virtual ScoredCoordinate emptyTarget(const Board&);
 };
 
 } // namespace xbs

@@ -5,24 +5,24 @@
 #ifndef RANDOM_RUFUS_H
 #define RANDOM_RUFUS_H
 
-#include "Client.h"
+#include <vector>
+#include "ScoredCoordinate.h"
+#include "TargetingComputer.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class RandomRufus : public Client {
+class RandomRufus : public TargetingComputer
+{
 public:
+  virtual std::string getName() const;
   virtual Version getVersion() const;
+  virtual ScoredCoordinate getTargetCoordinate(const Board&);
+  virtual void setConfig(const Configuration& configuration);
 
 private:
-  virtual bool joinPrompt(const int playersJoined);
-  virtual bool setupBoard();
-  virtual bool nextTurn();
-
-  bool myTurn();
-  Board* getTargetBoard();
-  Coordinate getTargetCoordinate(const Board&);
+  std::vector<Coordinate> coords;
 };
 
 } // namespace xbs

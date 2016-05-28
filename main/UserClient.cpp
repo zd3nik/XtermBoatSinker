@@ -26,7 +26,15 @@ int main(const int argc, const char* argv[]) {
     signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 
-    return (client.init() && client.join() && client.run()) ? 0 : 1;
+    if (!client.init()) {
+      return 1;
+    }
+
+    if (client.test()) {
+      return 0;
+    }
+
+    return (client.join() && client.run()) ? 0 : 1;
   }
   catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;

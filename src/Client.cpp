@@ -13,6 +13,12 @@
 #include "Screen.h"
 #include "Server.h"
 
+// bots
+#include "RandomRufus.h"
+#include "Hal9000.h"
+#include "Sal9000.h"
+#include "Edgar.h"
+
 namespace xbs
 {
 
@@ -36,19 +42,17 @@ enum ControlKey {
 };
 
 //-----------------------------------------------------------------------------
-unsigned Client::randomIndex(const unsigned bound) {
-  srand(clock());
-  return ((((unsigned)(rand() >> 3)) & 0x7FFFU) % bound);
-}
-
-//-----------------------------------------------------------------------------
 Client::Client()
   : port(-1),
     sock(-1),
     gameStarted(false),
     gameFinished(false),
+    showTestBoard(false),
+    testBot(false),
     msgEnd(~0U),
-    taunts(NULL)
+    testIterations(0),
+    taunts(NULL),
+    bot(NULL)
 {
   input.addHandle(STDIN_FILENO);
 }
@@ -102,7 +106,7 @@ void Client::closeSocketHandle() {
 
 //-----------------------------------------------------------------------------
 void Client::showHelp() {
-  Screen::get()
+  Screen::print()
       << EL
       << "Options:" << EL
       << EL
@@ -119,13 +123,62 @@ void Client::showHelp() {
       << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
       << "  -f <file>," << EL
       << "  --log-file <file>      Log messages to given file" << EL
+      << "  -b <name>," << EL
+      << "  --list-bots            Show available bot names and exit" << EL
+      << "  --bot <name>           Make this client use the given bot" << EL
+      << "  --test                 Test bot and exit" << EL
+      << "  --show                 Show board during bot test" << EL
+      << "  --test-db <dir>        Store bot test results in given dir" << EL
+      << "  -i <count>," << EL
+      << "  --iterations <count>   Test bot using given iteration count" << EL
       << EL << Flush;
+}
+
+//-----------------------------------------------------------------------------
+void Client::showBots() {
+  RandomRufus rufus;
+  Hal9000 hal;
+  Sal9000 sal;
+  Edgar edgar;
+
+  Screen::print()
+      << EL
+      << "Available bot AIs:" << EL
+      << EL
+      << "  " << rufus.getName() << " (" << rufus.getVersion() << ")" << EL
+      << "  " << hal.getName() << " (" << hal.getVersion() << ")" << EL
+      << "  " << sal.getName() << " (" << sal.getVersion() << ")" << EL
+      << "  " << edgar.getName() << " (" << edgar.getVersion() << ")" << EL
+      << EL << Flush;
+}
+
+//-----------------------------------------------------------------------------
+TargetingComputer* loadBot(const std::string& name) {
+  RandomRufus rufus;
+  Hal9000 hal;
+  Sal9000 sal;
+  Edgar edgar;
+
+  if (!name.empty()) {
+    if (strcasecmp(name.c_str(), rufus.getName().c_str()) == 0) {
+      return new RandomRufus();
+    } else if (strcasecmp(name.c_str(), hal.getName().c_str()) == 0) {
+      return new Hal9000();
+    } else if (strcasecmp(name.c_str(), sal.getName().c_str()) == 0) {
+      return new Sal9000();
+    } else if (strcasecmp(name.c_str(), edgar.getName().c_str()) == 0) {
+      return new Edgar();
+    }
+  }
+
+  return NULL;
 }
 
 //-----------------------------------------------------------------------------
 bool Client::init() {
   const CommandArgs& args = CommandArgs::getInstance();
-  Screen::get() << args.getProgramName() << " version " << getVersion()
+  Screen::get() << clearScreen() << Coordinate(1, 1)
+                << args.getProgramName() << " version " << getVersion()
                 << EL << Flush;
 
   if (args.indexOf("--help") > 0) {
@@ -133,13 +186,57 @@ bool Client::init() {
     return false;
   }
 
-  const char* tauntFile = args.getValueOf("-t", "--taunt-file");
-  if (tauntFile && (*tauntFile)) {
-    taunts = new FileSysDBRecord("taunts", tauntFile);
+  if (args.indexOf("--list-bots") > 0) {
+    showBots();
+    return false;
   }
+
+  const char* tauntFile = args.getValueOf("-t", "--taunt-file");
+  if (tauntFile) {
+    taunts = new FileSysDBRecord("taunts", Input::trim(tauntFile));
+  }
+
+  const char* botName = args.getValueOf("-b", "--bot");
+  if (botName) {
+    if (!(bot = loadBot(Input::trim(botName)))) {
+      throw std::runtime_error("Unknown bot name: " + std::string(botName));
+    }
+  }
+
+  const char* itCount = args.getValueOf("-i", "--iterations");
+  if (itCount) {
+    std::string iterations = Input::trim(itCount);
+    if (!isdigit(*iterations.c_str())) {
+      throw std::runtime_error("Invalid test iteration value: " + iterations);
+    }
+    testIterations = (unsigned)atoi(iterations.c_str());
+  }
+
+  const char* testDB = args.getValueOf("--test-db");
+  if (testDB) {
+    testDir = Input::trim(testDB);
+  }
+
+  testBot = (args.indexOf("--test") > 0);
+  showTestBoard = (args.indexOf("--show") > 0);
 
   closeSocket();
   return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::test() {
+  if (testBot) {
+    if (!bot) {
+      throw std::runtime_error("Missing parameter: --bot <name>");
+    }
+    // TODO allow user defined configuration
+    Configuration config = Configuration::getDefaultConfiguration();
+    bot->setConfig(config);
+    bot->test(testDir, testIterations, showTestBoard);
+    return true;
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -147,7 +244,10 @@ bool Client::join() {
   while (getHostAddress() && getHostPort()) {
     int playersJoined = 0;
     if (openSocket() && readGameInfo(playersJoined)) {
-      if (joinPrompt(playersJoined)) {
+      if (bot) {
+        bot->setConfig(config);
+      }
+      if (bot || joinPrompt(playersJoined)) {
         if (!gameStarted && !setupBoard()) {
           break;
         } else if (getUserName() && waitForGameStart()) {
@@ -410,7 +510,20 @@ bool Client::joinPrompt(const int playersJoined) {
 bool Client::setupBoard() {
   boardMap.clear();
   boardList.clear();
-  yourBoard = Board();
+
+  if (bot) {
+    yourBoard = Board(-1, bot->getName(), "local",
+                      config.getBoardSize().getWidth(),
+                      config.getBoardSize().getHeight());
+
+    if (!yourBoard.addRandomBoats(config)) {
+      Logger::printError() << "Failed to add boats to board";
+      return false;
+    }
+    return true;
+  } else {
+    yourBoard = Board();
+  }
 
   int n;
   char ch;
@@ -1180,12 +1293,30 @@ bool Client::nextTurn() {
       board->setToMove(false);
     }
   }
-
   if (!ok) {
     Logger::printError() << "Unknown player (" << name
                          << ") in nextTurn message received from server";
+    return false;
   }
-  return ok;
+
+  if (bot && (name == userName)) {
+    ScoredCoordinate coord;
+    Board* target = bot->getTargetBoard(name, boardList, coord);
+    if (!target) {
+      Logger::printError() << "failed to select target board";
+      return false;
+    } else if (!target->getBoatArea().contains(coord)) {
+      Logger::printError() << "failed to select target coordinate";
+      return false;
+    }
+
+    char sbuf[Input::BUFFER_SIZE];
+    snprintf(sbuf, sizeof(sbuf), "S|%s|%u|%u", target->getPlayerName().c_str(),
+             coord.getX(), coord.getY());
+    return sendLine(sbuf);
+
+  }
+  return true;
 }
 
 //-----------------------------------------------------------------------------

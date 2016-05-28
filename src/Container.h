@@ -101,6 +101,7 @@ public:
     return (isValid() ? (getMaxY() - getMinY() + 1) : 0);
   }
 
+  bool shift(const Direction, const unsigned count = 1);
   bool arrangeChildren(std::vector<Container*>& children) const;
   bool moveCoordinate(Coordinate& coordinate, const Movement& movement) const;
   bool moveCoordinate(Coordinate& coordinate,

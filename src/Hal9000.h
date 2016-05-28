@@ -6,26 +6,28 @@
 #define HAL9000_H
 
 #include <vector>
-#include "Client.h"
+#include "Configuration.h"
 #include "ScoredCoordinate.h"
+#include "TargetingComputer.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Hal9000: public Client {
+class Hal9000: public TargetingComputer
+{
 public:
+  virtual std::string getName() const;
   virtual Version getVersion() const;
+  virtual ScoredCoordinate getTargetCoordinate(const Board&);
+  virtual void setConfig(const Configuration& configuration);
 
-private:
-  virtual bool joinPrompt(const int playersJoined);
-  virtual bool setupBoard();
-  virtual bool nextTurn();
+protected:
+  virtual ScoredCoordinate hitTarget(const Board&);
+  virtual ScoredCoordinate emptyTarget(const Board&);
 
-  bool myTurn();
-  Board* getTargetBoard(ScoredCoordinate&);
-  ScoredCoordinate getTargetCoordinate(const Board&);
-  void setScores(std::vector<ScoredCoordinate>&, const Board&);
+  std::vector<ScoredCoordinate> hitCoords;
+  std::vector<ScoredCoordinate> emptyCoords;
 };
 
 } // namespace xbs
