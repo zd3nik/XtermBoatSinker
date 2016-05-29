@@ -2,6 +2,7 @@
 // TargetingComputer.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
+#include <unistd.h>
 #include <stdlib.h>
 #include <algorithm>
 #include <stdexcept>
@@ -10,16 +11,35 @@
 #include "DBRecord.h"
 #include "Configuration.h"
 #include "Screen.h"
+#include "Logger.h"
+#include "Input.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
+TargetingComputer::TargetingComputer()
+  : shortBoat(0),
+    longBoat(0),
+    width(0),
+    height(0),
+    boardLen(0)
+{ }
+
+//-----------------------------------------------------------------------------
+TargetingComputer::~TargetingComputer() {
+}
+
+//-----------------------------------------------------------------------------
 void TargetingComputer::setConfig(const Configuration& configuration) {
   config = configuration;
+  shortBoat = config.getShortestBoat().getLength();
+  longBoat = config.getLongestBoat().getLength();
   width = config.getBoardSize().getWidth();
   height = config.getBoardSize().getHeight();
+  maxLen = std::max(width, height);
   boardLen = (width * height);
+  coords.reserve(boardLen);
 }
 
 //-----------------------------------------------------------------------------
@@ -29,9 +49,8 @@ unsigned TargetingComputer::random(const unsigned bound) const {
 }
 
 //-----------------------------------------------------------------------------
-const ScoredCoordinate& TargetingComputer::getBest(
-    const std::vector<ScoredCoordinate>& coords) const
-{
+const ScoredCoordinate& TargetingComputer::getBestFromCoords() {
+  std::random_shuffle(coords.begin(), coords.end());
   unsigned best = 0;
   for (unsigned i = 1; i < coords.size(); ++i) {
     if (coords[i].getScore() > coords[best].getScore()) {
@@ -66,8 +85,32 @@ Board* TargetingComputer::getTargetBoard(const std::string& me,
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::test(const std::string& testDB, unsigned iterations,
-                             const bool showTestBoard)
+ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
+  const std::string desc = board.getDescriptor();
+  if (desc.empty() || (desc.size() != boardLen)) {
+    throw std::runtime_error("Incorrect board descriptor size");
+  }
+
+  coords.clear();
+  for (unsigned i = 0; i < desc.size(); ++i) {
+    if (desc[i] == Boat::NONE) {
+      const ScoredCoordinate coord(0, ((i % width) + 1), ((i / height) + 1));
+      if (coord.parity() || board.adjacentHits(coord)) {
+        coords.push_back(coord);
+      }
+    }
+  }
+
+  if (coords.empty()) {
+    throw std::runtime_error("Failed to select target coordinate!");
+  }
+
+  return bestShotOn(board);
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::test(std::string testDB, unsigned iterations,
+                             bool watch)
 {
   if (!config.isValid()) {
     throw std::runtime_error("Invalid board configuration");
@@ -75,35 +118,39 @@ void TargetingComputer::test(const std::string& testDB, unsigned iterations,
   if (!iterations) {
     iterations = DEFAULT_ITERATIONS;
   }
+  if (testDB.empty()) {
+    testDB = "testDB";
+  }
 
-  Screen::print() << EL << "Testing " << getName() << " version "
+  std::string recordID = ("test." + getName() + '-' + getVersion().toString() +
+                          ".ini");
+
+  Screen::print() << "Testing " << getName() << " version "
                   << getVersion() << " using " << iterations
-                  << " iterations" << EL << Flush;
+                  << " iterations" << EL
+                  << "Results will be stored in " << testDB << '/'
+                  << recordID << EL << Flush;
 
-  const std::string recordID = ("test." + getName() + ".version-" +
-                                getVersion().toString() + ".ini");
-
-//  FileSysDatabase db;
-//  db.open(testDB);
-
-//  DBRecord* rec = db.get(recordID, true);
-//  if (!rec) {
-//    throw std::runtime_error("Failed to get test DB record");
-//  }
+  FileSysDatabase db;
+  DBRecord* rec = db.open(testDB).get(recordID, true);
+  if (!rec) {
+    throw std::runtime_error("Failed to get test DB record");
+  }
 
   Coordinate statusLine(1, 5);
   Board board(-1, getName(), "local", width, height);
-  if (showTestBoard) {
-    if (!board.shift(South, (statusLine.getY() - 1))) {
-      throw std::runtime_error("Board does not fit in terminal");
-    }
-    Screen::print() << board.getTopLeft() << ClearToScreenEnd;
-    board.print(true);
-    Screen::print() << EL << Flush;
-    statusLine.shift(South, board.getHeight());
+  if (!board.shift(South, (statusLine.getY() - 1))) {
+    throw std::runtime_error("Board does not fit in terminal");
   }
+  Screen::print() << board.getTopLeft() << ClearToScreenEnd;
+  board.print(true);
+  Screen::print() << EL << Flush;
+  statusLine.shift(South, board.getHeight());
 
+  Input input;
   char prev = 0;
+  unsigned maxShots = 0;
+  unsigned minShots = ~0U;
   unsigned long long totalShots = 0ULL;
 
   for (unsigned i = 0; i < iterations; ++i) {
@@ -117,8 +164,10 @@ void TargetingComputer::test(const std::string& testDB, unsigned iterations,
     }
 
     unsigned hits = 0;
+    unsigned shots = 0;
     while (hits < config.getPointGoal()) {
       ScoredCoordinate coord = getTargetCoordinate(targetBoard);
+      Logger::debug() << "best shot = " << coord;
       if (!board.shootAt(coord, prev)) {
         throw std::runtime_error("Invalid target coord: " + coord.toString());
       } else if (++totalShots == 0) {
@@ -129,26 +178,42 @@ void TargetingComputer::test(const std::string& testDB, unsigned iterations,
       } else {
         targetBoard.setSquare(coord, Boat::MISS);
       }
-    }
+      shots++;
 
-    if (showTestBoard) {
-      board.print(true);
-      Screen::print() << EL << Flush;
+      if (watch) {
+        board.print(true);
+        Screen::print() << EL << "(S)top watching, (Q)uit, [RET=continue] -> "
+                        << Flush;
+        if (input.readln(STDIN_FILENO, 0) < 0) {
+          return;
+        }
+        std::string str = Input::trim(input.getString(0, ""));
+        prev = toupper(*str.c_str());
+        if (prev == 'Q') {
+          return;
+        } else if (prev == 'S') {
+          watch = false;
+          Screen::print() << board.getTopLeft() << ClearToScreenEnd;
+          board.print(true);
+          Screen::get().flush();
+        }
+      }
     }
+    minShots = std::min(shots, minShots);
+    maxShots = std::max(shots, maxShots);
 
-    if ((i % 1000) == 999) {
+    if (!i || ((i % 1000) == 999)) {
       double avg = (double(totalShots) / (i + 1));
+      board.print(true);
       Screen::print() << statusLine << ClearToLineEnd << (i + 1)
-                      << " iterations, avg shots to sink all boats: "
-                      << avg << EL << Flush;
+                      << " iterations, min shots " << minShots
+                      << ", max shots " << maxShots
+                      << ", avg shots " << avg << EL << Flush;
     }
   }
 
-  if (showTestBoard) {
-    Screen::print() << board.getTopLeft() << ClearToScreenEnd;
-    board.print(true);
-  }
-
+  Screen::print() << board.getTopLeft() << ClearToScreenEnd;
+  board.print(true);
   Screen::print() << statusLine << ClearToScreenEnd << iterations
                   << " iterations complete!" << EL << Flush;
 
@@ -157,7 +222,23 @@ void TargetingComputer::test(const std::string& testDB, unsigned iterations,
   }
 
   double avg = (double(totalShots) / iterations);
-  Screen::print() << "Average shots to sink all boats: " << avg << EL << Flush;
+  Screen::print() << "Min shots to sink all boats: " << minShots << EL
+                  << "Max shots to sink all boats: " << maxShots << EL
+                  << "Avg shots to sink all boats: " << avg << EL << Flush;
+
+  if (rec) {
+    // TODO add last test date, test time, and avg test time
+    rec->incUInt("testsRun");
+    rec->incUInt("total.iterationCount", iterations);
+    rec->setUInt("last.iterationCount", iterations);
+    rec->incUInt64("total.shotCount", totalShots);
+    rec->setUInt64("last.shotCount", totalShots);
+    rec->incUInt("total.minShotCount", minShots);
+    rec->setUInt("last.minShotCount", minShots);
+    rec->incUInt("total.maxShotCount", maxShots);
+    rec->setUInt("last.maxShotCount", maxShots);
+    db.sync();
+  }
 }
 
 } // namespace xbs

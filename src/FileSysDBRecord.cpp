@@ -25,7 +25,8 @@ typedef FieldMap::iterator FieldIterator;
 FileSysDBRecord::FileSysDBRecord(const std::string& recordID,
                                  const std::string& filePath)
   : recordID(recordID),
-    filePath(filePath)
+    filePath(filePath),
+    dirty(false)
 {
   load();
 }
@@ -33,6 +34,7 @@ FileSysDBRecord::FileSysDBRecord(const std::string& recordID,
 //-----------------------------------------------------------------------------
 void FileSysDBRecord::clear() {
   fieldCache.clear();
+  dirty = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -43,6 +45,7 @@ void FileSysDBRecord::load() {
     throw std::runtime_error("Empty FileSysDBRecord file path");
   }
 
+  dirty = false;
   Logger::debug() << "Loading '" << filePath << "' as record ID '"
                   << recordID << "'";
 
@@ -98,8 +101,8 @@ void FileSysDBRecord::load() {
 }
 
 //-----------------------------------------------------------------------------
-void FileSysDBRecord::store() {
-  if (recordID.size() && filePath.size()) {
+void FileSysDBRecord::store(const bool force) {
+  if ((dirty | force) && recordID.size() && filePath.size()) {
     FILE* fp = fopen(filePath.c_str(), "w");
     if (!fp) {
       throw std::runtime_error(strerror(errno));
@@ -131,6 +134,7 @@ void FileSysDBRecord::store() {
     fclose(fp);
     fp = NULL;
   }
+  dirty = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -148,6 +152,7 @@ void FileSysDBRecord::clear(const std::string& fld) {
   FieldIterator it = fieldCache.find(fld);
   if (it != fieldCache.end()) {
     fieldCache.erase(it);
+    dirty = true;
   }
 }
 
@@ -185,6 +190,7 @@ bool FileSysDBRecord::setString(const std::string& fld,
                              std::make_pair(fld, StringVector()));
     }
     it->second.push_back(val);
+    dirty = true;
     return true;
   }
   return false;
@@ -202,6 +208,7 @@ int FileSysDBRecord::addString(const std::string& fld,
       it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
     }
     it->second.push_back(val);
+    dirty = true;
     return it->second.size();
   }
   return -1;
@@ -224,6 +231,7 @@ int FileSysDBRecord::addStrings(const std::string& fld,
         }
       }
     }
+    dirty = true;
     return it->second.size();
   }
   return -1;

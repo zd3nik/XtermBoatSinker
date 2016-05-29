@@ -21,7 +21,8 @@ public:
   virtual Version getVersion() const;
 
 protected:
-  virtual ScoredCoordinate emptyTarget(const Board&);
+  virtual ScoredCoordinate searchShot(const Board&, const double weight);
+  virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 };
 
 } // namespace xbs

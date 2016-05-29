@@ -20,8 +20,7 @@ public:
   virtual Version getVersion() const;
 
 protected:
-  virtual ScoredCoordinate hitTarget(const Board&);
-  //virtual ScoredCoordinate emptyTarget(const Board&);
+  virtual void hitScore(const Board&, ScoredCoordinate&, const double weigth);
 };
 
 } // namespace xbs

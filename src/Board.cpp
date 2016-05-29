@@ -336,8 +336,23 @@ unsigned Board::getBoatPoints() const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::horizontalHits(const Coordinate& coord) const
-{
+unsigned Board::adjacentFree(const Coordinate& coord) const {
+  return ((getSquare(coord + North) == Boat::NONE) +
+          (getSquare(coord + South) == Boat::NONE) +
+          (getSquare(coord + East) == Boat::NONE) +
+          (getSquare(coord + West) == Boat::NONE));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::adjacentHits(const Coordinate& coord) const {
+  return ((getSquare(coord + North) == Boat::HIT_MASK) +
+          (getSquare(coord + South) == Boat::HIT_MASK) +
+          (getSquare(coord + East) == Boat::HIT_MASK) +
+          (getSquare(coord + West) == Boat::HIT_MASK));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::horizontalHits(const Coordinate& coord) const {
   unsigned count = 0;
   char ch = getSquare(coord);
   if (ch == Boat::HIT_MASK) {
@@ -353,8 +368,7 @@ unsigned Board::horizontalHits(const Coordinate& coord) const
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::verticalHits(const Coordinate& coord) const
-{
+unsigned Board::verticalHits(const Coordinate& coord) const {
   unsigned count = 0;
   char ch = getSquare(coord);
   if (ch == Boat::HIT_MASK) {
@@ -366,6 +380,62 @@ unsigned Board::verticalHits(const Coordinate& coord) const
       count++;
     }
   }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::freeNorthOf(Coordinate coord) const {
+  unsigned count = 0;
+  while (getSquare(coord.north()) == Boat::NONE) ++count;
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::freeSouthOf(Coordinate coord) const {
+  unsigned count = 0;
+  while (getSquare(coord.south()) == Boat::NONE) ++count;
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::freeEastOf(Coordinate coord) const {
+  unsigned count = 0;
+  while (getSquare(coord.east()) == Boat::NONE) ++count;
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::freeWestOf(Coordinate coord) const {
+  unsigned count = 0;
+  while (getSquare(coord.west()) == Boat::NONE) ++count;
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::hitsNorthOf(Coordinate coord) const {
+  unsigned count = 0;
+  while (Boat::isHit(getSquare(coord.north()))) ++count;
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::hitsSouthOf(Coordinate coord) const {
+  unsigned count = 0;
+  while (Boat::isHit(getSquare(coord.south()))) ++count;
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::hitsEastOf(Coordinate coord) const {
+  unsigned count = 0;
+  while (Boat::isHit(getSquare(coord.east()))) ++count;
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::hitsWestOf(Coordinate coord) const {
+  unsigned count = 0;
+  while (Boat::isHit(getSquare(coord.west()))) ++count;
   return count;
 }
 

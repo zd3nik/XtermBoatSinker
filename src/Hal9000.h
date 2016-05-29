@@ -19,15 +19,16 @@ class Hal9000: public TargetingComputer
 public:
   virtual std::string getName() const;
   virtual Version getVersion() const;
-  virtual ScoredCoordinate getTargetCoordinate(const Board&);
-  virtual void setConfig(const Configuration& configuration);
 
 protected:
-  virtual ScoredCoordinate hitTarget(const Board&);
-  virtual ScoredCoordinate emptyTarget(const Board&);
+  virtual ScoredCoordinate bestShotOn(const Board&);
+  virtual ScoredCoordinate frenzyShot(const Board&, const double weight);
+  virtual ScoredCoordinate searchShot(const Board&, const double weight);
+  virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
+  virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 
-  std::vector<ScoredCoordinate> hitCoords;
-  std::vector<ScoredCoordinate> emptyCoords;
+  std::vector<ScoredCoordinate> frenzyCoords;
+  std::vector<ScoredCoordinate> searchCoords;
 };
 
 } // namespace xbs

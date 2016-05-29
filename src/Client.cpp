@@ -47,7 +47,7 @@ Client::Client()
     sock(-1),
     gameStarted(false),
     gameFinished(false),
-    showTestBoard(false),
+    watchTestShots(false),
     testBot(false),
     msgEnd(~0U),
     testIterations(0),
@@ -124,10 +124,10 @@ void Client::showHelp() {
       << "  -f <file>," << EL
       << "  --log-file <file>      Log messages to given file" << EL
       << "  -b <name>," << EL
-      << "  --list-bots            Show available bot names and exit" << EL
       << "  --bot <name>           Make this client use the given bot" << EL
+      << "  --list-bots            Show available bot names and exit" << EL
       << "  --test                 Test bot and exit" << EL
-      << "  --show                 Show board during bot test" << EL
+      << "  --watch                Watch every shot during test" << EL
       << "  --test-db <dir>        Store bot test results in given dir" << EL
       << "  -i <count>," << EL
       << "  --iterations <count>   Test bot using given iteration count" << EL
@@ -218,7 +218,7 @@ bool Client::init() {
   }
 
   testBot = (args.indexOf("--test") > 0);
-  showTestBoard = (args.indexOf("--show") > 0);
+  watchTestShots = (args.indexOf("--watch") > 0);
 
   closeSocket();
   return true;
@@ -233,7 +233,7 @@ bool Client::test() {
     // TODO allow user defined configuration
     Configuration config = Configuration::getDefaultConfiguration();
     bot->setConfig(config);
-    bot->test(testDir, testIterations, showTestBoard);
+    bot->test(testDir, testIterations, watchTestShots);
     return true;
   }
   return false;

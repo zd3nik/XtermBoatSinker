@@ -18,11 +18,9 @@ class RandomRufus : public TargetingComputer
 public:
   virtual std::string getName() const;
   virtual Version getVersion() const;
-  virtual ScoredCoordinate getTargetCoordinate(const Board&);
-  virtual void setConfig(const Configuration& configuration);
 
-private:
-  std::vector<Coordinate> coords;
+protected:
+  virtual ScoredCoordinate bestShotOn(const Board&);
 };
 
 } // namespace xbs

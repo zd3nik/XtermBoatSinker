@@ -23,7 +23,7 @@ public:
   virtual ~FileSysDatabase();
 
   void close();
-  void open(const std::string& dbHomeDir);
+  FileSysDatabase& open(const std::string& dbHomeDir);
   std::string getHomeDir() const { return homeDir; }
 
   void sync();

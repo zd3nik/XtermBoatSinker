@@ -271,4 +271,28 @@ void Configuration::loadFrom(DBRecord& record) {
   }
 }
 
+//-----------------------------------------------------------------------------
+Boat Configuration::getLongestBoat() const {
+  Boat longest;
+  for (unsigned i = 0; i < boats.size(); ++i) {
+    const Boat& boat = boats[i];
+    if (!longest.isValid() || (boat.getLength() > longest.getLength())) {
+      longest = boat;
+    }
+  }
+  return longest;
+}
+
+//-----------------------------------------------------------------------------
+Boat Configuration::getShortestBoat() const {
+  Boat shortest;
+  for (unsigned i = 0; i < boats.size(); ++i) {
+    const Boat& boat = boats[i];
+    if (!shortest.isValid() || (boat.getLength() < shortest.getLength())) {
+      shortest = boat;
+    }
+  }
+  return shortest;
+}
+
 } // namespace xbs

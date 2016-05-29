@@ -25,46 +25,26 @@ Version Sal9000::getVersion() const {
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Sal9000::emptyTarget(const Board& board){
-  const unsigned maxWidth = std::max(width, height);
-  const unsigned remain = (config.getPointGoal() - board.getHitCount());
-
-  std::random_shuffle(emptyCoords.begin(), emptyCoords.end());
-  for (unsigned i = 0; i < emptyCoords.size(); ++i) {
-    ScoredCoordinate& coord = emptyCoords[i];
-    if (!remain) {
-      coord.setScore(MIN_SCORE);
-      continue;
-    }
-
-    ScoredCoordinate c;
-    int north = 0;
-    int south = 0;
-    int east = 0;
-    int west = 0;
-
-    for (c = coord; board.getSquare(c.north()) == Boat::NONE; ++north) { }
-    for (c = coord; board.getSquare(c.south()) == Boat::NONE; ++south) { }
-    for (c = coord; board.getSquare(c.east()) == Boat::NONE; ++east) { }
-    for (c = coord; board.getSquare(c.west()) == Boat::NONE; ++west) { }
-    if (!(north | south | east | west)) {
-      coord.setScore(MIN_SCORE);
-      continue;
-    }
-
-    int vertical = (north + south - abs(north - south));
-    int horizont = (east + west - abs(east - west));
-    double score = (std::max(vertical, horizont) - int(maxWidth));
-    assert(score < 0);
-
-    score -= (!vertical + !horizont);
-    coord.setScore((score - !vertical - !horizont) / log(remain + 1));
-    assert(coord.getScore() < 0);
+ScoredCoordinate Sal9000::searchShot(const Board& board, const double weight) {
+  for (unsigned i = 0; i < coords.size(); ++i) {
+    searchScore(board, coords[i], weight);
   }
+  return getBestFromCoords();
+}
 
-  const ScoredCoordinate& best = getBest(emptyCoords);
-  assert(best.getScore() < 0);
-  return best;
+//-----------------------------------------------------------------------------
+void Sal9000::searchScore(const Board& board, ScoredCoordinate& coord,
+                          const double weight)
+{
+  assert(board.adjacentHits(coord) == 0);
+  unsigned north = board.freeNorthOf(coord);
+  unsigned south = board.freeSouthOf(coord);
+  unsigned east  = board.freeEastOf(coord);
+  unsigned west  = board.freeWestOf(coord);
+  double score   = (double(north + south + east + west) / (4 * maxLen));
+  coord.setScore((unsigned)floor(score * weight));
+  assert(coord.getScore() < (2 * weight));
+  searchCoords.push_back(coord);
 }
 
 } // namespace xbs

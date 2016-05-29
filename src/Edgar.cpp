@@ -24,84 +24,88 @@ Version Edgar::getVersion() const {
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Edgar::hitTarget(const Board& board) {
-  const unsigned remain = (config.getPointGoal() - board.getHitCount());
+void Edgar::hitScore(const Board& board, ScoredCoordinate& coord,
+                     const double weight)
+{
+  double score;
+  char a;
+  char b;
 
-  std::random_shuffle(hitCoords.begin(), hitCoords.end());
-  for (unsigned i = 0; i < hitCoords.size(); ++i) {
-    ScoredCoordinate& coord = hitCoords[i];
-    if (!remain) {
-      coord.setScore(MIN_SCORE);
-      continue;
-    }
+  // inline hits
+  int nl = (int)board.hitsNorthOf(coord);
+  int sl = (int)board.hitsSouthOf(coord);
+  int el = (int)board.hitsEastOf(coord);
+  int wl = (int)board.hitsWestOf(coord);
+  assert(nl | sl | el | wl);
 
-    unsigned open[4] = {0};
-    unsigned hit[4] = {0};
-    unsigned maxHits = 0;
-    unsigned adjacent = 0;
-    double score = 0;
+  // perpendicular hits
+  int np = (int)board.horizontalHits(coord + North);
+  int sp = (int)board.horizontalHits(coord + South);
+  int ep = (int)board.verticalHits(coord + East);
+  int wp = (int)board.verticalHits(coord + West);
+  assert((!nl == !np) && (!sl == !sp) && (!el == !ep) && (!wl == !wp));
 
-    for (unsigned d = North; d <= West; ++d) {
-      const Direction dir = static_cast<Direction>(d);
-      char type = 0;
-      char sqr;
-      for (Coordinate c(coord); (sqr = board.getSquare(c.shift(dir))); ) {
-        if (sqr == Boat::MISS) {
-          break;
-        } else if (!type) {
-          type = sqr;
-        } else if (sqr != type) {
-          break;
-        }
-        if (sqr == Boat::NONE) {
-          adjacent += !open[dir];
-          open[dir]++;
-        } else {
-          hit[dir]++;
-          maxHits = std::max<unsigned>(maxHits, hit[dir]);
-        }
-      }
-    }
-
-    if (maxHits > 1) {
-      score = 7; // on end of one or more hit lines
-    } else if (maxHits == 1) {
-      unsigned nc = board.horizontalHits(coord + North);
-      unsigned sc = board.horizontalHits(coord + South);
-      unsigned ec = board.verticalHits(coord + East);
-      unsigned wc = board.verticalHits(coord + West);
-      if ((nc + sc + ec + wc) == 1) {
-        // adjacent to loner hit
-        score = 5;
-      } else if ((!nc + !sc + !ec + !wc) == 3) {
-        // adjacent to single line
-        score = log(3);
-      } else if (((nc == 1) && (sc == 1)) || ((wc == 1) && (ec == 1))) {
-        // between vertical or horizontal single hits
-        score = 6;
-      } else if (!(nc | sc) == !(ec | wc)) {
-        // elbow configuration
-        score = log(3.5);
-      } else if ((nc == 1) || (sc == 1) || (ec == 1) || (wc == 1)) {
-        // between single hit and a line
-        score = 5.1;
+  // point scale:
+  // 1 = same as search targetting
+  int maxLen = std::max(nl, std::max(sl, std::max(el, wl)));
+  if (maxLen > 1) {
+    // inline with 2 or more sequential hits
+    score = (maxLen + 2);
+  } else if ((np + sp + ep + wp) == 1) {
+    // no perpendicular line (adjacent to a lone hit)
+    score = 2;
+  } else {
+    switch (!np + !sp + !ep + !wp) {
+    case 0:
+      // adjacent to 4 perpendicular lines (center of a closed box)
+      score = 3;
+      break;
+    case 1:
+      // adjacent to 3 perpendicular lines
+      score = 4;
+      break;
+    case 2:
+      // adjacent to 2 perpendicular lines
+      score = 1;
+      break;
+    case 3:
+      // adjacent to 1 perpendicular line
+      if (np) {
+        assert(!(sp | ep | wp));
+        a = board.getSquare((coord + North) + East);
+        b = board.getSquare((coord + North) + West);
+      } else if (sp) {
+        assert(!(np | ep | wp));
+        a = board.getSquare((coord + South) + East);
+        b = board.getSquare((coord + South) + West);
+      } else if (ep) {
+        assert(!(np | sp | wp));
+        a = board.getSquare((coord + East) + North);
+        b = board.getSquare((coord + East) + South);
+      } else if (wp) {
+        assert(!(np | sp | ep));
+        a = board.getSquare((coord + West) + North);
+        b = board.getSquare((coord + West) + South);
       } else {
-        // sandwiched between 2 lines
-        score = log(2);
+        assert(false);
       }
-    } else if (adjacent) {
-      score = log(adjacent);
+      assert(a || b);
+      if (a && b) {
+        // probably side of a boat, score it as if we a doing searchShot
+        searchScore(board, coord, weight);
+        return;
+      } else {
+        // adjacent to end of a perpendicular line (possible elbow pattern)
+        score = 1.5;
+      }
+      break;
+    default:
+      assert(false);
     }
-
-    if (score > 0) {
-      score *= log(remain + 1);
-    }
-
-    assert(score >= 0);
-    hitCoords[i].setScore(score);
   }
 
-  return getBest(hitCoords);
+  assert(score >= 0);
+  coord.setScore(score * weight);
 }
 
 } // namespace xbs

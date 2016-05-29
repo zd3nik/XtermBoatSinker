@@ -25,90 +25,65 @@ Version Hal9000::getVersion() const {
 }
 
 //-----------------------------------------------------------------------------
-void Hal9000::setConfig(const Configuration& configuration) {
-  TargetingComputer::setConfig(configuration);
-  hitCoords.reserve(boardLen);
-  emptyCoords.reserve(boardLen);
+ScoredCoordinate Hal9000::bestShotOn(const Board& board) {
+  const unsigned hitCount = board.getHitCount();
+  const unsigned remain = (config.getPointGoal() - hitCount);
+  if (!remain) {
+    return coords[random(coords.size())].setScore(0);
+  }
+
+  frenzyCoords.clear();
+  searchCoords.clear();
+
+  double weight = (boardLen * log(remain + 1));
+  ScoredCoordinate best = hitCount ? frenzyShot(board, weight) : searchShot(board, weight);
+
+  std::stable_sort(frenzyCoords.begin(), frenzyCoords.end());
+  std::stable_sort(searchCoords.begin(), searchCoords.end());
+  for (unsigned i = 0; i < frenzyCoords.size(); ++i) {
+    Logger::debug() << "frenzy " << frenzyCoords[i];
+  }
+  for (unsigned i = 0; i < searchCoords.size(); ++i) {
+    Logger::debug() << "search " << searchCoords[i];
+  }
+  return best;
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Hal9000::getTargetCoordinate(const Board& board) {
-  const std::string desc = board.getDescriptor();
-  if (desc.empty() || (desc.size() != boardLen)) {
-    throw std::runtime_error("Incorrect board descriptor size");
+ScoredCoordinate Hal9000::frenzyShot(const Board& board, const double weight) {
+  for (unsigned i = 0; i < coords.size(); ++i) {
+    frenzyScore(board, coords[i], weight);
   }
-
-  hitCoords.clear();
-  emptyCoords.clear();
-  for (unsigned i = 0; i < desc.size(); ++i) {
-    if (desc[i] == Boat::NONE) {
-      const unsigned x = ((i % width) + 1);
-      const unsigned y = ((i / height) + 1);
-      const ScoredCoordinate coord(MIN_SCORE, x, y);
-      if ((board.getSquare(coord + North) == Boat::HIT_MASK) ||
-          (board.getSquare(coord + South) == Boat::HIT_MASK) ||
-          (board.getSquare(coord + East) == Boat::HIT_MASK) ||
-          (board.getSquare(coord + West) == Boat::HIT_MASK))
-      {
-        hitCoords.push_back(coord);
-      } else if (hitCoords.empty() &&
-                 ((coord.getX() & 1) == (coord.getY() & 1)))
-      {
-        emptyCoords.push_back(coord);
-      }
-    }
-  }
-
-  if (hitCoords.empty() && emptyCoords.empty()) {
-    throw std::runtime_error("Failed to select target coordinate!");
-  }
-
-  return hitCoords.empty() ? emptyTarget(board) : hitTarget(board);
+  return getBestFromCoords();
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Hal9000::hitTarget(const Board& board) {
-  const unsigned remain = (config.getPointGoal() - board.getHitCount());
-
-  std::random_shuffle(hitCoords.begin(), hitCoords.end());
-  for (unsigned i = 0; i < hitCoords.size(); ++i) {
-    ScoredCoordinate& coord = hitCoords[i];
-    if (!remain) {
-      coord.setScore(MIN_SCORE);
-      continue;
-    }
-
-    ScoredCoordinate c;
-    unsigned north = 0;
-    unsigned south = 0;
-    unsigned east = 0;
-    unsigned west = 0;
-
-    for (c = coord; Boat::isHit(board.getSquare(c.north())); ++north) { }
-    for (c = coord; Boat::isHit(board.getSquare(c.south())); ++south) { }
-    for (c = coord; Boat::isHit(board.getSquare(c.east())); ++east) { }
-    for (c = coord; Boat::isHit(board.getSquare(c.west())); ++west) { }
-    assert(north | south | east | west);
-
-    unsigned maxLen = std::max(north, std::max(south, std::max(east, west)));
-    if (maxLen > 1) {
-      coord.setScore((8 - std::min(maxLen, 7U)) * log(remain + 1));
-      assert(coord.getScore() >= 0);
-    } else if (maxLen > 0) {
-      coord.setScore(0);
-    } else {
-      assert(false);
-    }
-  }
-
-  return getBest(hitCoords);
+ScoredCoordinate Hal9000::searchShot(const Board& board, const double weight) {
+  return coords[random(coords.size())].setScore((unsigned)floor(weight / 2));
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Hal9000::emptyTarget(const Board& board){
-  const unsigned remain = (config.getPointGoal() - board.getHitCount());
-  ScoredCoordinate& coord = emptyCoords[random(emptyCoords.size())];
-  return coord.setScore(-1 / log(remain + 1));
+void Hal9000::frenzyScore(const Board& board, ScoredCoordinate& coord,
+                          const double weight)
+{
+  unsigned north = board.hitsNorthOf(coord);
+  unsigned south = board.hitsSouthOf(coord);
+  unsigned east  = board.hitsEastOf(coord);
+  unsigned west  = board.hitsWestOf(coord);
+  unsigned len   = std::max(north, std::max(south, std::max(east, west)));
+  if (len) {
+    coord.setScore((unsigned)floor(std::min(longBoat, len) * weight));
+    frenzyCoords.push_back(coord);
+  } else {
+    searchScore(board, coord, weight);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Hal9000::searchScore(const Board&, ScoredCoordinate& coord,
+                          const double weight)
+{
+  coord.setScore((unsigned)floor(weight / 2));
 }
 
 } // namespace xbs

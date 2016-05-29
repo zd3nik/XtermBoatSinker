@@ -25,7 +25,7 @@ public:
   void clear(const std::string& fld);
   void clear();
   void load();
-  void store();
+  void store(const bool force = false);
 
   std::vector<std::string> getStrings(const std::string& fld) const;
   std::string getString(const std::string& fld) const;
@@ -38,6 +38,7 @@ private:
   std::string recordID;
   std::string filePath;
   std::map<std::string, std::vector<std::string> > fieldCache;
+  bool dirty;
 };
 
 } // namespace xbs

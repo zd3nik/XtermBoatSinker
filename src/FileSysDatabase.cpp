@@ -43,7 +43,7 @@ void FileSysDatabase::close() {
 }
 
 //-----------------------------------------------------------------------------
-void FileSysDatabase::open(const std::string& dbURI) {
+FileSysDatabase& FileSysDatabase::open(const std::string& dbURI) {
   close();
   try {
     homeDir = dbURI.empty() ? DEFAULT_HOME_DIR : dbURI;
@@ -64,6 +64,7 @@ void FileSysDatabase::open(const std::string& dbURI) {
     close();
     throw;
   }
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------

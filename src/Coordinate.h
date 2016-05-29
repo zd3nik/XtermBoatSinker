@@ -129,6 +129,10 @@ public:
     return y;
   }
 
+  unsigned parity() const {
+    return ((x & 1) == (y & 1));
+  }
+
   std::string toString() const {
     char sbuf[32];
     if (x <= ('z' - 'a' + 1)) {

@@ -37,7 +37,9 @@ public:
   void loadFrom(DBRecord&);
   void print(Coordinate& coord) const;
   bool isValidBoatDescriptor(const std::string& descriptor) const;
-  bool isValid() const ;
+  bool isValid() const;
+  Boat getLongestBoat() const;
+  Boat getShortestBoat() const;
 
   std::string getName() const {
     return name;

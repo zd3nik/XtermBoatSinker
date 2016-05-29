@@ -63,7 +63,7 @@ int DBRecord::addInts(const std::string& fld, const std::vector<int>& values) {
 }
 
 //-----------------------------------------------------------------------------
-unsigned strToUInt(const std::string& str) {
+unsigned DBRecord::strToUInt(const std::string& str) {
   unsigned value = 0;
   for (const char* p = str.c_str(); p && (*p) && isdigit(*p); ++p) {
     unsigned tmp = ((10 * value) + ((*p) - '0'));
@@ -130,7 +130,74 @@ int DBRecord::addUInts(const std::string& fld,
 }
 
 //-----------------------------------------------------------------------------
-bool strToBool(const std::string& str) {
+uint64_t DBRecord::strToUInt64(const std::string& str) {
+  uint64_t value = 0;
+  for (const char* p = str.c_str(); p && (*p) && isdigit(*p); ++p) {
+    uint64_t tmp = ((10 * value) + ((*p) - '0'));
+    if (tmp >= value) {
+      value = tmp;
+    } else {
+      break;
+    }
+  }
+  return value;
+}
+
+//-----------------------------------------------------------------------------
+std::vector<uint64_t> DBRecord::getUInt64s(const std::string& fld) const {
+  std::vector<std::string> strValues = getStrings(fld);
+  std::vector<uint64_t> values;
+  values.reserve(strValues.size());
+  for (unsigned i = 0; i < strValues.size(); ++i) {
+    values.push_back(strToUInt64(strValues[i]));
+  }
+  return values;
+}
+
+//-----------------------------------------------------------------------------
+uint64_t DBRecord::getUInt64(const std::string& fld) const {
+  return strToUInt64(getString(fld));
+}
+
+//-----------------------------------------------------------------------------
+uint64_t DBRecord::incUInt64(const std::string& fld, const uint64_t inc) {
+  uint64_t val = getUInt64(fld);
+  if (setUInt64(fld, (val + inc))) {
+    return (val + inc);
+  }
+  return 0;
+}
+
+//-----------------------------------------------------------------------------
+bool DBRecord::setUInt64(const std::string& fld, const uint64_t val) {
+  char sbuf[32];
+  snprintf(sbuf, sizeof(sbuf), "%llu", val);
+  return setString(fld, sbuf);
+}
+
+//-----------------------------------------------------------------------------
+int DBRecord::addUInt64(const std::string& fld, const uint64_t val) {
+  char sbuf[32];
+  snprintf(sbuf, sizeof(sbuf), "%llu", val);
+  return addString(fld, sbuf);
+}
+
+//-----------------------------------------------------------------------------
+int DBRecord::addUInt64s(const std::string& fld,
+                         const std::vector<uint64_t>& values)
+{
+  char sbuf[32];
+  std::vector<std::string> strValues;
+  strValues.reserve(values.size());
+  for (unsigned i = 0; i < values.size(); ++i) {
+    snprintf(sbuf, sizeof(sbuf), "%llu", values[i]);
+    strValues.push_back(sbuf);
+  }
+  return addStrings(fld, strValues);
+}
+
+//-----------------------------------------------------------------------------
+bool DBRecord::strToBool(const std::string& str) {
   return ((strcasecmp("true", str.c_str()) == 0) ||
           (strcasecmp("yes", str.c_str()) == 0) ||
           (strcasecmp("y", str.c_str()) == 0) ||

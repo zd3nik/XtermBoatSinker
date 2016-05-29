@@ -102,7 +102,7 @@ protected:
   int sock;
   bool gameStarted;
   bool gameFinished;
-  bool showTestBoard;
+  bool watchTestShots;
   bool testBot;
   unsigned msgEnd;
   unsigned testIterations;
