@@ -20,7 +20,7 @@ public:
   virtual Version getVersion() const;
 
 protected:
-  virtual void hitScore(const Board&, ScoredCoordinate&, const double weigth);
+  virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
 };
 
 } // namespace xbs

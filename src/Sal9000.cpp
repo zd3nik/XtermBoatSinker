@@ -36,7 +36,6 @@ ScoredCoordinate Sal9000::searchShot(const Board& board, const double weight) {
 void Sal9000::searchScore(const Board& board, ScoredCoordinate& coord,
                           const double weight)
 {
-  assert(board.adjacentHits(coord) == 0);
   unsigned north = board.freeNorthOf(coord);
   unsigned south = board.freeSouthOf(coord);
   unsigned east  = board.freeEastOf(coord);
