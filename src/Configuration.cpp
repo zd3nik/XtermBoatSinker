@@ -146,7 +146,7 @@ void Configuration::print(Coordinate& coord) const {
 //-----------------------------------------------------------------------------
 unsigned Configuration::getBoatIndex(const Coordinate& coord) const {
   return boardSize.contains(coord)
-      ? (coord.getX() - 1 + (boardSize.getHeight() * (coord.getY() - 1)))
+      ? (coord.getX() - 1 + (boardSize.getWidth() * (coord.getY() - 1)))
       : ~0U;
 }
 
@@ -206,7 +206,7 @@ bool Configuration::isValidBoatDescriptor(const std::string& descriptor) const {
 
   std::map<char, Boat> boatMap;
   for (unsigned i = 0; i < desc.size(); i += boardSize.getWidth()) {
-    unsigned y = ((i / boardSize.getHeight()) + 1);
+    unsigned y = ((i / boardSize.getWidth()) + 1);
     for (unsigned x = 1; x <= boardSize.getWidth(); ++x) {
       if (!getBoat(desc, Coordinate(x, y), boatMap)) {
         return false;
@@ -244,7 +244,7 @@ void Configuration::saveTo(DBRecord& record) {
 }
 
 //-----------------------------------------------------------------------------
-void Configuration::loadFrom(DBRecord& record) {
+void Configuration::loadFrom(const DBRecord& record) {
   clear();
 
   name = record.getString("name");

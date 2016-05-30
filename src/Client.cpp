@@ -1306,7 +1306,7 @@ bool Client::nextTurn() {
       Logger::printError() << "failed to select target board";
       return false;
     } else if (!target->getBoatArea().contains(coord)) {
-      Logger::printError() << "failed to select target coordinate";
+      Logger::printError() << "invalid target coordinate: " << coord;
       return false;
     }
 

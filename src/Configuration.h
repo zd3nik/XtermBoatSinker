@@ -34,7 +34,7 @@ public:
 
   void clear();
   void saveTo(DBRecord&);
-  void loadFrom(DBRecord&);
+  void loadFrom(const DBRecord&);
   void print(Coordinate& coord) const;
   bool isValidBoatDescriptor(const std::string& descriptor) const;
   bool isValid() const;

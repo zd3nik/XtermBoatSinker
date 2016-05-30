@@ -94,7 +94,7 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
   coords.clear();
   for (unsigned i = 0; i < desc.size(); ++i) {
     if (desc[i] == Boat::NONE) {
-      const ScoredCoordinate coord(0, ((i % width) + 1), ((i / height) + 1));
+      const ScoredCoordinate coord(0, ((i % width) + 1), ((i / width) + 1));
       if (coord.parity() || board.adjacentHits(coord)) {
         coords.push_back(coord);
       }

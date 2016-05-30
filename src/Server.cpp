@@ -12,7 +12,7 @@
 #include "Logger.h"
 #include "Screen.h"
 #include "FileSysDatabase.h"
-#include "DBRecord.h"
+#include "FileSysDBRecord.h"
 
 namespace xbs
 {
@@ -68,8 +68,14 @@ void Server::showHelp() {
       << "  --bind-address <addr>  Bind server to given IP address" << EL
       << "  -p <port>," << EL
       << "  --port <port>          Listen for connections on given port" << EL
+      << "  -c <file>," << EL
+      << "  --config <file>        Use given board configuration file" << EL
       << "  -t <title>," << EL
       << "  --title <title>        Set game title to given value" << EL
+      << "  --min <players>        Set minimum number of players" << EL
+      << "  --max <players>        Set maximum number of players" << EL
+      << "  --width <count>        Set board width" << EL
+      << "  --height <count>       Set board height" << EL
       << "  -d <dir>," << EL
       << "  --db-dir <dir>         Save game stats to given directory" << EL
       << "  -l <level>," << EL
@@ -1232,8 +1238,55 @@ bool Server::getGameTitle(std::string& title) {
 
 //-----------------------------------------------------------------------------
 Configuration Server::getGameConfig() {
-  // TODO let user choose (or get config name from command args)
-  return Configuration::getDefaultConfiguration();
+  Configuration config = Configuration::getDefaultConfiguration();
+  const CommandArgs& args = CommandArgs::getInstance();
+
+  const char* str = args.getValueOf("-c", "--config");
+  if (str) {
+    config.loadFrom(FileSysDBRecord(str, Input::trim(str)));
+  }
+
+  str = args.getValueOf("--min");
+  if (str) {
+    int val = atoi(Input::trim(str).c_str());
+    if (val < 2) {
+      throw std::runtime_error("Invalid --min value");
+    } else {
+      config.setMaxPlayers((unsigned)val);
+    }
+  }
+
+  str = args.getValueOf("--max");
+  if (str) {
+    int val = atoi(Input::trim(str).c_str());
+    if ((val < 2) || (config.getMinPlayers() > (unsigned)val)) {
+      throw std::runtime_error("Invalid --max value");
+    } else {
+      config.setMaxPlayers((unsigned)val);
+    }
+  }
+
+  str = args.getValueOf("--width");
+  if (str) {
+    int val = atoi(Input::trim(str).c_str());
+    if (val < 8) {
+      throw std::runtime_error("Invalid --width value");
+    } else {
+      config.setBoardSize((unsigned)val, config.getBoardSize().getHeight());
+    }
+  }
+
+  str = args.getValueOf("--heigth");
+  if (str) {
+    int val = atoi(Input::trim(str).c_str());
+    if (val < 8) {
+      throw std::runtime_error("Invalid --height value");
+    } else {
+      config.setBoardSize(config.getBoardSize().getWidth(), (unsigned)val);
+    }
+  }
+
+  return config;
 }
 
 //-----------------------------------------------------------------------------
