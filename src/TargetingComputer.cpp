@@ -122,8 +122,11 @@ void TargetingComputer::test(std::string testDB, unsigned iterations,
     testDB = "testDB";
   }
 
-  std::string recordID = ("test." + getName() + '-' + getVersion().toString() +
-                          ".ini");
+  char recordID[1024];
+  snprintf(recordID, sizeof(recordID), "test.%ux%u.%s-%s",
+           config.getBoardSize().getWidth(),
+           config.getBoardSize().getHeight(),
+           getName().c_str(), getVersion().toString().c_str());
 
   Screen::print() << "Testing " << getName() << " version "
                   << getVersion() << " using " << iterations
@@ -229,6 +232,8 @@ void TargetingComputer::test(std::string testDB, unsigned iterations,
   if (rec) {
     // TODO add last test date, test time, and avg test time
     rec->incUInt("testsRun");
+    rec->setUInt("board.width", config.getBoardSize().getWidth());
+    rec->setUInt("board.height", config.getBoardSize().getHeight());
     rec->incUInt("total.iterationCount", iterations);
     rec->setUInt("last.iterationCount", iterations);
     rec->incUInt64("total.shotCount", totalShots);

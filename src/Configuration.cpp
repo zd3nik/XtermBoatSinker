@@ -117,8 +117,10 @@ void Configuration::clear() {
 
 //-----------------------------------------------------------------------------
 bool Configuration::isValid() const {
-  return (name.size() && (minPlayers > 1) && (maxPlayers >= minPlayers) &&
-          boardSize.isValid() && boats.size());
+  return (name.size() && boats.size() && boardSize.isValid() &&
+          (minPlayers > 1) && (maxPlayers >= minPlayers) &&
+          (boardSize.getWidth() <= (unsigned)(Boat::MAX_ID - Boat::MIN_ID)) &&
+          (boardSize.getHeight() <= (unsigned)(Boat::MAX_ID - Boat::MIN_ID)));
 }
 
 //-----------------------------------------------------------------------------

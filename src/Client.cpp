@@ -127,6 +127,8 @@ void Client::showHelp() {
       << "  --bot <name>           Make this client use the given bot" << EL
       << "  --list-bots            Show available bot names and exit" << EL
       << "  --test                 Test bot and exit" << EL
+      << "  --width <count>        Set board width for use with --test" << EL
+      << "  --height <count>       Set board height for use with --test" << EL
       << "  --watch                Watch every shot during test" << EL
       << "  --test-db <dir>        Store bot test results in given dir" << EL
       << "  -i <count>," << EL
@@ -230,8 +232,30 @@ bool Client::test() {
     if (!bot) {
       throw std::runtime_error("Missing parameter: --bot <name>");
     }
-    // TODO allow user defined configuration
+
     Configuration config = Configuration::getDefaultConfiguration();
+    const CommandArgs& args = CommandArgs::getInstance();
+
+    const char* str = args.getValueOf("--width");
+    if (str) {
+      int val = atoi(Input::trim(str).c_str());
+      if (val < 8) {
+        throw std::runtime_error("Invalid --width value");
+      } else {
+        config.setBoardSize((unsigned)val, config.getBoardSize().getHeight());
+      }
+    }
+
+    str = args.getValueOf("--height");
+    if (str) {
+      int val = atoi(Input::trim(str).c_str());
+      if (val < 8) {
+        throw std::runtime_error("Invalid --height value");
+      } else {
+        config.setBoardSize(config.getBoardSize().getWidth(), (unsigned)val);
+      }
+    }
+
     bot->setConfig(config);
     bot->test(testDir, testIterations, watchTestShots);
     return true;
