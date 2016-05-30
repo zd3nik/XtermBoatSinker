@@ -43,7 +43,9 @@ void Sal9000::searchScore(const Board& board, ScoredCoordinate& coord,
   double score   = (double(north + south + east + west) / (4 * maxLen));
   coord.setScore((unsigned)floor(score * weight));
   assert(coord.getScore() < (2 * weight));
-  searchCoords.push_back(coord);
+  if (debugMode) {
+    searchCoords.push_back(coord);
+  }
 }
 
 } // namespace xbs

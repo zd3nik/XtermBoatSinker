@@ -158,7 +158,9 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
   }
 
   coord.setScore(score * weight);
-  frenzyCoords.push_back(coord);
+  if (debugMode) {
+    frenzyCoords.push_back(coord);
+  }
 }
 
 } // namespace xbs

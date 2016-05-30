@@ -17,8 +17,10 @@ namespace xbs
 class Hal9000: public TargetingComputer
 {
 public:
+  Hal9000();
   virtual std::string getName() const;
   virtual Version getVersion() const;
+  virtual void setConfig(const Configuration&);
 
 protected:
   virtual ScoredCoordinate bestShotOn(const Board&);
@@ -27,6 +29,7 @@ protected:
   virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
   virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 
+  bool debugMode;
   std::vector<ScoredCoordinate> frenzyCoords;
   std::vector<ScoredCoordinate> searchCoords;
 };

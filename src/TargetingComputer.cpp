@@ -39,6 +39,7 @@ void TargetingComputer::setConfig(const Configuration& configuration) {
   height = config.getBoardSize().getHeight();
   maxLen = std::max(width, height);
   boardLen = (width * height);
+  parity = random(2);
   coords.reserve(boardLen);
 }
 
@@ -95,7 +96,7 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
   for (unsigned i = 0; i < desc.size(); ++i) {
     if (desc[i] == Boat::NONE) {
       const ScoredCoordinate coord(0, ((i % width) + 1), ((i / width) + 1));
-      if (coord.parity() || board.adjacentHits(coord)) {
+      if ((coord.parity() == parity) || board.adjacentHits(coord)) {
         coords.push_back(coord);
       }
     }
@@ -165,6 +166,8 @@ void TargetingComputer::test(std::string testDB, unsigned iterations,
     if (!targetBoard.updateBoatArea(board.getMaskedDescriptor())) {
       throw std::runtime_error("Failed to mask boat area");
     }
+
+    parity = random(2);
 
     unsigned hits = 0;
     unsigned shots = 0;

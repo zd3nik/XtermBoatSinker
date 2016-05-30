@@ -41,13 +41,14 @@ protected:
   unsigned random(const unsigned bound) const;
   const ScoredCoordinate& getBestFromCoords();
 
+  Configuration config;
   unsigned shortBoat;
   unsigned longBoat;
   unsigned width;
   unsigned height;
   unsigned maxLen;
   unsigned boardLen;
-  Configuration config;
+  bool parity;
   std::vector<ScoredCoordinate> coords;
 };
 
