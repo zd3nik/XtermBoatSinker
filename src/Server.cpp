@@ -1276,7 +1276,7 @@ Configuration Server::getGameConfig() {
     }
   }
 
-  str = args.getValueOf("--heigth");
+  str = args.getValueOf("--height");
   if (str) {
     int val = atoi(Input::trim(str).c_str());
     if (val < 8) {
