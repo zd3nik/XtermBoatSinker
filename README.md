@@ -1,16 +1,16 @@
 Xterm Boat Sinker
 =================
 
-This is a multi-player battleship game.  A game requires 2 or more players.  Each player has a board and set of ships.  The board size, boat count, and boat sizes are the same for all players.  Before the game starts each player places their boats on their board in locations unknown to the other players.  Each boat spans 2 or more coordinates on the board.  The objective of the game is to sink your opponents boats by firing shots at their boards using coordinates to designate the location of your shots.  If one of your opponent's boats occupies the target coordinate you get a HIT (X), otherwise you get a MISS (0).  Hits are worth 1 point each.  Misses are worth 0 points.
+This is a multi-player battleship game.  A game requires 2 or more players.  Each player has one board and a set of boats to place on their board.  The board size, boat count, and boat sizes are the same for all players.  Before the game starts each player places their boats on their board in locations unknown to the other players.  Each boat spans 2 or more coordinates on the board.  The objective of the game is to sink your opponents boats by firing shots at their boards using coordinates to designate the location of your shots.  If an opponent's boat occupies a coordinate you shoot at you score a HIT.  Hits are worth 1 point each.  Misses are worth 0 points.
 
 Once a game has started players take turns shooting at each other's boards (you are not allowed to shoot at your own board).  The game ends when at least one player has obtained the game's point goal.  By default the point goal is equal to the total number of coordinates a single player's boats can occupy.  All players get the same number of shots so it is possible for one or more (even all) players to obtain the point goal.  In other words, it is possible for 2 or more players to tie for first place.
 
-The game *doesn't* end when all of a players boats are sunk.  And a player is not disabled when all of their boats are sunk.  The objective of the game is to get the most hits and all players are provided an equal number of shots regardless of the state of their own boats.  The challenge of the game is to figure out the location of other player boats based on what coordinates have hits, misses, or have not yet been targeted.  The player with the best logic (and some luck) will win the most often.
+The game does **not** end when all of a player's boats are sunk.  Nor does having all of your boats sunk eliminate you from the game.  The objective of the game is to get the most hits, not to avoid getting sunk - although arranging your boats so they are less likely to get hit helps reduce the amount of points your opponents can get, so place you boats wisely.
 
 How to start a game
 -------------------
 
-The server and client binaries produced by this project are console applications compatible with terminal consoles that support VT100 emulation.  To host a game run the xbs-server binary in a VT100 compatible terminal emulator, such as Xterm.  Users may then join the game by running the xbs-client binary in a VT100 compatible terminal emulator.
+The server and client binaries produced by this project are console applications compatible with terminal consoles that support VT100 emulation.  To host a game run the `xbs-server` binary in a VT100 compatible terminal emulator, such as Xterm.  Players may then join the game by running the `xbs-client` binary in separate VT100 compatible terminal emulators.
 
 Run `xbs-server --help` to see a list of command-line options for the server.
 
@@ -19,7 +19,7 @@ Run `xbs-client --help` to see a list of command-line options for the client.
 Bots!
 -----
 
-The client can be configured to connect as a "bot" (e.g. a robot, computer AI, etc).  There are multiple bot algorithms to choose from.  Run `xbs-client` with the `--list-bots` option to see what's available.
+The client can be configured to connect as a "bot" (e.g. a robot, computer AI, etc).  There are multiple bot algorithms to choose from.  Run `xbs-client --list-bots` to see which bots are available.
 
 Bots can be tested with the `--test` command-line option.  This gives you a general idea of the strength and speed of the bot.  The test generates a number of boards with random boat placement and lets the bot take shots at each board until it has sunk all the boats.  Bots that consistently sink all the boats with fewer shots are generally stronger.  The number of boards to use for testing can be set with the `--iterations` command-line-parameter.
 
@@ -32,14 +32,14 @@ An *open* hit is a group of any number of contiguous hits that have not been sur
 
 In `--test` mode the standard number and size of boats is always used, regardless of board size.  So you can increase the board size to better judge a bot's search method.  The size of the board has little or no effect on a bot's destroy method in most cases.
 
-See the `--width` and `--height` command-line options of xbs-client for changing the `--test` board size.
+Use the `--width` and `--height` command-line options of `xbs-client` to change the `--test` board size.
 
 Communication Protocol
 ----------------------
 
-The server and client application communicate with one-line text messages over a TCP socket.  Each line is terminated by a single new-line character.  Trailing whitespace characters (spaces, tabs, form-feeds, carriage returns, new-lines) should be stripped from the message.
+The server and client application communicate with one-line text messages over a TCP socket.  Each line is terminated by a single new-line character.  Trailing whitespace characters (spaces, tabs, form-feeds, carriage returns, new-lines) are stripped from the messages before they're processed.
 
-The format of every message (except error messages) follow the following form:
+All messages (except error messages) use the following form:
 
     TYPE|VALUE1|VALUE2|...
 
@@ -47,17 +47,17 @@ The format of every message (except error messages) follow the following form:
 
 If a message does not follow this format is is to be treated as an `ERROR MESSAGE`.
 
-Only some messages elicit a direct response.  For the most part messages handling should be completely asynchronous.  In most cases if the server has a reaction to a client message the reaction is sent as a text message (type `M`) which should be displayed to the user the same as any other text message.  **Text messages should never be expected or parsed as a response to another message.**
+Only some messages elicit a direct response.  For the most part message handling should be completely asynchronous.  In most cases if the server has a reaction to a client message the reaction is sent as a text message (type `M`) which should be displayed to the user the same as any other text message.  **Text messages should never be expected or parsed as a response to another message.**
 
 NOTE: The message type can have different values depending on context.  For example a type `M` message sent from a client has the form `M|recipient|text` but a type `M` message from the server has the form `M|sender|text|group`
 
-NOTE: No form of character escaping is supported in the messaging protocol.  So individual message values/parameters may *not* contain pipe `|` characters, end of story, period.
+NOTE: No form of character escaping is supported in the messaging protocol.  So individual message values/parameters may *not* contain pipe `|` characters.
 
 ### Protocol Reference
 
 #### Client to server messages:
 
-    Description      Client message format   Server response
+    Description      Client message          Server response
     ========================================================================================
     Get game info    G                       G|--see "Game Info Message" below--
     Ping             P|text                  P|text
@@ -70,16 +70,16 @@ NOTE: No form of character escaping is supported in the messaging protocol.  So 
 
 More info:
 
-    Message          Details
+    Client Message   Details
     ========================================================================================
-    G                Request game info message.  See "Game Info Message" below.
+    G                Request game info.  See "Game Info Message" below.
     P|text           Ping.  The server will echo the exact same message back.
     J|name|board     Join the current game using the specified player name.
                      - Server will respond with J|name if successful.
-                     - Server will respond with E|message unsuccessful but you may retry.
+                     - Server will respond with E|message if unsuccessful but you may retry.
                      - See "Board Value" below for details about board value.
     S|player|X|Y     Fire a shot at specified player's board at specified X,Y coordinates.
-    K|reason         Skip your turn, ignored if it's not your turn.  Reason is optional.
+    K|reason         Skip your turn.  Ignored if it's not your turn.  Reason is optional.
     M|player|text    Send a text message to the specified player.
                      - If player is empty send text to all players.
                      - Ignored if text is empty.
@@ -120,9 +120,10 @@ More info:
                      - One value given for each player joined, value is player name.
                      - Player names given in turn order.
     N|player         Sets the current player to move.
-    H|player|X|Y     A hit scored on player's board at the specified coordinates.
-                     - This message should be used to inform users, not to update boards.
-                     - Board updates are sent by the server whenever their state changes.
+    H|plyr|targt|xy  Sent when a player gets a hit.
+                     - The "plyr" value is the name of the player that got the hit.
+                     - The "targt" value is the name of the player that got hit.
+                     - The "xy" value is the alpha/numeric coordinate of the hit.
     L|player|reason  The specified player has left the game.  Reason is optional.
     M|from|txt|grp   Specified "text" message was sent by "from" player.
                      - This message is sent to intended recipients only.
@@ -247,6 +248,203 @@ Example viewed one row at a time with spaces between each square:
     . . . . . . . . . .
     . A A A A A . . . .
 
-### Protocol Exchange Sequence
+#### Game Finished Message
 
+When the game has finished the server sends a type `F` message followed by one type `R` message for every player.
+
+The type `F` message has the following values:
+
+    #   Value
+    =========================================================================
+    1   Game state ("Finished" or "aborted")
+    2   Number of turns taken
+    3   Number of players (this is the number of type `R` messages to expect)
+
+Example type `F` message:
+
+    F|finished|35|4
+
+    Game state = finished
+    Turns      = 35
+    Players    = 4
+
+The type `R` messages have the following values:
+
+    #   Value
+    =========================================================================
+    1   Player name
+    2   Player score
+    3   Number of times this player skipped their turn
+    4   Number of turns this player had (including skipped turns)
+    5   Status (disconnected, etc) usually blank
+
+Example type `R` message:
+
+    R|turkey|13|0|35|
+
+    Player name = turkey
+    Score       = 15
+    Skips       = 0
+    Turns       = 35
+    Status      = (none)
+
+### Example Protocol Exchanges
+
+Messages going from client (you) to server prefixed with `-->`
+
+Messages going from server to client (you) prefixed with `<--`
+
+#### Standard Example
+
+    --> (establish connection to server, send no message)
+
+        (server sends game info message)
+        <-- G|ver|title|N|2|9|0|17|10|10|5|A5|B4|C3|D3|E2
+
+        (join game)
+    --> J|turkey|<board value>
+
+        (confirmation)
+        <-- J|turkey
+
+        (another player joins)
+        <-- J|shooter
+
+        (say hello to shooter)
+    --> M|shooter|hello
+
+        (shooter responds)
+        <-- M|shooter|prepare to be cooked
+
+        (another player joins)
+        <-- J|edgar
+
+        (shooter sends text to ALL)
+        <-- M|shooter|it's hunting season!|All
+
+        (you send text to ALL)
+    --> M||i'm coming for you shooter, and hell's coming with me!
+
+        (server sends text to ALL)
+        <-- M||i'm going to start the game now, any objections?|All
+
+        (you send text to ALL, NOTE: cannot send private text to server)
+    --> M||no objection
+
+        (other players respond with text to ALL)
+        <-- M|shooter|nope|All
+        <-- M|edgar|no objects|All
+
+        (server sends boards, start message, next player message)
+        <-- B|shooter||<board value>|0|0
+        <-- B|turkey||<board value>|0|0
+        <-- B|edgar||<board value>|0|0
+        <-- S|shooter|turkey|edgar
+        <-- N|shooter
+
+        (shooter takes shot at you and misses)
+        <-- B|turkey||<board value>|0|0
+        <-- N|turkey
+
+        (you shoot at shooter)
+    --> S|shooter|4|2
+
+        (you got a hit, server sends board, hit, next turn messages)
+        <-- B|shooter|<board value>|0|0
+        <-- H|turkey|shooter|d2
+        <-- N|edgar
+
+        (shooter sends taunt)
+        <-- M|shooter|you hit like a goldfish!
+
+        (edgar gets hit, server sends board, hit, next turn messages)
+        <-- B|shooter|<board value>|0|0
+        <-- H|edgar|shooter|e2
+        <-- N|shooter
+
+        (game proceeds until edgar wins, server sends game finished message)
+        <-- F|finished|41|3
+        <-- R|edgar|17|0|41|
+        <-- R|turkey|13|0|41|
+        <-- R|shooter|6|0|38|disconnected
+
+#### Invalid Player Name
+
+    --> (establish connection to server, send no message)
+
+        (server sends game info message)
+        <-- G|ver|title|N|2|9|5|17|10|10|5|A5|B4|C3|D3|E2
+
+        (join game attempt 1)
+    --> J|I love really long usernames|<board value>
+
+        (join request rejected, retry permitted)
+        <-- E|name too long
+
+        (join game attempt 2)
+    --> J|turkey|<board value>
+
+        (join request rejected, retry permitted)
+        <-- E|name in use
+
+        (join game attempt 3)
+    --> J|me|<board value>
+
+        (join request rejected, retry permitted)
+        <-- E|invalid name
+
+        (join game attempt 4)
+    --> J|4 attempts|<board value>
+
+        (join request rejected, retry permitted)
+        <-- E|invalid name
+
+        (join game attempt 5)
+    --> J|dead meat|<board value>
+
+        (confirmation, and list of other players sent)
+        <-- J|dead meat
+        <-- J|alice
+        <-- J|turkey
+        <-- J|aakbar
+        <-- J|captain nimo
+        <-- J|your mom
+
+#### Rejoin a Game In Progress
+
+Attempt #1
+
+    --> (establish connection to server, send no message)
+
+        (server sends game info message)
+        <-- G|ver|title|Y|2|9|5|17|10|10|5|A5|B4|C3|D3|E2
+
+        (join game attempt using a new player name)
+    --> J|some new name
+
+        (error message sent in reply and you are disconnected)
+        <-- game is already started
+
+Attempt #2
+
+    --> (establish connection to server, send no message)
+
+        (server sends game info message)
+        <-- G|ver|title|Y|2|9|5|17|10|10|5|A5|B4|C3|D3|E2
+
+        (join game attempt using same player name as original join)
+    --> J|dead meat
+
+        (confirmation, your board, and list of other players sent)
+        <-- J|dead meat
+        <-- Y|<board value>
+        <-- J|alice
+        <-- J|turkey
+        <-- J|aakbar
+        <-- J|captain nimo
+        <-- J|your mom
+
+NOTE: You do not send a board value in the join message when re-joining a game in progress.
+
+NOTE: Your board (type `Y` message) is only sent on rejoin attempts.
 
