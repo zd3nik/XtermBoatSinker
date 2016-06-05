@@ -7,8 +7,8 @@
 
 #include <string>
 #include "Container.h"
-#include "Version.h"
 #include "Coordinate.h"
+#include "Printable.h"
 
 namespace xbs
 {
@@ -80,6 +80,12 @@ public:
     return str(x);
   }
 
+  Screen& operator<<(const long long x) {
+    char sbuf[32];
+    snprintf(sbuf, sizeof(sbuf), "%lld", x);
+    return str(sbuf);
+  }
+
   Screen& operator<<(const long x) {
     char sbuf[32];
     snprintf(sbuf, sizeof(sbuf), "%ld", x);
@@ -100,6 +106,12 @@ public:
 
   Screen& operator<<(const char x) {
     return ch(x);
+  }
+
+  Screen& operator<<(const unsigned long long x) {
+    char sbuf[32];
+    snprintf(sbuf, sizeof(sbuf), "%llu", x);
+    return str(sbuf);
   }
 
   Screen& operator<<(const unsigned long x) {
@@ -128,17 +140,17 @@ public:
 
   Screen& operator<<(const float x) {
     char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%f", x);
+    snprintf(sbuf, sizeof(sbuf), "%.02f", x);
     return str(sbuf);
   }
 
   Screen& operator<<(const double x) {
     char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%lf", x);
+    snprintf(sbuf, sizeof(sbuf), "%.02lf", x);
     return str(sbuf);
   }
 
-  Screen& operator<<(const Version& x) {
+  Screen& operator<<(const Printable& x) {
     return str(x.toString().c_str());
   }
 

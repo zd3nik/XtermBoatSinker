@@ -10,6 +10,7 @@
 #include "Version.h"
 #include "Coordinate.h"
 #include "ScoredCoordinate.h"
+#include "Timer.h"
 
 namespace xbs
 {
@@ -68,12 +69,15 @@ public:
     return operator<<(x.toString());
   }
 
+  LogStream& operator<<(const Timer& x) {
+    return operator<<(x.toString());
+  }
+
 private:
   std::ostream* stream;
   const bool print;
 };
 
 } // namespace xbs
-
 
 #endif // LOGSTREAM_H

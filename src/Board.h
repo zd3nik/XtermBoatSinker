@@ -86,6 +86,7 @@ public:
   std::vector<std::string> getHitTaunts() const;
   std::vector<std::string> getMissTaunts() const;
   std::string toString(const unsigned number, const bool gameStarted) const;
+  virtual std::string toString() const;
 
   int getHandle() const;
   Container getBoatArea() const;

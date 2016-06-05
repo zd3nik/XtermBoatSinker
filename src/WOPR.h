@@ -15,12 +15,20 @@ namespace xbs
 class WOPR : public Edgar
 {
 public:
+  WOPR();
+
   virtual std::string getName() const;
   virtual Version getVersion() const;
-  virtual void setConfig(const Configuration&);
 
 protected:
+  virtual void newBoard(const Board&, const bool parity);
   virtual ScoredCoordinate bestShotOn(const Board&);
+
+  enum TestResult {
+    POSSIBLE,
+    IMPROBABLE,
+    IMPOSSIBLE
+  };
 
   struct Placement {
     Boat boat;
@@ -30,7 +38,7 @@ protected:
     unsigned hits;
     double score;
 
-    void setScore(const std::string& desc, const bool testSquare) {
+    void setScore(const std::string& desc) {
       hits = 0;
       unsigned sqr = start;
       unsigned len = boat.getLength();
@@ -39,9 +47,6 @@ protected:
         sqr += inc;
       }
       score = (double(hits) - (double(abs(int(len) - int(hits))) / len));
-      if (testSquare) {
-        score /= 10;
-      }
     }
 
     bool operator<(const Placement& other) const {
@@ -49,9 +54,9 @@ protected:
     }
   };
 
-  bool isPossible(std::string& desc, const Coordinate&);
-  bool isPossible(const unsigned ply, std::string& desc);
-  bool canPlace(const unsigned ply, std::string& desc, const Placement&);
+  TestResult isPossible(const Board&, std::string& desc, const Coordinate&);
+  TestResult isPossible(const unsigned ply, std::string& desc);
+  TestResult canPlace(const unsigned ply, std::string& desc, const Placement&);
 
   unsigned idx(const Coordinate& coord) const {
     return ((coord.getX() - 1) + (width * (coord.getY() - 1)));
@@ -64,12 +69,13 @@ protected:
   std::set<unsigned> hits;
   std::set<unsigned> examined;
   std::set<unsigned> impossible;
+  std::set<unsigned> improbable;
   std::vector<unsigned> tryCount;
   std::vector<unsigned> okCount;
   unsigned nodeCount;
   unsigned posCount;
   unsigned maxPly;
-  unsigned testSquare;
+  bool fullSearch;
 };
 
 } // namespace xbs

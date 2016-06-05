@@ -51,7 +51,7 @@ Client::Client()
     watchTestShots(false),
     testBot(false),
     msgEnd(~0U),
-    testIterations(0),
+    testPositions(0),
     taunts(NULL),
     bot(NULL)
 {
@@ -132,8 +132,7 @@ void Client::showHelp() {
       << "  --height <count>       Set board height for use with --test" << EL
       << "  --watch                Watch every shot during test" << EL
       << "  --test-db <dir>        Store bot test results in given dir" << EL
-      << "  -i <count>," << EL
-      << "  --iterations <count>   Test bot using given iteration count" << EL
+      << "  --positions <count>    Test with given number of positions" << EL
       << EL << Flush;
 }
 
@@ -211,13 +210,13 @@ bool Client::init() {
     }
   }
 
-  const char* itCount = args.getValueOf("-i", "--iterations");
+  const char* itCount = args.getValueOf("--positions");
   if (itCount) {
-    std::string iterations = Input::trim(itCount);
-    if (!isdigit(*iterations.c_str())) {
-      throw std::runtime_error("Invalid test iteration value: " + iterations);
+    std::string positions = Input::trim(itCount);
+    if (!isdigit(*positions.c_str())) {
+      throw std::runtime_error("Invalid posision count value: " + positions);
     }
-    testIterations = (unsigned)atoi(iterations.c_str());
+    testPositions = (unsigned)atoi(positions.c_str());
   }
 
   const char* testDB = args.getValueOf("--test-db");
@@ -263,7 +262,7 @@ bool Client::test() {
     }
 
     bot->setConfig(config);
-    bot->test(testDir, testIterations, watchTestShots);
+    bot->test(testDir, testPositions, watchTestShots);
     return true;
   }
   return false;

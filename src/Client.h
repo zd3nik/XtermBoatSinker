@@ -105,7 +105,7 @@ protected:
   bool watchTestShots;
   bool testBot;
   unsigned msgEnd;
-  unsigned testIterations;
+  unsigned testPositions;
   FileSysDBRecord* taunts;
   TargetingComputer* bot;
 

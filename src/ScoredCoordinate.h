@@ -52,7 +52,7 @@ public:
     return (score < other.score);
   }
 
-  std::string toString() const {
+  virtual std::string toString() const {
     char sbuf[128];
     snprintf(sbuf, sizeof(sbuf), "%s,%u", Coordinate::toString().c_str(), score);
     return sbuf;

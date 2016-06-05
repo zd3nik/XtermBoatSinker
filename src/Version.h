@@ -6,12 +6,13 @@
 #define VERSION_H
 
 #include <string>
+#include "Printable.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Version
+class Version : public Printable
 {
 public:
   Version(const unsigned major_ = 0,
@@ -31,7 +32,7 @@ public:
   Version& setOther(const std::string& value);
   Version& clear();
 
-  std::string toString() const;
+  virtual std::string toString() const;
   bool isEmpty() const;
   bool isValid() const;
   bool operator<(const Version&) const;
@@ -41,7 +42,6 @@ public:
   bool operator<=(const Version& v) const { return !(operator>(v)); }
   bool operator>=(const Version& v) const { return !(operator<(v)); }
   bool operator!() const { return isEmpty(); }
-  operator bool() const { return isValid(); }
 
   unsigned getMajor() const {
     return major_;

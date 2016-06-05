@@ -11,6 +11,7 @@
 #include "DBRecord.h"
 #include "Configuration.h"
 #include "Screen.h"
+#include "Timer.h"
 #include "Logger.h"
 #include "Input.h"
 
@@ -111,14 +112,14 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::test(std::string testDB, unsigned iterations,
+void TargetingComputer::test(std::string testDB, unsigned positions,
                              bool watch)
 {
   if (!config.isValid()) {
     throw std::runtime_error("Invalid board configuration");
   }
-  if (!iterations) {
-    iterations = DEFAULT_ITERATIONS;
+  if (!positions) {
+    positions = DEFAULT_POSITION_COUNT;
   }
   if (testDB.empty()) {
     testDB = "testDB";
@@ -131,8 +132,8 @@ void TargetingComputer::test(std::string testDB, unsigned iterations,
            getName().c_str(), getVersion().toString().c_str());
 
   Screen::print() << "Testing " << getName() << " version "
-                  << getVersion() << " using " << iterations
-                  << " iterations" << EL
+                  << getVersion() << " using " << positions
+                  << " test positions" << EL
                   << "Results will be stored in " << testDB << '/'
                   << recordID << EL << Flush;
 
@@ -152,13 +153,16 @@ void TargetingComputer::test(std::string testDB, unsigned iterations,
   Screen::print() << EL << Flush;
   statusLine.shift(South, board.getHeight());
 
+  Timer timer;
   Input input;
   char prev = 0;
   unsigned maxShots = 0;
   unsigned minShots = ~0U;
+  unsigned perfectGames = 0ULL;
   unsigned long long totalShots = 0ULL;
+  std::set<std::string> unique;
 
-  for (unsigned i = 0; i < iterations; ++i) {
+  for (unsigned i = 0; i < positions; ++i) {
     if (!board.addRandomBoats(config)) {
       throw std::runtime_error("Failed random boat placement");
     }
@@ -169,6 +173,8 @@ void TargetingComputer::test(std::string testDB, unsigned iterations,
     }
 
     parity = random(2);
+    newBoard(board, parity);
+    unique.insert(board.getDescriptor());
 
     unsigned hits = 0;
     unsigned shots = 0;
@@ -208,44 +214,63 @@ void TargetingComputer::test(std::string testDB, unsigned iterations,
     }
     minShots = std::min(shots, minShots);
     maxShots = std::max(shots, maxShots);
+    perfectGames += (shots == hits);
 
-    if (!i || ((i % 1000) == 999)) {
+    if (!i || (timer.tick() >= Timer::ONE_SECOND)) {
+      timer.tock();
       double avg = (double(totalShots) / (i + 1));
       board.print(true);
       Screen::print() << statusLine << ClearToLineEnd << (i + 1)
-                      << " iterations, min shots " << minShots
-                      << ", max shots " << maxShots
-                      << ", avg shots " << avg << EL << Flush;
+                      << " positions, time " << timer
+                      << ", min/max/avg shots " << minShots
+                      << '/' << maxShots << '/' << avg << EL << Flush;
     }
   }
 
+  const Milliseconds elapsed = timer.elapsed();
   Screen::print() << board.getTopLeft() << ClearToScreenEnd;
   board.print(true);
-  Screen::print() << statusLine << ClearToScreenEnd << iterations
-                  << " iterations complete!" << EL << Flush;
+  Screen::print() << statusLine << ClearToScreenEnd << positions
+                  << " positions complete! time = " << timer << EL << Flush;
 
   if (!totalShots) {
     throw std::runtime_error("No shots taken");
   }
 
-  double avg = (double(totalShots) / iterations);
+  double avg = (double(totalShots) / positions);
   Screen::print() << "Min shots to sink all boats: " << minShots << EL
                   << "Max shots to sink all boats: " << maxShots << EL
-                  << "Avg shots to sink all boats: " << avg << EL << Flush;
+                  << "Avg shots to sink all boats: " << avg << EL
+                  << "Perfect games              : " << perfectGames << EL
+                  << "Unique test positions      : " << unique.size() << EL
+                  << Flush;
 
   if (rec) {
-    // TODO add last test date, test time, and avg test time
+    unsigned allTimeMin = rec->getUInt("minShotCount");
+    unsigned allTimeMax = rec->getUInt("maxShotCount");
+    allTimeMin = (allTimeMin ? std::min(allTimeMin, minShots) : minShots);
+    allTimeMax = (allTimeMax ? std::max(allTimeMax, maxShots) : maxShots);
+
+    // TODO add last test date
     rec->incUInt("testsRun");
     rec->setUInt("board.width", config.getBoardSize().getWidth());
     rec->setUInt("board.height", config.getBoardSize().getHeight());
-    rec->incUInt("total.iterationCount", iterations);
-    rec->setUInt("last.iterationCount", iterations);
+    rec->incUInt("total.positionCount", positions);
+    rec->setUInt("last.positionCount", positions);
+    rec->incUInt("total.uniquePositionCount", unique.size());
+    rec->setUInt("last.uniquePositionCount", unique.size());
     rec->incUInt64("total.shotCount", totalShots);
     rec->setUInt64("last.shotCount", totalShots);
     rec->incUInt("total.minShotCount", minShots);
     rec->setUInt("last.minShotCount", minShots);
     rec->incUInt("total.maxShotCount", maxShots);
     rec->setUInt("last.maxShotCount", maxShots);
+    rec->incUInt("total.perfectCount", perfectGames);
+    rec->setUInt("last.perfectCount", perfectGames);
+    rec->setUInt("minShotCount", allTimeMin);
+    rec->setUInt("maxShotCount", allTimeMax);
+    rec->incUInt64("total.time", elapsed);
+    rec->setUInt64("last.time", elapsed);
     db.sync();
   }
 }

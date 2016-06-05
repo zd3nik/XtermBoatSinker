@@ -7,12 +7,19 @@
 #include <algorithm>
 #include "WOPR.h"
 #include "Logger.h"
+#include "CommandArgs.h"
+#include "Timer.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version WOPR_VERSION("1.0");
+const Version WOPR_VERSION("1.1");
+
+//-----------------------------------------------------------------------------
+WOPR::WOPR()
+  : fullSearch(CommandArgs::getInstance().indexOf("--fullSearch") > 0)
+{ }
 
 //-----------------------------------------------------------------------------
 std::string WOPR::getName() const {
@@ -25,9 +32,10 @@ Version WOPR::getVersion() const {
 }
 
 //-----------------------------------------------------------------------------
-void WOPR::setConfig(const Configuration& configuration) {
-  Edgar::setConfig(configuration);
+void WOPR::newBoard(const Board& board, const bool parity) {
+  Edgar::newBoard(board, parity);
   impossible.clear();
+  improbable.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -52,27 +60,38 @@ ScoredCoordinate WOPR::bestShotOn(const Board& board) {
     return best;
   }
 
+  Timer timer;
   std::sort(coords.begin(), coords.end(), ScoreCompare);
   for (unsigned i = 0; i < coords.size(); ++i) {
     ScoredCoordinate& coord = coords[i];
     Logger::debug() << "checking possibility of " << coord;
-    if (isPossible(desc, coord)) {
+    switch (isPossible(board, desc, coord)) {
+    case POSSIBLE:
       Logger::debug() << coord << " verified!";
+      if (fullSearch && (timer.tick() >= Timer::ONE_SECOND)) {
+        Logger::debug() << board.toString();
+      }
       return coord;
-    } else {
-      Logger::info() << coord << " is not possible, setting score to 0";
+    case IMPROBABLE:
+      Logger::debug() << "lowering score on improbable " << coord;
+      coord.setScore(coord.getScore() / 3);
+      if (!debugMode && (timer.tick() >= Timer::ONE_SECOND)) {
+        Logger::debug() << board.toString();
+      }
+      break;
+    default:
+      Logger::info() << "setting score to 0 on impossible " << coord;
       coord.setScore(0);
     }
   }
-
-  Logger::error() << "None of the " << coords.size()
-                  << " provided coordinates are possible hits";
 
   return getBestFromCoords();
 }
 
 //-----------------------------------------------------------------------------
-bool WOPR::isPossible(std::string& desc, const Coordinate& coord) {
+WOPR::TestResult WOPR::isPossible(const Board& board, std::string& desc,
+                                  const Coordinate& coord)
+{
   examined.clear(); // which boat indexes have already been examined
   tryCount.clear(); // attempted boat placements per ply
   okCount.clear();  // successful boat placements per ply
@@ -83,16 +102,32 @@ bool WOPR::isPossible(std::string& desc, const Coordinate& coord) {
   tryCount.assign(config.getBoatCount(), 0);
   okCount.assign(config.getBoatCount(), 0);
 
-  testSquare = idx(coord);
+  const unsigned testSquare = idx(coord);
   if (impossible.count(testSquare)) {
-    return false;
+    return IMPOSSIBLE;
+  } else if (improbable.count(testSquare)) {
+    return IMPROBABLE;
   }
 
   assert(desc[testSquare] == Boat::NONE);
   desc[testSquare] = Boat::HIT;
   hits.insert(testSquare);
 
-  bool ok = isPossible(0, desc);
+  TestResult result = isPossible(0, desc);
+  switch (result) {
+  case IMPROBABLE:
+    improbable.insert(testSquare);
+    if (debugMode) {
+      Logger::info() << coord << " is improbable" << board.toString();
+    }
+    break;
+  case IMPOSSIBLE:
+    impossible.insert(testSquare);
+    Logger::info() << coord << " is impossible" << board.toString();
+    break;
+  default:
+    break;
+  }
 
   assert(desc[testSquare] == Boat::HIT);
   desc[testSquare] = Boat::NONE;
@@ -112,10 +147,7 @@ bool WOPR::isPossible(std::string& desc, const Coordinate& coord) {
     }
   }
 
-  if (!ok) {
-    impossible.insert(testSquare);
-  }
-  return ok;
+  return result;
 }
 
 //-----------------------------------------------------------------------------
@@ -152,14 +184,14 @@ unsigned forward(const std::string& desc, unsigned i, unsigned last,
 }
 
 //-----------------------------------------------------------------------------
-bool WOPR::isPossible(const unsigned ply, std::string& desc) {
+WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
   assert(hits.size() > 0);
   if (examined.size() >= config.getBoatCount()) {
-    return false;
+    return IMPOSSIBLE;
   }
 
   std::vector<Placement> candidates;
-  for (unsigned i = config.getBoatCount(); i-- > 0; ) {
+  for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     if (!examined.count(i)) {
       const Boat& boat = config.getBoat(i);
       std::set<unsigned>::const_iterator it;
@@ -205,7 +237,7 @@ bool WOPR::isPossible(const unsigned ply, std::string& desc) {
             placement.boatIndex = i;
             placement.start = start;
             placement.inc = width;
-            placement.setScore(desc, (sqr == testSquare));
+            placement.setScore(desc);
             start += width;
           }
         }
@@ -222,7 +254,7 @@ bool WOPR::isPossible(const unsigned ply, std::string& desc) {
             placement.boatIndex = i;
             placement.start = start;
             placement.inc = 1;
-            placement.setScore(desc, (sqr == testSquare));
+            placement.setScore(desc);
             start++;
           }
         }
@@ -230,27 +262,52 @@ bool WOPR::isPossible(const unsigned ply, std::string& desc) {
     }
   }
   if (candidates.empty()) {
-    return false;
+    return IMPOSSIBLE;
   }
 
   std::sort(candidates.begin(), candidates.end());
 
-  bool ok = false;
-  for (unsigned i = 0; (i < candidates.size()) && !ok; ++i) {
+  // try to search each of the boat lengths early in the list
+  std::map<unsigned, unsigned> lengthCount;
+  for (unsigned i = 0; i <= (candidates.size() / 2); ++i) {
+    const Boat& boat = candidates[i].boat;
+    unsigned count = lengthCount[boat.getLength()]++;
+    if (count > 2) {
+      std::swap(candidates[i], candidates[candidates.size() - 1]);
+    }
+  }
+
+  unsigned improbCount = 0;
+  unsigned half = std::max<unsigned>(25, ((candidates.size() + 1) / 2));
+  TestResult result = IMPOSSIBLE;
+
+  for (unsigned i = 0; i < candidates.size(); ++i) {
+//    if ((i > 2) && (i < half) && (i != (candidates.size() - 1)) &&
+//        (random(10) > 4))
+//    {
+//      std::swap(candidates[i], candidates[candidates.size() - 1]);
+//    }
     const Placement& placement = candidates[i];
     examined.insert(placement.boatIndex);
-    if (canPlace(ply, desc, placement)) {
-      ok = true;
+    TestResult tmp = canPlace(ply, desc, placement);
+    if (tmp == POSSIBLE) {
+      result = POSSIBLE;
       break;
+    }
+    if (!fullSearch && ((i + 1) < candidates.size())) {
+      if (++improbCount >= half) {
+        result = IMPROBABLE;
+        break;
+      }
     }
     examined.erase(placement.boatIndex);
   }
-  return ok;
+  return result;
 }
 
 //-----------------------------------------------------------------------------
-bool WOPR::canPlace(const unsigned ply, std::string& desc,
-                    const Placement& placement)
+WOPR::TestResult WOPR::canPlace(const unsigned ply, std::string& desc,
+                                const Placement& placement)
 {
   assert(ply < tryCount.size());
   assert(hits.size() > 0);
@@ -259,68 +316,49 @@ bool WOPR::canPlace(const unsigned ply, std::string& desc,
   tryCount[ply]++;
   nodeCount++;
 
-  std::vector<unsigned> squares;
-  const Boat& boat = placement.boat;
-  unsigned sqr = placement.start;
-  unsigned hitCount = 0;
-  for (unsigned n = 0; n < boat.getLength(); ++n) {
-    assert(sqr < desc.size());
-    assert(squares.size() <= boat.getLength());
-    const char ch = desc[sqr];
-    assert((ch == Boat::NONE) || (ch == Boat::HIT));
-    if (ch == Boat::HIT) {
-      assert(hits.count(sqr));
-      hitCount++;
-    }
-    squares.push_back(sqr);
-    sqr += placement.inc;
-  }
-
-  assert((hitCount > 0) && (hitCount <= hits.size()));
-  assert(squares.size() == boat.getLength());
-  assert(hitCount == placement.hits);
-
   // does this placement overlap all the remaining hits?
-  if (hitCount == hits.size()) {
+  if (placement.hits == hits.size()) {
     okCount[ply]++;
     posCount++;
-    return true;
+    return POSSIBLE;
   }
 
   // place boat and remove overlapped hits
-  for (unsigned n = 0; n < squares.size(); ++n) {
-    sqr = squares[n];
+  unsigned sqr = placement.start;
+  for (unsigned n = 0; n < placement.boat.getLength(); ++n) {
     if (desc[sqr] == Boat::HIT) {
       assert(hits.count(sqr));
       hits.erase(sqr);
-      desc[sqr] = tolower(boat.getID());
+      desc[sqr] = tolower(placement.boat.getID());
     } else {
       assert(!hits.count(sqr));
       assert(desc[sqr] == Boat::NONE);
-      desc[sqr] = boat.getID();
+      desc[sqr] = placement.boat.getID();
     }
+    sqr += placement.inc;
   }
 
   // see if the remaining boats can be placed
-  bool ok = isPossible((ply + 1), desc);
-  if (ok) {
+  TestResult result = isPossible((ply + 1), desc);
+  if (result == POSSIBLE) {
     okCount[ply]++;
   }
 
   // remove boat and restore overlapped hits
-  for (unsigned n = 0; n < squares.size(); ++n) {
-    sqr = squares[n];
+  sqr = placement.start;
+  for (unsigned n = 0; n < placement.boat.getLength(); ++n) {
     assert(!hits.count(sqr));
-    if (desc[sqr] == boat.getID()) {
+    if (desc[sqr] == placement.boat.getID()) {
       desc[sqr] = Boat::NONE;
     } else {
-      assert(desc[sqr] == tolower(boat.getID()));
+      assert(desc[sqr] == tolower(placement.boat.getID()));
       desc[sqr] = Boat::HIT;
       hits.insert(sqr);
     }
+    sqr += placement.inc;
   }
 
-  return ok;
+  return result;
 }
 
 } // namespace xbs

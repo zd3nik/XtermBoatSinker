@@ -25,6 +25,10 @@ Version RandomRufus::getVersion() const {
 }
 
 //-----------------------------------------------------------------------------
+void RandomRufus::newBoard(const Board&, const bool /*parity*/) {
+}
+
+//-----------------------------------------------------------------------------
 ScoredCoordinate RandomRufus::bestShotOn(const Board& board) {
   const unsigned remain = (config.getPointGoal() - board.getHitCount());
   const unsigned score = (unsigned)floor(boardLen * log(remain + 1));

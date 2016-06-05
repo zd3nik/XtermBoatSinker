@@ -9,6 +9,13 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
+std::string Container::toString() const {
+  char sbuf[128];
+  snprintf(sbuf, sizeof(sbuf), "%ux%u container", getWidth(), getHeight());
+  return sbuf;
+}
+
+//-----------------------------------------------------------------------------
 bool Container::shift(const Direction dir, const unsigned count) {
   if (count) {
     begin.shift(dir, count);

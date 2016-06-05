@@ -23,6 +23,7 @@ public:
   virtual void setConfig(const Configuration&);
 
 protected:
+  virtual void newBoard(const Board&, const bool parity);
   virtual ScoredCoordinate bestShotOn(const Board&);
   virtual ScoredCoordinate frenzyShot(const Board&, const double weight);
   virtual ScoredCoordinate searchShot(const Board&, const double weight);

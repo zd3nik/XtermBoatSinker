@@ -20,7 +20,7 @@ class TargetingComputer
 {
 public:
   enum {
-    DEFAULT_ITERATIONS = 10000U
+    DEFAULT_POSITION_COUNT = 10000U
   };
 
   TargetingComputer();
@@ -29,13 +29,14 @@ public:
   virtual Version getVersion() const = 0;
 
   virtual void setConfig(const Configuration& configuration);
-  virtual void test(std::string testDB, unsigned iterations, bool watch);
+  virtual void test(std::string testDB, unsigned positions, bool watch);
   virtual ScoredCoordinate getTargetCoordinate(const Board&);
   virtual Board* getTargetBoard(const std::string& playerToMove,
                                 const std::vector<Board*>& boardList,
                                 ScoredCoordinate& targetCoord);
 
 protected:
+  virtual void newBoard(const Board&, const bool parity) = 0;
   virtual ScoredCoordinate bestShotOn(const Board&) = 0;
 
   unsigned random(const unsigned bound) const;

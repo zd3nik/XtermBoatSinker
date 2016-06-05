@@ -10,12 +10,13 @@
 #include <stdio.h>
 #include <string>
 #include "Movement.h"
+#include "Printable.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Coordinate
+class Coordinate : public Printable
 {
 public:
   Coordinate()
@@ -109,10 +110,6 @@ public:
     return ((y < other.y) || ((y == other.y) && (x < other.x)));
   }
 
-  operator bool() const {
-    return isValid();
-  }
-
   bool operator!() const {
     return !isValid();
   }
@@ -133,7 +130,7 @@ public:
     return ((x & 1) == (y & 1));
   }
 
-  std::string toString() const {
+  virtual std::string toString() const {
     char sbuf[32];
     if (x <= ('z' - 'a' + 1)) {
       snprintf(sbuf, sizeof(sbuf), "%c%u", (char)('a' + x - 1), y);

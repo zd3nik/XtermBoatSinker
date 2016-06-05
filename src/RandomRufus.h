@@ -20,6 +20,7 @@ public:
   virtual Version getVersion() const;
 
 protected:
+  virtual void newBoard(const Board&, const bool parity);
   virtual ScoredCoordinate bestShotOn(const Board&);
 };
 

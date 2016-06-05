@@ -20,7 +20,7 @@ Hal9000::Hal9000()
   : debugMode(false)
 {
   const CommandArgs& args  = CommandArgs::getInstance();
-  debugMode = args.indexOf("--debugBot");
+  debugMode = (args.indexOf("--debugBot") > 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -38,6 +38,10 @@ void Hal9000::setConfig(const Configuration& configuration) {
   TargetingComputer::setConfig(configuration);
   frenzyCoords.reserve(boardLen);
   searchCoords.reserve(boardLen);
+}
+
+//-----------------------------------------------------------------------------
+void Hal9000::newBoard(const Board&, const bool /*parity*/) {
 }
 
 //-----------------------------------------------------------------------------

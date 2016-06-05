@@ -8,12 +8,13 @@
 #include <vector>
 #include "Coordinate.h"
 #include "Movement.h"
+#include "Printable.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Container
+class Container : public Printable
 {
 public:
   Container() { }
@@ -62,7 +63,7 @@ public:
   }
 
   bool contains(const Coordinate& c) const {
-    return (c && contains(c.getX(), c.getY()));
+    return (c.isValid() && contains(c.getX(), c.getY()));
   }
 
   bool contains(const Container& other) const {
@@ -101,6 +102,7 @@ public:
     return (isValid() ? (getMaxY() - getMinY() + 1) : 0);
   }
 
+  virtual std::string toString() const;
   bool shift(const Direction, const unsigned count = 1);
   bool arrangeChildren(std::vector<Container*>& children) const;
   bool moveCoordinate(Coordinate& coordinate, const Movement& movement) const;

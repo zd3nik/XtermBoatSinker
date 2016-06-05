@@ -617,6 +617,39 @@ bool Board::print(const bool masked, const Configuration* config) const {
 }
 
 //-----------------------------------------------------------------------------
+std::string Board::toString() const {
+  char sbuf[4096];
+  const Container area = getBoatArea();
+  const unsigned width = area.getWidth();
+  const unsigned height = area.getHeight();
+  const char* in = descriptor;
+
+  char* out = sbuf;
+  *out++ = '\n';
+  *out++ = ' ';
+  *out++ = ' ';
+  *out++ = ' ';
+
+  for (unsigned x = 0; x < boatAreaWidth; ++x) {
+    *out++ = ' ';
+    *out++ = ('a' + x);
+  }
+
+  for (unsigned y = 0; y < height; ++y) {
+    snprintf(out, 5, "\n% 3u", (y + 1));
+    out += strlen(out);
+
+    for (unsigned x = 0; x < width; ++x) {
+      *out++ = ' ';
+      *out++ = *in++;
+    }
+  }
+
+  *out = 0;
+  return sbuf;
+}
+
+//-----------------------------------------------------------------------------
 bool Board::updateBoatArea(const std::string& desc) {
   if (desc.empty() || !isValid() || (desc.size() != descriptorLength)) {
     return false;
