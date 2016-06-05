@@ -4,9 +4,7 @@
 //-----------------------------------------------------------------------------
 #include <math.h>
 #include <assert.h>
-#include <algorithm>
 #include "Edgar.h"
-#include "Logger.h"
 
 namespace xbs {
 
@@ -91,10 +89,10 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
       case 2:
         if (np && sp) {
           assert(!(ep | wp));
-          a = (board.getSquare((coord + North) + East) == Boat::HIT_MASK);
-          b = (board.getSquare((coord + North) + West) == Boat::HIT_MASK);
-          c = (board.getSquare((coord + South) + East) == Boat::HIT_MASK);
-          d = (board.getSquare((coord + South) + West) == Boat::HIT_MASK);
+          a = (board.getSquare((coord + North) + East) == Boat::HIT);
+          b = (board.getSquare((coord + North) + West) == Boat::HIT);
+          c = (board.getSquare((coord + South) + East) == Boat::HIT);
+          d = (board.getSquare((coord + South) + West) == Boat::HIT);
           if (a & b & c & d) {
             // between parallel horizontal lines
             searchScore(board, coord, (weight * 1.2));
@@ -104,10 +102,10 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
           }
         } else if (ep && wp) {
           assert(!(np | sp));
-          a = (board.getSquare((coord + North) + East) == Boat::HIT_MASK);
-          b = (board.getSquare((coord + North) + West) == Boat::HIT_MASK);
-          c = (board.getSquare((coord + South) + East) == Boat::HIT_MASK);
-          d = (board.getSquare((coord + South) + West) == Boat::HIT_MASK);
+          a = (board.getSquare((coord + North) + East) == Boat::HIT);
+          b = (board.getSquare((coord + North) + West) == Boat::HIT);
+          c = (board.getSquare((coord + South) + East) == Boat::HIT);
+          d = (board.getSquare((coord + South) + West) == Boat::HIT);
           if (a & b & c & d) {
             // between parallel vertical lines
             searchScore(board, coord, (weight * 1.2));
@@ -124,20 +122,20 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
         // adjacent to 1 perpendicular line
         if (np) {
           assert(!(sp | ep | wp));
-          a = (board.getSquare((coord + North) + East) == Boat::HIT_MASK);
-          b = (board.getSquare((coord + North) + West) == Boat::HIT_MASK);
+          a = (board.getSquare((coord + North) + East) == Boat::HIT);
+          b = (board.getSquare((coord + North) + West) == Boat::HIT);
         } else if (sp) {
           assert(!(np | ep | wp));
-          a = (board.getSquare((coord + South) + East) == Boat::HIT_MASK);
-          b = (board.getSquare((coord + South) + West) == Boat::HIT_MASK);
+          a = (board.getSquare((coord + South) + East) == Boat::HIT);
+          b = (board.getSquare((coord + South) + West) == Boat::HIT);
         } else if (ep) {
           assert(!(np | sp | wp));
-          a = (board.getSquare((coord + East) + North) == Boat::HIT_MASK);
-          b = (board.getSquare((coord + East) + South) == Boat::HIT_MASK);
+          a = (board.getSquare((coord + East) + North) == Boat::HIT);
+          b = (board.getSquare((coord + East) + South) == Boat::HIT);
         } else if (wp) {
           assert(!(np | sp | ep));
-          a = (board.getSquare((coord + West) + North) == Boat::HIT_MASK);
-          b = (board.getSquare((coord + West) + South) == Boat::HIT_MASK);
+          a = (board.getSquare((coord + West) + North) == Boat::HIT);
+          b = (board.getSquare((coord + West) + South) == Boat::HIT);
         } else {
           assert(false);
         }

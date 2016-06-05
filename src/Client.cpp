@@ -18,6 +18,7 @@
 #include "Hal9000.h"
 #include "Sal9000.h"
 #include "Edgar.h"
+#include "WOPR.h"
 
 namespace xbs
 {
@@ -142,6 +143,7 @@ void Client::showBots() {
   Hal9000 hal;
   Sal9000 sal;
   Edgar edgar;
+  WOPR wopr;
 
   Screen::print()
       << EL
@@ -151,6 +153,7 @@ void Client::showBots() {
       << "  " << hal.getName() << " (" << hal.getVersion() << ")" << EL
       << "  " << sal.getName() << " (" << sal.getVersion() << ")" << EL
       << "  " << edgar.getName() << " (" << edgar.getVersion() << ")" << EL
+      << "  " << wopr.getName() << " (" << wopr.getVersion() << ")" << EL
       << EL << Flush;
 }
 
@@ -160,6 +163,7 @@ TargetingComputer* loadBot(const std::string& name) {
   Hal9000 hal;
   Sal9000 sal;
   Edgar edgar;
+  WOPR wopr;
 
   if (!name.empty()) {
     if (strcasecmp(name.c_str(), rufus.getName().c_str()) == 0) {
@@ -170,6 +174,8 @@ TargetingComputer* loadBot(const std::string& name) {
       return new Sal9000();
     } else if (strcasecmp(name.c_str(), edgar.getName().c_str()) == 0) {
       return new Edgar();
+    } else if (strcasecmp(name.c_str(), wopr.getName().c_str()) == 0) {
+      return new WOPR();
     }
   }
 

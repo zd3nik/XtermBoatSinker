@@ -30,6 +30,8 @@ protected:
   virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 
   bool debugMode;
+  unsigned hitCount;
+  unsigned remain;
   std::vector<ScoredCoordinate> frenzyCoords;
   std::vector<ScoredCoordinate> searchCoords;
 };

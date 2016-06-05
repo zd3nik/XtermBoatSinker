@@ -16,9 +16,9 @@ class Boat
 public:
   static const char NONE = '.';
   static const char MISS = '0';
+  static const char HIT = 'X';
   static const char MIN_ID = 'A';
   static const char MAX_ID = 'W';
-  static const char HIT_MASK = 'X';
   static const unsigned MIN_LENGTH = 2;
   static const unsigned MAX_LENGTH = 8;
 
@@ -27,7 +27,7 @@ public:
   }
 
   static bool isBoat(const char id) {
-    return ((id == HIT_MASK) || isValidID(toupper(id)));
+    return ((id == HIT) || isValidID(toupper(id)));
   }
 
   static bool isHit(const char id) {
@@ -43,7 +43,7 @@ public:
   }
 
   static char mask(const char id) {
-    return isValidID(id) ? NONE : isValidID(toupper(id)) ? HIT_MASK : id;
+    return isValidID(id) ? NONE : isValidID(toupper(id)) ? HIT : id;
   }
 
   static char hit(const char id) {

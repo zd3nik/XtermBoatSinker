@@ -33,10 +33,11 @@ TargetingComputer::~TargetingComputer() {
 //-----------------------------------------------------------------------------
 void TargetingComputer::setConfig(const Configuration& configuration) {
   config = configuration;
+  boatArea = config.getBoardSize();
   shortBoat = config.getShortestBoat().getLength();
   longBoat = config.getLongestBoat().getLength();
-  width = config.getBoardSize().getWidth();
-  height = config.getBoardSize().getHeight();
+  width = boatArea.getWidth();
+  height = boatArea.getHeight();
   maxLen = std::max(width, height);
   boardLen = (width * height);
   parity = random(2);
@@ -179,7 +180,7 @@ void TargetingComputer::test(std::string testDB, unsigned iterations,
       } else if (++totalShots == 0) {
         throw std::runtime_error("Shot count overflow");
       } else if (Boat::isValidID(prev)) {
-        targetBoard.setSquare(coord, Boat::HIT_MASK);
+        targetBoard.setSquare(coord, Boat::HIT);
         hits++;
       } else {
         targetBoard.setSquare(coord, Boat::MISS);

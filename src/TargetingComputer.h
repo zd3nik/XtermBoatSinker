@@ -42,6 +42,7 @@ protected:
   const ScoredCoordinate& getBestFromCoords();
 
   Configuration config;
+  Container boatArea;
   unsigned shortBoat;
   unsigned longBoat;
   unsigned width;

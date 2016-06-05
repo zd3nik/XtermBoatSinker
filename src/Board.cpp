@@ -345,24 +345,19 @@ unsigned Board::adjacentFree(const Coordinate& coord) const {
 
 //-----------------------------------------------------------------------------
 unsigned Board::adjacentHits(const Coordinate& coord) const {
-  return ((getSquare(coord + North) == Boat::HIT_MASK) +
-          (getSquare(coord + South) == Boat::HIT_MASK) +
-          (getSquare(coord + East) == Boat::HIT_MASK) +
-          (getSquare(coord + West) == Boat::HIT_MASK));
+  return ((getSquare(coord + North) == Boat::HIT) +
+          (getSquare(coord + South) == Boat::HIT) +
+          (getSquare(coord + East) == Boat::HIT) +
+          (getSquare(coord + West) == Boat::HIT));
 }
 
 //-----------------------------------------------------------------------------
 unsigned Board::horizontalHits(const Coordinate& coord) const {
   unsigned count = 0;
-  char ch = getSquare(coord);
-  if (ch == Boat::HIT_MASK) {
+  if (getSquare(coord) == Boat::HIT) {
     count++;
-    for (Coordinate c(coord); (ch = getSquare(c.west())) == Boat::HIT_MASK;) {
-      count++;
-    }
-    for (Coordinate c(coord); (ch = getSquare(c.east())) == Boat::HIT_MASK;) {
-      count++;
-    }
+    for (Coordinate c(coord); getSquare(c.west()) == Boat::HIT; ++count) { }
+    for (Coordinate c(coord); getSquare(c.east()) == Boat::HIT; ++count) { }
   }
   return count;
 }
@@ -370,15 +365,10 @@ unsigned Board::horizontalHits(const Coordinate& coord) const {
 //-----------------------------------------------------------------------------
 unsigned Board::verticalHits(const Coordinate& coord) const {
   unsigned count = 0;
-  char ch = getSquare(coord);
-  if (ch == Boat::HIT_MASK) {
+  if (getSquare(coord) == Boat::HIT) {
     count++;
-    for (Coordinate c(coord); (ch = getSquare(c.north())) == Boat::HIT_MASK;) {
-      count++;
-    }
-    for (Coordinate c(coord); (ch = getSquare(c.south())) == Boat::HIT_MASK;) {
-      count++;
-    }
+    for (Coordinate c(coord); getSquare(c.north()) == Boat::HIT; ++count) { }
+    for (Coordinate c(coord); getSquare(c.south()) == Boat::HIT; ++count) { }
   }
   return count;
 }
@@ -642,10 +632,10 @@ bool Board::addHitsAndMisses(const std::string& desc) {
   }
   bool ok = true;
   for (unsigned i = 0; i < desc.size(); ++i) {
-    if (desc[i] == Boat::HIT_MASK) {
+    if (desc[i] == Boat::HIT) {
       if (Boat::isValidID(descriptor[i])) {
-        descriptor[i] = Boat::HIT_MASK;
-      } else if (descriptor[i] != Boat::HIT_MASK) {
+        descriptor[i] = Boat::HIT;
+      } else if (descriptor[i] != Boat::HIT) {
         ok = false;
       }
     } else if (desc[i] == Boat::MISS) {

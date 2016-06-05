@@ -42,9 +42,8 @@ void Hal9000::setConfig(const Configuration& configuration) {
 
 //-----------------------------------------------------------------------------
 ScoredCoordinate Hal9000::bestShotOn(const Board& board) {
-  const unsigned hitCount = board.getHitCount();
-  const unsigned remain = (config.getPointGoal() - hitCount);
-  if (!remain) {
+  hitCount = board.getHitCount();
+  if (!(remain = (config.getPointGoal() - hitCount))) {
     return coords[random(coords.size())].setScore(0);
   }
 
