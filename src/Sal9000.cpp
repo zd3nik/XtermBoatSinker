@@ -41,6 +41,9 @@ void Sal9000::searchScore(const Board& board, ScoredCoordinate& coord,
   unsigned east  = board.freeEastOf(coord);
   unsigned west  = board.freeWestOf(coord);
   double score   = (double(north + south + east + west) / (4 * maxLen));
+  if ((remain == 1) && !board.adjacentHits(coord)) {
+    score = 0;
+  }
   coord.setScore((unsigned)floor(score * weight));
   assert(coord.getScore() < (2 * weight));
   if (debugMode) {

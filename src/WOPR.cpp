@@ -190,11 +190,18 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
     return IMPOSSIBLE;
   }
 
+  unsigned left = config.getPointGoal();
+  std::set<unsigned>::const_iterator it;
+  for (it = examined.begin(); it != examined.end(); ++it) {
+    left -= config.getBoat(*it).getLength();
+  }
+  assert(left > 0);
+
+  std::set<Placement> unique;
   std::vector<Placement> candidates;
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     if (!examined.count(i)) {
       const Boat& boat = config.getBoat(i);
-      std::set<unsigned>::const_iterator it;
       for (it = hits.begin(); (it != hits.end()); ++it) {
         unsigned sqr = (*it);
         unsigned x   = (sqr % width);
@@ -220,65 +227,77 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
         west = std::min(west, (boat.getLength() - 1));
         east = std::min(east, (boat.getLength() - 1));
 
-        assert(toCoord(sqr - (north * width)).getX() == (x + 1));
-        assert(toCoord(sqr + (south * width)).getX() == (x + 1));
-        assert(toCoord(sqr - west).getY() == (y + 1));
-        assert(toCoord(sqr + east).getY() == (y + 1));
-
-        // does current boat fit vertically?
+        // add all legal vertical placements of current boat
         unsigned windowLen = (north + south + 1);
         if (windowLen >= boat.getLength()) {
           unsigned start = (sqr - (north * width));
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
-            candidates.push_back(Placement());
-            Placement& placement = candidates.back();
-            placement.boat = boat;
-            placement.boatIndex = i;
-            placement.start = start;
-            placement.inc = width;
-            placement.setScore(desc);
+            Placement placement(boat, i, start, width, desc);
+            assert(placement.isValid());
+            if (((boat.getLength() - placement.getHitCount()) <= left) &&
+                (unique.count(placement) == 0))
+            {
+              unique.insert(placement);
+              candidates.push_back(placement);
+              assert(placement == candidates.back());
+            }
             start += width;
           }
         }
 
-        // does current boat fit horizontally?
+        // add all legal horizontal placements of current boat
         windowLen = (east + west + 1);
         if (windowLen >= boat.getLength()) {
           unsigned start = (sqr - west);
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
-            candidates.push_back(Placement());
-            Placement& placement = candidates.back();
-            placement.boat = boat;
-            placement.boatIndex = i;
-            placement.start = start;
-            placement.inc = 1;
-            placement.setScore(desc);
+            Placement placement(boat, i, start, 1, desc);
+            assert(placement.isValid());
+            if (((boat.getLength() - placement.getHitCount()) <= left) &&
+                (unique.count(placement) == 0))
+            {
+              unique.insert(placement);
+              candidates.push_back(placement);
+              assert(placement == candidates.back());
+            }
             start++;
           }
         }
       }
     }
   }
+
+  assert(unique.size() == candidates.size());
   if (candidates.empty()) {
     return IMPOSSIBLE;
   }
 
-  std::sort(candidates.begin(), candidates.end());
+  // sort best first
+  std::sort(candidates.begin(), candidates.end(), Placement::GreaterScore);
 
-  // try to search each of the boat lengths early in the list
+  // rearrange so we alternate between boat lengths
   std::map<unsigned, unsigned> lengthCount;
-  unsigned half = ((candidates.size() + 1) / 2);
-  for (unsigned i = 2; i < half; ++i) {
-    const Boat& boat = candidates[i].boat;
-    unsigned count = lengthCount[boat.getLength()]++;
-    if (count >= boat.getLength()) {
-      unsigned z = (candidates.size() - 1 - random(half));
-      if (z >= half) {
-        std::swap(candidates[i], candidates[z]);
+  unsigned maxCount = 2;
+  unsigned half = (candidates.size() / 2);
+  for (unsigned i = 0; i < half; ++i) {
+    const Placement& placement = candidates[i];
+    assert(placement.isValid());
+    unsigned len = placement.getBoat().getLength();
+    if (lengthCount[len] >= maxCount) {
+      for (unsigned z = candidates.size(); z-- > half; ) {
+        const Placement& next = candidates[z];
+        assert(next.isValid());
+        unsigned nextLen = next.getBoat().getLength();
+        if ((nextLen != len) && (lengthCount[nextLen] < maxCount)) {
+          len = next.getBoat().getLength();
+          std::swap(candidates[i], candidates[z]);
+          break;
+        }
       }
     }
+    unsigned count = ++lengthCount[len];
+    maxCount = std::max(maxCount, count);
   }
 
   unsigned improbCount = 0;
@@ -287,7 +306,8 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
 
   for (unsigned i = 0; i < candidates.size(); ++i) {
     const Placement& placement = candidates[i];
-    examined.insert(placement.boatIndex);
+    assert(placement.isValid());
+    examined.insert(placement.getBoatIndex());
     TestResult tmp = canPlace(ply, desc, placement);
     if (tmp == POSSIBLE) {
       result = POSSIBLE;
@@ -299,7 +319,7 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
         break;
       }
     }
-    examined.erase(placement.boatIndex);
+    examined.erase(placement.getBoatIndex());
   }
   return result;
 }
@@ -308,6 +328,7 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
 WOPR::TestResult WOPR::canPlace(const unsigned ply, std::string& desc,
                                 const Placement& placement)
 {
+  assert(placement.isValid());
   assert(ply < tryCount.size());
   assert(hits.size() > 0);
 
@@ -316,26 +337,15 @@ WOPR::TestResult WOPR::canPlace(const unsigned ply, std::string& desc,
   nodeCount++;
 
   // does this placement overlap all the remaining hits?
-  if (placement.hits == hits.size()) {
+  assert(placement.getHitCount() <= hits.size());
+  if (placement.getHitCount() == hits.size()) {
     okCount[ply]++;
     posCount++;
     return POSSIBLE;
   }
 
   // place boat and remove overlapped hits
-  unsigned sqr = placement.start;
-  for (unsigned n = 0; n < placement.boat.getLength(); ++n) {
-    if (desc[sqr] == Boat::HIT) {
-      assert(hits.count(sqr));
-      hits.erase(sqr);
-      desc[sqr] = tolower(placement.boat.getID());
-    } else {
-      assert(!hits.count(sqr));
-      assert(desc[sqr] == Boat::NONE);
-      desc[sqr] = placement.boat.getID();
-    }
-    sqr += placement.inc;
-  }
+  placement.exec(desc, hits);
 
   // see if the remaining boats can be placed
   TestResult result = isPossible((ply + 1), desc);
@@ -344,18 +354,7 @@ WOPR::TestResult WOPR::canPlace(const unsigned ply, std::string& desc,
   }
 
   // remove boat and restore overlapped hits
-  sqr = placement.start;
-  for (unsigned n = 0; n < placement.boat.getLength(); ++n) {
-    assert(!hits.count(sqr));
-    if (desc[sqr] == placement.boat.getID()) {
-      desc[sqr] = Boat::NONE;
-    } else {
-      assert(desc[sqr] == tolower(placement.boat.getID()));
-      desc[sqr] = Boat::HIT;
-      hits.insert(sqr);
-    }
-    sqr += placement.inc;
-  }
+  placement.undo(desc, hits);
 
   return result;
 }

@@ -14,13 +14,15 @@
 class Boat
 {
 public:
-  static const char NONE = '.';
-  static const char MISS = '0';
-  static const char HIT = 'X';
-  static const char MIN_ID = 'A';
-  static const char MAX_ID = 'W';
-  static const unsigned MIN_LENGTH = 2;
-  static const unsigned MAX_LENGTH = 8;
+  enum {
+    MIN_LENGTH = 2,
+    MAX_LENGTH = 8,
+    NONE = '.',
+    MISS = '0',
+    MIN_ID = 'A',
+    MAX_ID = 'W',
+    HIT = 'X'
+  };
 
   static bool isValidID(const char id) {
     return ((id >= MIN_ID) && (id <= MAX_ID));
@@ -85,6 +87,10 @@ public:
       snprintf(sbuf, sizeof(sbuf), "%c%u", id, length);
     }
     return sbuf;
+  }
+
+  bool operator==(const Boat& other) const {
+    return ((id == other.id) && (length == other.length));
   }
 
   bool fromString(const std::string& str) {

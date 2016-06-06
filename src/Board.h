@@ -47,6 +47,8 @@ namespace xbs
 class Board : public Container
 {
 public:
+  static std::string toString(const std::string& desc, const unsigned width);
+
   Board();
   Board(const int handle,
         const std::string& playerName,

@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include "Edgar.h"
+#include "Placement.h"
 
 namespace xbs
 {
@@ -29,30 +30,6 @@ protected:
     POSSIBLE,
     IMPROBABLE,
     IMPOSSIBLE
-  };
-
-  struct Placement {
-    Boat boat;
-    unsigned boatIndex;
-    unsigned start;
-    unsigned inc;
-    unsigned hits;
-    double score;
-
-    void setScore(const std::string& desc) {
-      hits = 0;
-      unsigned sqr = start;
-      unsigned len = boat.getLength();
-      for (unsigned i = 0; i < len; ++i) {
-        hits += (desc[sqr] == Boat::HIT);
-        sqr += inc;
-      }
-      score = (double(hits) - (double(abs(int(len) - int(hits))) / len));
-    }
-
-    bool operator<(const Placement& other) const {
-      return (score > other.score);
-    }
   };
 
   TestResult isPossible(const Board&, std::string& desc, const Coordinate&);
