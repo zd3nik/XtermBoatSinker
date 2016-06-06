@@ -14,7 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version WOPR_VERSION("1.1");
+const Version WOPR_VERSION("1.2");
 
 //-----------------------------------------------------------------------------
 WOPR::WOPR()
@@ -103,9 +103,9 @@ WOPR::TestResult WOPR::isPossible(const Board& board, std::string& desc,
   okCount.assign(config.getBoatCount(), 0);
 
   const unsigned testSquare = idx(coord);
-  if (impossible.count(testSquare)) {
+  if (impossible[board.getPlayerName()].count(testSquare)) {
     return IMPOSSIBLE;
-  } else if (improbable.count(testSquare)) {
+  } else if (improbable[board.getPlayerName()].count(testSquare)) {
     return IMPROBABLE;
   }
 
@@ -116,13 +116,13 @@ WOPR::TestResult WOPR::isPossible(const Board& board, std::string& desc,
   TestResult result = isPossible(0, desc);
   switch (result) {
   case IMPROBABLE:
-    improbable.insert(testSquare);
+    improbable[board.getPlayerName()].insert(testSquare);
     if (debugMode) {
       Logger::info() << coord << " is improbable" << board.toString();
     }
     break;
   case IMPOSSIBLE:
-    impossible.insert(testSquare);
+    impossible[board.getPlayerName()].insert(testSquare);
     Logger::info() << coord << " is impossible" << board.toString();
     break;
   default:
@@ -269,24 +269,23 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
 
   // try to search each of the boat lengths early in the list
   std::map<unsigned, unsigned> lengthCount;
-  for (unsigned i = 0; i <= (candidates.size() / 2); ++i) {
+  unsigned half = ((candidates.size() + 1) / 2);
+  for (unsigned i = 2; i < half; ++i) {
     const Boat& boat = candidates[i].boat;
     unsigned count = lengthCount[boat.getLength()]++;
-    if (count > 2) {
-      std::swap(candidates[i], candidates[candidates.size() - 1]);
+    if (count >= boat.getLength()) {
+      unsigned z = (candidates.size() - 1 - random(half));
+      if (z >= half) {
+        std::swap(candidates[i], candidates[z]);
+      }
     }
   }
 
   unsigned improbCount = 0;
-  unsigned half = std::max<unsigned>(25, ((candidates.size() + 1) / 2));
+  unsigned limit = std::max<unsigned>(25, half);
   TestResult result = IMPOSSIBLE;
 
   for (unsigned i = 0; i < candidates.size(); ++i) {
-//    if ((i > 2) && (i < half) && (i != (candidates.size() - 1)) &&
-//        (random(10) > 4))
-//    {
-//      std::swap(candidates[i], candidates[candidates.size() - 1]);
-//    }
     const Placement& placement = candidates[i];
     examined.insert(placement.boatIndex);
     TestResult tmp = canPlace(ply, desc, placement);
@@ -295,7 +294,7 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
       break;
     }
     if (!fullSearch && ((i + 1) < candidates.size())) {
-      if (++improbCount >= half) {
+      if (++improbCount >= limit) {
         result = IMPROBABLE;
         break;
       }

@@ -1117,8 +1117,6 @@ void Server::shoot(Game& game, const int handle) {
   Coordinate coord(input.getInt(2, 0), input.getInt(3, 0));
   if (target->shootAt(coord, id)) {
     char sbuf[Input::BUFFER_SIZE];
-    sendBoard(game, target);
-    nextTurn(game);
     sender->incTurns();
     if (Boat::isValidID(id)) {
       sender->incScore();
@@ -1133,12 +1131,15 @@ void Server::shoot(Game& game, const int handle) {
                  target->getHitTaunt().c_str());
         sendLine(game, handle, sbuf);
       }
+      sendBoard(game, sender);
     } else if (target->hasMissTaunts()) {
       snprintf(sbuf, sizeof(sbuf), "M|%s|%s",
                target->getPlayerName().c_str(),
                target->getMissTaunt().c_str());
       sendLine(game, handle, sbuf);
     }
+    sendBoard(game, target);
+    nextTurn(game);
   } else if (Boat::isHit(id) || Boat::isMiss(id)) {
     sendLine(game, handle, "M||that spot has already been shot");
   } else {

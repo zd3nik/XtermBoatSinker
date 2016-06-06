@@ -5,6 +5,7 @@
 #ifndef WOPR_H
 #define WOPR_H
 
+#include <map>
 #include <set>
 #include "Edgar.h"
 
@@ -66,10 +67,11 @@ protected:
     return Coordinate(((i % width) + 1), ((i / width) + 1));
   }
 
+  typedef std::set<unsigned> SquareSet;
+  std::map<std::string, SquareSet> impossible;
+  std::map<std::string, SquareSet> improbable;
   std::set<unsigned> hits;
   std::set<unsigned> examined;
-  std::set<unsigned> impossible;
-  std::set<unsigned> improbable;
   std::vector<unsigned> tryCount;
   std::vector<unsigned> okCount;
   unsigned nodeCount;

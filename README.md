@@ -350,16 +350,18 @@ Messages going from server to client (you) prefixed with `<--`
     --> S|shooter|4|2
 
         (you got a hit, server sends board, hit, next turn messages)
-        <-- B|shooter|<board value>|0|0
         <-- H|turkey|shooter|d2
+        <-- B|turkey|<board value>|1|0
+        <-- B|shooter|<board value>|0|0
         <-- N|edgar
 
         (shooter sends taunt)
         <-- M|shooter|you hit like a goldfish!
 
         (edgar gets hit, server sends board, hit, next turn messages)
-        <-- B|shooter|<board value>|0|0
         <-- H|edgar|shooter|e2
+        <-- B|edgar|<board value>|1|0
+        <-- B|shooter|<board value>|0|0
         <-- N|shooter
 
         (game proceeds until edgar wins, server sends game finished message)
