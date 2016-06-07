@@ -1,23 +1,22 @@
 //-----------------------------------------------------------------------------
-// WOPR.h
+// Jane.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef WOPR_H
-#define WOPR_H
+#ifndef JANE_H
+#define JANE_H
 
 #include <map>
 #include <set>
-#include "Edgar.h"
+#include "Sal9000.h"
 #include "Placement.h"
 
 namespace xbs
 {
 
-//-----------------------------------------------------------------------------
-class WOPR : public Edgar
+class Jane : public Sal9000
 {
 public:
-  WOPR();
+  Jane();
 
   virtual std::string getName() const;
   virtual Version getVersion() const;
@@ -25,20 +24,27 @@ public:
 protected:
   virtual void newBoard(const Board&, const bool parity);
   virtual ScoredCoordinate bestShotOn(const Board&);
+  virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
+  virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 
-  enum TestResult {
+  enum SearchResult {
     POSSIBLE,
     IMPROBABLE,
     IMPOSSIBLE
   };
 
-  TestResult isPossible(const Board&, std::string& desc, const Coordinate&);
-  TestResult isPossible(const unsigned ply, std::string& desc);
-  TestResult canPlace(const unsigned ply, std::string& desc, const Placement&);
+  void incSquareCounts();
+  void resetSearchVars();
+  SearchResult doSearch(const unsigned ply, std::string& desc);
+  SearchResult canPlace(const unsigned ply, std::string& desc, const Placement&);
+  void finishSearch();
+
+  typedef std::map<unsigned, unsigned> SquareCountMap;
 
   std::string boardKey;
-  std::map<std::string, SquareSet> impossible;
-  std::map<std::string, SquareSet> improbable;
+  std::map<std::string, SquareCountMap> placeCount;
+  SquareCountMap sqrCount;
+  std::set<Placement> placements;
   SquareSet hits;
   SquareSet examined;
   SquareVector tryCount;
@@ -51,4 +57,4 @@ protected:
 
 } // namespace xbs
 
-#endif // WOPR_H
+#endif // JANE_H

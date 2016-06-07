@@ -5,6 +5,7 @@
 #ifndef PLACEMENT_H
 #define PLACEMENT_H
 
+#include <map>
 #include <set>
 #include "Boat.h"
 
@@ -20,16 +21,19 @@ public:
   Placement();
   Placement(const Placement&);
   Placement(const Boat&, const unsigned boatIndex, const unsigned startSquare,
-            const unsigned inc, const std::string& desc);
+            const unsigned inc, const std::string& desc, bool weightByLength);
 
   Placement& operator=(const Placement&);
-
+  std::string toString(const unsigned width) const;
   bool isValid() const;
   bool operator<(const Placement&) const;
   bool operator==(const Placement&) const;
+  bool overlaps(const std::set<unsigned>& squares) const;
   void exec(std::string& desc, std::set<unsigned>& hits) const;
   void undo(std::string& desc, std::set<unsigned>& hits) const;
-  std::string toString(const unsigned width) const;
+  void incSquareCounts(std::map<unsigned, unsigned>& squareCountMap) const;
+  void boostScore(const std::map<unsigned, unsigned>& squareCountMap,
+                  const std::string& desc);
 
   const Boat& getBoat() const {
     return boat;

@@ -1,50 +1,43 @@
 //-----------------------------------------------------------------------------
-// WOPR.cpp
+// Jane.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include <math.h>
 #include <assert.h>
 #include <algorithm>
-#include "WOPR.h"
+#include "Jane.h"
+#include "Version.h"
 #include "Logger.h"
 #include "CommandArgs.h"
-#include "Timer.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version WOPR_VERSION("1.4");
+const Version JANE_VERSION("1.0");
 
 //-----------------------------------------------------------------------------
-WOPR::WOPR()
+Jane::Jane()
   : fullSearch(CommandArgs::getInstance().indexOf("--fullSearch") > 0)
 { }
 
 //-----------------------------------------------------------------------------
-std::string WOPR::getName() const {
-  return "WOPR";
+std::string Jane::getName() const {
+  return "Jane";
 }
 
 //-----------------------------------------------------------------------------
-Version WOPR::getVersion() const {
-  return WOPR_VERSION;
+Version Jane::getVersion() const {
+  return JANE_VERSION;
 }
 
 //-----------------------------------------------------------------------------
-void WOPR::newBoard(const Board& board, const bool parity) {
-  Edgar::newBoard(board, parity);
-  impossible.clear();
-  improbable.clear();
+void Jane::newBoard(const Board&, const bool /*parity*/) {
+  placeCount.clear();
 }
 
 //-----------------------------------------------------------------------------
-bool ScoreCompare(const ScoredCoordinate& a, const ScoredCoordinate& b) {
-  return (a.getScore() > b.getScore());
-}
-
-//-----------------------------------------------------------------------------
-ScoredCoordinate WOPR::bestShotOn(const Board& board) {
+ScoredCoordinate Jane::bestShotOn(const Board& board) {
   if (!remain) {
     return coords[random(coords.size())].setScore(0);
   }
@@ -60,103 +53,76 @@ ScoredCoordinate WOPR::bestShotOn(const Board& board) {
 
   Logger::debug() << "hit count = " << hits.size();
   assert(hits.size() == hitCount);
-  ScoredCoordinate best = Edgar::bestShotOn(board);
-  if (hits.size() < 2) {
-    return best;
+  if (hits.size() > 1) {
+    resetSearchVars();
+    doSearch(0, desc);
+    finishSearch();
   }
 
-  Timer timer;
-  std::sort(coords.begin(), coords.end(), ScoreCompare);
-  for (unsigned i = 0; i < coords.size(); ++i) {
-    ScoredCoordinate& coord = coords[i];
-    Logger::debug() << "checking possibility of " << coord;
-    switch (isPossible(board, desc, coord)) {
-    case POSSIBLE:
-      Logger::debug() << coord << " verified!";
-      if (fullSearch && (timer.tick() >= Timer::ONE_SECOND)) {
-        Logger::debug() << board.toString();
-      }
-      return coord;
-    case IMPROBABLE:
-      Logger::debug() << "lowering score on improbable " << coord;
-      coord.setScore(coord.getScore() / 3);
-      if (!debugMode && (timer.tick() >= Timer::ONE_SECOND)) {
-        Logger::debug() << board.toString();
-      }
-      break;
-    default:
-      Logger::info() << "setting score to 0 on impossible " << coord;
-      coord.setScore(0);
-    }
-  }
-
-  return getBestFromCoords();
+  return Sal9000::bestShotOn(board);
 }
 
 //-----------------------------------------------------------------------------
-WOPR::TestResult WOPR::isPossible(const Board& board, std::string& desc,
-                                  const Coordinate& coord)
+void Jane::frenzyScore(const Board& board, ScoredCoordinate& coord,
+                       const double weigth)
 {
-  examined.clear(); // which boat indexes have already been examined
-  tryCount.clear(); // attempted boat placements per ply
-  okCount.clear();  // successful boat placements per ply
-  nodeCount = 0;    // total number of placements attempted
-  posCount = 0;     // total number of unique legal positions found
-  maxPly = 0;       // deepest ply searched this turn
+  if (hits.size() > 1) {
+    const unsigned sqr = idx(coord);
+    const SquareCountMap& count = placeCount[boardKey];
+    SquareCountMap::const_iterator it = count.find(sqr);
+    double score = (it == count.end()) ? 0 : it->second;
+    coord.setScore((unsigned)floor(score * weigth));
+    if (debugMode) {
+      frenzyCoords.push_back(coord);
+    }
+  } else {
+    Sal9000::frenzyScore(board, coord, weigth);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Jane::searchScore(const Board& board, ScoredCoordinate& coord,
+                       const double weight)
+{
+  if (hits.size() > 1) {
+    const unsigned sqr = idx(coord);
+    const SquareCountMap& count = placeCount[boardKey];
+    SquareCountMap::const_iterator it = count.find(sqr);
+    double score = (it == count.end()) ? 0 : it->second;
+    coord.setScore((unsigned)floor(score * weight * 0.5)); // TODO
+    if (debugMode) {
+      searchCoords.push_back(coord);
+    }
+  } else {
+    Sal9000::searchScore(board, coord, weight);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Jane::incSquareCounts() {
+  std::set<Placement>::const_iterator it;
+  for (it = placements.begin(); it != placements.end(); ++it) {
+    it->incSquareCounts(sqrCount);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Jane::resetSearchVars() {
+  placements.clear(); // current boat placements
+  sqrCount.clear();   // legal placement count per square
+  examined.clear();   // which boat indexes have already been examined
+  tryCount.clear();   // attempted boat placements per ply
+  okCount.clear();    // successful boat placements per ply
+  nodeCount = 0;      // total number of placements attempted
+  posCount = 0;       // total number of unique legal positions found
+  maxPly = 0;         // deepest ply searched this turn
 
   tryCount.assign(config.getBoatCount(), 0);
   okCount.assign(config.getBoatCount(), 0);
-
-  const unsigned testSquare = idx(coord);
-  if (impossible[boardKey].count(testSquare)) {
-    return IMPOSSIBLE;
-  } else if (improbable[boardKey].count(testSquare)) {
-    return IMPROBABLE;
-  }
-
-  assert(desc[testSquare] == Boat::NONE);
-  desc[testSquare] = Boat::HIT;
-  hits.insert(testSquare);
-
-  TestResult result = isPossible(0, desc);
-  switch (result) {
-  case IMPROBABLE:
-    improbable[boardKey].insert(testSquare);
-    if (debugMode) {
-      Logger::info() << coord << " is improbable" << board.toString();
-    }
-    break;
-  case IMPOSSIBLE:
-    impossible[boardKey].insert(testSquare);
-    Logger::info() << coord << " is impossible" << board.toString();
-    break;
-  default:
-    break;
-  }
-
-  assert(desc[testSquare] == Boat::HIT);
-  desc[testSquare] = Boat::NONE;
-  hits.erase(testSquare);
-
-  if (Logger::getInstance().getLogLevel() == Logger::DEBUG) {
-    Logger::debug() << "nodeCount = " << nodeCount
-                    << ", posCount = " << posCount
-                    << ", maxPly = " << maxPly;
-    for (unsigned ply = 0; ply < config.getBoatCount(); ++ply) {
-      if (tryCount[ply]) {
-        Logger::debug() << "tryCount[" << ply << "] " << (tryCount[ply])
-                        << ", okCount[" << ply << "] " << (okCount[ply]);
-      } else {
-        break;
-      }
-    }
-  }
-
-  return result;
 }
 
 //-----------------------------------------------------------------------------
-WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
+Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
   assert(hits.size() > 0);
   if (examined.size() >= config.getBoatCount()) {
     return IMPOSSIBLE;
@@ -171,15 +137,15 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
 
   std::set<Placement> unique;
   std::vector<Placement> candidates;
-  SquareSet& impossibleHits = impossible[boardKey];
+  const SquareCountMap& sqrProb = placeCount[boardKey];
 
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     if (!examined.count(i)) {
       const Boat& boat = config.getBoat(i);
       for (it = hits.begin(); (it != hits.end()); ++it) {
-        unsigned sqr = (*it);
-        unsigned x   = (sqr % width);
-        unsigned y   = (sqr / width);
+        const unsigned sqr = (*it);
+        const unsigned x = (sqr % width);
+        const unsigned y = (sqr / width);
 
         // count number of contiguous free squares in backward directions
         unsigned north = back(desc, sqr, x, width);
@@ -207,12 +173,12 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
           unsigned start = (sqr - (north * width));
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
-            Placement placement(boat, i, start, width, desc, true);
+            Placement placement(boat, i, start, width, desc, false);
             assert(placement.isValid());
             if (((boat.getLength() - placement.getHitCount()) <= left) &&
-                !unique.count(placement) &&
-                !placement.overlaps(impossibleHits))
+                !unique.count(placement))
             {
+              placement.boostScore(sqrProb, desc);
               unique.insert(placement);
               candidates.push_back(placement);
               assert(placement == candidates.back());
@@ -227,12 +193,12 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
           unsigned start = (sqr - west);
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
-            Placement placement(boat, i, start, 1, desc, true);
+            Placement placement(boat, i, start, 1, desc, false);
             assert(placement.isValid());
             if (((boat.getLength() - placement.getHitCount()) <= left) &&
-                !unique.count(placement) &&
-                !placement.overlaps(impossibleHits))
+                !unique.count(placement))
             {
+              placement.boostScore(sqrProb, desc);
               unique.insert(placement);
               candidates.push_back(placement);
               assert(placement == candidates.back());
@@ -252,48 +218,32 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
   // sort best first
   std::sort(candidates.begin(), candidates.end(), Placement::GreaterScore);
 
-  // rearrange so we alternate between boat lengths
-  std::map<unsigned, unsigned> lengthCount;
-  unsigned maxCount = 2;
-  unsigned half = (candidates.size() / 2);
-  for (unsigned i = 0; i < half; ++i) {
-    const Placement& placement = candidates[i];
-    assert(placement.isValid());
-    unsigned len = placement.getBoat().getLength();
-    if (lengthCount[len] >= maxCount) {
-      for (unsigned z = candidates.size(); z-- > half; ) {
-        const Placement& next = candidates[z];
-        assert(next.isValid());
-        unsigned nextLen = next.getBoat().getLength();
-        if ((nextLen != len) && (lengthCount[nextLen] < maxCount)) {
-          len = next.getBoat().getLength();
-          std::swap(candidates[i], candidates[z]);
-          break;
-        }
-      }
-    }
-    unsigned count = ++lengthCount[len];
-    maxCount = std::max(maxCount, count);
-  }
-
+//  unsigned matchHits = 0;
   unsigned improbCount = 0;
-  unsigned limit = std::max<unsigned>(10, half);
-  TestResult result = IMPOSSIBLE;
+  unsigned limit = std::max<unsigned>(25, (candidates.size() / 2));
+  SearchResult result = IMPOSSIBLE;
 
   for (unsigned i = 0; i < candidates.size(); ++i) {
     const Placement& placement = candidates[i];
     assert(placement.isValid());
+//    if (matchHits && (placement.getHitCount() != matchHits)) {
+//      break;
+//    }
     examined.insert(placement.getBoatIndex());
-    TestResult tmp = canPlace(ply, desc, placement);
+    placements.insert(placement);
+    SearchResult tmp = canPlace(ply, desc, placement);
     if (tmp == POSSIBLE) {
       result = POSSIBLE;
+      incSquareCounts();
+//      matchHits = placement.getHitCount();
     } else if (!fullSearch && ((i + 1) < candidates.size()) &&
                (++improbCount >= limit))
     {
       result = IMPROBABLE;
     }
     examined.erase(placement.getBoatIndex());
-    if (result != IMPOSSIBLE) {
+    placements.erase(placement);
+    if (result == IMPROBABLE) {
       break;
     }
   }
@@ -301,8 +251,8 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
 }
 
 //-----------------------------------------------------------------------------
-WOPR::TestResult WOPR::canPlace(const unsigned ply, std::string& desc,
-                                const Placement& placement)
+Jane::SearchResult Jane::canPlace(const unsigned ply, std::string& desc,
+                                  const Placement& placement)
 {
   assert(placement.isValid());
   assert(ply < tryCount.size());
@@ -324,7 +274,7 @@ WOPR::TestResult WOPR::canPlace(const unsigned ply, std::string& desc,
   placement.exec(desc, hits);
 
   // see if the remaining boats can be placed
-  TestResult result = isPossible((ply + 1), desc);
+  SearchResult result = doSearch((ply + 1), desc);
   if (result == POSSIBLE) {
     okCount[ply]++;
   }
@@ -335,4 +285,30 @@ WOPR::TestResult WOPR::canPlace(const unsigned ply, std::string& desc,
   return result;
 }
 
-} // namespace xbs
+//-----------------------------------------------------------------------------
+void Jane::finishSearch() {
+  SquareCountMap::iterator it;
+  SquareCountMap& ref = placeCount[boardKey];
+  for (it = sqrCount.begin(); it != sqrCount.end(); ++it) {
+    ref[it->first] += it->second;
+  }
+
+  if (Logger::getInstance().getLogLevel() == Logger::DEBUG) {
+    Logger::debug() << "nodeCount = " << nodeCount
+                    << ", posCount = " << posCount
+                    << ", maxPly = " << maxPly;
+
+    for (unsigned ply = 0; ply < config.getBoatCount(); ++ply) {
+      if (tryCount[ply]) {
+        Logger::debug() << "tryCount[" << ply << "] " << (tryCount[ply])
+                        << ", okCount[" << ply << "] " << (okCount[ply]);
+      }
+    }
+
+    for (it = ref.begin(); it != ref.end(); ++it) {
+      Logger::debug() << "sqr[" << it->first << "] " << it->second;
+    }
+  }
+}
+
+} //namespace xbs

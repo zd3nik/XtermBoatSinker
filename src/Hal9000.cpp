@@ -7,21 +7,12 @@
 #include <algorithm>
 #include "Hal9000.h"
 #include "Logger.h"
-#include "CommandArgs.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version HAL_VERSION("1.1");
-
-//-----------------------------------------------------------------------------
-Hal9000::Hal9000()
-  : debugMode(false)
-{
-  const CommandArgs& args  = CommandArgs::getInstance();
-  debugMode = (args.indexOf("--debugBot") > 0);
-}
+const Version HAL_VERSION("1.2");
 
 //-----------------------------------------------------------------------------
 std::string Hal9000::getName() const {
@@ -41,13 +32,8 @@ void Hal9000::setConfig(const Configuration& configuration) {
 }
 
 //-----------------------------------------------------------------------------
-void Hal9000::newBoard(const Board&, const bool /*parity*/) {
-}
-
-//-----------------------------------------------------------------------------
 ScoredCoordinate Hal9000::bestShotOn(const Board& board) {
-  hitCount = board.getHitCount();
-  if (!(remain = (config.getPointGoal() - hitCount))) {
+  if (!remain) {
     return coords[random(coords.size())].setScore(0);
   }
 
@@ -83,19 +69,24 @@ ScoredCoordinate Hal9000::frenzyShot(const Board& board, const double weight) {
 
 //-----------------------------------------------------------------------------
 ScoredCoordinate Hal9000::searchShot(const Board& board, const double weight) {
-  return coords[random(coords.size())].setScore((unsigned)floor(weight / 2));
+  for (unsigned i = 0; i < coords.size(); ++i) {
+    searchScore(board, coords[i], weight);
+  }
+  return getBestFromCoords();
 }
 
 //-----------------------------------------------------------------------------
 void Hal9000::frenzyScore(const Board& board, ScoredCoordinate& coord,
                           const double weight)
 {
-  unsigned north = board.hitsNorthOf(coord);
-  unsigned south = board.hitsSouthOf(coord);
-  unsigned east  = board.hitsEastOf(coord);
-  unsigned west  = board.hitsWestOf(coord);
-  unsigned len   = std::max(north, std::max(south, std::max(east, west)));
-  if (len) {
+  unsigned adj = adjacentHits[idx(coord)];
+  if (adj) {
+    unsigned north = board.hitsNorthOf(coord);
+    unsigned south = board.hitsSouthOf(coord);
+    unsigned east  = board.hitsEastOf(coord);
+    unsigned west  = board.hitsWestOf(coord);
+    unsigned len   = std::max(north, std::max(south, std::max(east, west)));
+    assert(len >= adj);
     coord.setScore((unsigned)floor(std::min(longBoat, len) * weight));
     if (debugMode) {
       frenzyCoords.push_back(coord);
@@ -109,7 +100,11 @@ void Hal9000::frenzyScore(const Board& board, ScoredCoordinate& coord,
 void Hal9000::searchScore(const Board&, ScoredCoordinate& coord,
                           const double weight)
 {
-  coord.setScore((unsigned)floor(weight / 2));
+  if ((remain == 1) && !adjacentHits[idx(coord)]) {
+    coord.setScore(0);
+  } else {
+    coord.setScore((unsigned)floor(weight / 2));
+  }
   if (debugMode) {
     searchCoords.push_back(coord);
   }

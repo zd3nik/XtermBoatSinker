@@ -19,6 +19,7 @@
 #include "Sal9000.h"
 #include "Edgar.h"
 #include "WOPR.h"
+#include "Jane.h"
 
 namespace xbs
 {
@@ -143,6 +144,7 @@ void Client::showBots() {
   Sal9000 sal;
   Edgar edgar;
   WOPR wopr;
+  Jane jane;
 
   Screen::print()
       << EL
@@ -153,6 +155,7 @@ void Client::showBots() {
       << "  " << sal.getName() << " (" << sal.getVersion() << ")" << EL
       << "  " << edgar.getName() << " (" << edgar.getVersion() << ")" << EL
       << "  " << wopr.getName() << " (" << wopr.getVersion() << ")" << EL
+      << "  " << jane.getName() << " (" << jane.getVersion() << ")" << EL
       << EL << Flush;
 }
 
@@ -163,6 +166,7 @@ TargetingComputer* loadBot(const std::string& name) {
   Sal9000 sal;
   Edgar edgar;
   WOPR wopr;
+  Jane jane;
 
   if (!name.empty()) {
     if (strcasecmp(name.c_str(), rufus.getName().c_str()) == 0) {
@@ -175,6 +179,8 @@ TargetingComputer* loadBot(const std::string& name) {
       return new Edgar();
     } else if (strcasecmp(name.c_str(), wopr.getName().c_str()) == 0) {
       return new WOPR();
+    } else if (strcasecmp(name.c_str(), jane.getName().c_str()) == 0) {
+      return new Jane();
     }
   }
 

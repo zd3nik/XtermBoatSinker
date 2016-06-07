@@ -12,7 +12,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version SAL_VERSION("1.0");
+const Version SAL_VERSION("1.1");
 
 //-----------------------------------------------------------------------------
 std::string Sal9000::getName() const {
@@ -25,27 +25,19 @@ Version Sal9000::getVersion() const {
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Sal9000::searchShot(const Board& board, const double weight) {
-  for (unsigned i = 0; i < coords.size(); ++i) {
-    searchScore(board, coords[i], weight);
-  }
-  return getBestFromCoords();
-}
-
-//-----------------------------------------------------------------------------
 void Sal9000::searchScore(const Board& board, ScoredCoordinate& coord,
                           const double weight)
 {
-  unsigned north = board.freeNorthOf(coord);
-  unsigned south = board.freeSouthOf(coord);
-  unsigned east  = board.freeEastOf(coord);
-  unsigned west  = board.freeWestOf(coord);
-  double score   = (double(north + south + east + west) / (4 * maxLen));
-  if ((remain == 1) && !board.adjacentHits(coord)) {
-    score = 0;
+  if ((remain == 1) && !adjacentHits[idx(coord)]) {
+    coord.setScore(0);
+  } else {
+    unsigned north = board.freeNorthOf(coord);
+    unsigned south = board.freeSouthOf(coord);
+    unsigned east  = board.freeEastOf(coord);
+    unsigned west  = board.freeWestOf(coord);
+    double score   = (double(north + south + east + west) / (4 * maxLen));
+    coord.setScore((unsigned)floor(score * weight));
   }
-  coord.setScore((unsigned)floor(score * weight));
-  assert(coord.getScore() < (2 * weight));
   if (debugMode) {
     searchCoords.push_back(coord);
   }

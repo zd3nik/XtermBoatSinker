@@ -5,8 +5,6 @@
 #ifndef RANDOM_RUFUS_H
 #define RANDOM_RUFUS_H
 
-#include <vector>
-#include "ScoredCoordinate.h"
 #include "TargetingComputer.h"
 
 namespace xbs
@@ -20,7 +18,6 @@ public:
   virtual Version getVersion() const;
 
 protected:
-  virtual void newBoard(const Board&, const bool parity);
   virtual ScoredCoordinate bestShotOn(const Board&);
 };
 

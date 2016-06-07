@@ -5,9 +5,6 @@
 #ifndef HAL9000_H
 #define HAL9000_H
 
-#include <vector>
-#include "Configuration.h"
-#include "ScoredCoordinate.h"
 #include "TargetingComputer.h"
 
 namespace xbs
@@ -17,22 +14,17 @@ namespace xbs
 class Hal9000: public TargetingComputer
 {
 public:
-  Hal9000();
   virtual std::string getName() const;
   virtual Version getVersion() const;
   virtual void setConfig(const Configuration&);
 
 protected:
-  virtual void newBoard(const Board&, const bool parity);
   virtual ScoredCoordinate bestShotOn(const Board&);
   virtual ScoredCoordinate frenzyShot(const Board&, const double weight);
   virtual ScoredCoordinate searchShot(const Board&, const double weight);
   virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
   virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 
-  bool debugMode;
-  unsigned hitCount;
-  unsigned remain;
   std::vector<ScoredCoordinate> frenzyCoords;
   std::vector<ScoredCoordinate> searchCoords;
 };

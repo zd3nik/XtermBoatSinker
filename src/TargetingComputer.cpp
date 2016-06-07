@@ -8,8 +8,9 @@
 #include <stdexcept>
 #include "TargetingComputer.h"
 #include "FileSysDatabase.h"
-#include "DBRecord.h"
 #include "Configuration.h"
+#include "CommandArgs.h"
+#include "DBRecord.h"
 #include "Screen.h"
 #include "Timer.h"
 #include "Logger.h"
@@ -24,7 +25,8 @@ TargetingComputer::TargetingComputer()
     longBoat(0),
     width(0),
     height(0),
-    boardLen(0)
+    boardLen(0),
+    debugMode(CommandArgs::getInstance().indexOf("--debugBot") > 0)
 { }
 
 //-----------------------------------------------------------------------------
@@ -94,11 +96,22 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
     throw std::runtime_error("Incorrect board descriptor size");
   }
 
+  hitCount = board.getHitCount();
+  remain = (config.getPointGoal() - hitCount);
+
   coords.clear();
-  for (unsigned i = 0; i < desc.size(); ++i) {
+  adjacentHits.clear();
+  adjacentFree.clear();
+  adjacentHits.assign(boardLen, 0);
+  adjacentFree.assign(boardLen, 0);
+
+  for (unsigned i = 0; i < boardLen; ++i) {
+    const Coordinate coord(toCoord(i));
+    adjacentHits[i] = board.adjacentHits(coord);
+    adjacentFree[i] = board.adjacentFree(coord);
     if (desc[i] == Boat::NONE) {
       const ScoredCoordinate coord(0, ((i % width) + 1), ((i / width) + 1));
-      if ((coord.parity() == parity) || board.adjacentHits(coord)) {
+      if (adjacentHits[i] || (coord.parity() == parity)) {
         coords.push_back(coord);
       }
     }
@@ -273,6 +286,39 @@ void TargetingComputer::test(std::string testDB, unsigned positions,
     rec->setUInt64("last.time", elapsed);
     db.sync();
   }
+}
+
+//-----------------------------------------------------------------------------
+unsigned TargetingComputer::back(const std::string& desc, unsigned i,
+                                 unsigned last, unsigned inc)
+{
+  unsigned count = 0;
+  while (i > last) {
+    if (desc[i -= inc] == Boat::NONE) {
+      count++;
+    } else {
+      return count;
+    }
+  }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned TargetingComputer::forward(const std::string& desc, unsigned i,
+                                    unsigned last, unsigned inc)
+{
+  unsigned count = 0;
+  while ((i + inc) < last) {
+    switch (desc[i += inc]) {
+    case Boat::NONE:
+    case Boat::HIT:
+      count++;
+      break;
+    default:
+      return count;
+    }
+  }
+  return count;
 }
 
 } // namespace xbs

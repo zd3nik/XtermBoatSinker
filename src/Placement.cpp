@@ -2,6 +2,7 @@
 // Placement.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
+#include <math.h>
 #include <ctype.h>
 #include <assert.h>
 #include "Placement.h"
@@ -38,7 +39,7 @@ Placement::Placement(const Placement& other)
 //-----------------------------------------------------------------------------
 Placement::Placement(const Boat& boat, const unsigned boatIndex,
                      const unsigned start, const unsigned inc,
-                     const std::string& desc)
+                     const std::string& desc, bool weightByLength)
   : boat(boat),
     boatIndex(boatIndex),
     start(start),
@@ -66,7 +67,10 @@ Placement::Placement(const Boat& boat, const unsigned boatIndex,
   if (between > tail) {
     score -= (0.5 * (between - tail));
   }
-  score -= (double(abs(int(len) - int(hitCount))) / len);
+  if (weightByLength) {
+    // prefer when boat length more closely matches hit count
+    score -= (double(abs(int(len) - int(hitCount))) / len);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -97,6 +101,52 @@ bool Placement::operator==(const Placement& other) const {
           (boatIndex == other.boatIndex) &&
           (start == other.start) &&
           (inc == other.inc));
+}
+
+//-----------------------------------------------------------------------------
+bool Placement::overlaps(const std::set<unsigned>& squares) const {
+  unsigned sqr = start;
+  for (unsigned i = 0; i < boat.getLength(); ++i) {
+    if (squares.count(sqr)) {
+      return true;
+    }
+    sqr += inc;
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+void Placement::boostScore(const std::map<unsigned, unsigned>& sqrCount,
+                           const std::string& desc)
+{
+  std::map<unsigned, unsigned>::const_iterator it;
+  double boost = 0;
+  unsigned num = 0;
+  unsigned sqr = start;
+  for (unsigned i = 0; i < boat.getLength(); ++i) {
+    if (desc[sqr] != Boat::HIT) {
+      if ((it = sqrCount.find(sqr)) != sqrCount.end()) {
+        unsigned possiblePlacementOverlaps = it->second;
+        if (possiblePlacementOverlaps > 0) {
+          boost += possiblePlacementOverlaps;
+          num++;
+        }
+      }
+    }
+    sqr += inc;
+  }
+  if (num > 0) {
+    score += log(boost / num);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Placement::incSquareCounts(std::map<unsigned, unsigned>& count) const {
+  unsigned sqr = start;
+  for (unsigned i = 0; i < boat.getLength(); ++i) {
+    count[sqr]++;
+    sqr += inc;
+  }
 }
 
 //-----------------------------------------------------------------------------
