@@ -80,7 +80,7 @@ ScoredCoordinate WOPR::bestShotOn(const Board& board) {
     case IMPROBABLE:
       Logger::debug() << "lowering score on improbable " << coord;
       coord.setScore(coord.getScore() / 3);
-      if (!debugMode && (timer.tick() >= Timer::ONE_SECOND)) {
+      if (!debugBot && (timer.tick() >= Timer::ONE_SECOND)) {
         Logger::debug() << board.toString();
       }
       break;
@@ -122,7 +122,7 @@ WOPR::TestResult WOPR::isPossible(const Board& board, std::string& desc,
   switch (result) {
   case IMPROBABLE:
     improbable[boardKey].insert(testSquare);
-    if (debugMode) {
+    if (debugBot) {
       Logger::info() << coord << " is improbable" << board.toString();
     }
     break;
@@ -207,7 +207,7 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
           unsigned start = (sqr - (north * width));
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
-            Placement placement(boat, i, start, width, desc, true);
+            Placement placement(boat, i, start, width);
             assert(placement.isValid());
             if (((boat.getLength() - placement.getHitCount()) <= left) &&
                 !unique.count(placement) &&
@@ -227,7 +227,7 @@ WOPR::TestResult WOPR::isPossible(const unsigned ply, std::string& desc) {
           unsigned start = (sqr - west);
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
-            Placement placement(boat, i, start, 1, desc, true);
+            Placement placement(boat, i, start, 1);
             assert(placement.isValid());
             if (((boat.getLength() - placement.getHitCount()) <= left) &&
                 !unique.count(placement) &&

@@ -156,7 +156,7 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
   }
 
   coord.setScore(score * weight);
-  if (debugMode) {
+  if (debugBot) {
     frenzyCoords.push_back(coord);
   }
 }

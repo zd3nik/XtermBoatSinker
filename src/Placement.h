@@ -20,8 +20,8 @@ public:
 
   Placement();
   Placement(const Placement&);
-  Placement(const Boat&, const unsigned boatIndex, const unsigned startSquare,
-            const unsigned inc, const std::string& desc, bool weightByLength);
+  Placement(const Boat&, const unsigned boatIndex,
+            const unsigned startSquare, const unsigned inc);
 
   Placement& operator=(const Placement&);
   std::string toString(const unsigned width) const;
@@ -31,9 +31,9 @@ public:
   bool overlaps(const std::set<unsigned>& squares) const;
   void exec(std::string& desc, std::set<unsigned>& hits) const;
   void undo(std::string& desc, std::set<unsigned>& hits) const;
-  void incSquareCounts(std::map<unsigned, unsigned>& squareCountMap) const;
-  void boostScore(const std::map<unsigned, unsigned>& squareCountMap,
-                  const std::string& desc);
+  void getSquares(std::set<unsigned>& squares) const;
+  void setScore(const unsigned width, const unsigned height,
+                const std::string& desc);
 
   const Boat& getBoat() const {
     return boat;

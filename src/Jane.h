@@ -7,13 +7,13 @@
 
 #include <map>
 #include <set>
-#include "Sal9000.h"
+#include "Edgar.h"
 #include "Placement.h"
 
 namespace xbs
 {
 
-class Jane : public Sal9000
+class Jane : public Edgar
 {
 public:
   Jane();
@@ -33,18 +33,19 @@ protected:
     IMPOSSIBLE
   };
 
-  void incSquareCounts();
+  void saveResult();
   void resetSearchVars();
+  bool getPlacements(std::vector<Placement>&, const std::string& desc);
   SearchResult doSearch(const unsigned ply, std::string& desc);
   SearchResult canPlace(const unsigned ply, std::string& desc, const Placement&);
   void finishSearch();
 
-  typedef std::map<unsigned, unsigned> SquareCountMap;
+  typedef std::set<Placement> PlacementSet;
 
   std::string boardKey;
-  std::map<std::string, SquareCountMap> placeCount;
-  SquareCountMap sqrCount;
-  std::set<Placement> placements;
+  std::map<std::string, PlacementSet> placementMap;
+  PlacementSet placements;
+  SquareSet shots;
   SquareSet hits;
   SquareSet examined;
   SquareVector tryCount;

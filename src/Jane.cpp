@@ -33,7 +33,7 @@ Version Jane::getVersion() const {
 
 //-----------------------------------------------------------------------------
 void Jane::newBoard(const Board&, const bool /*parity*/) {
-  placeCount.clear();
+  placementMap.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -54,29 +54,32 @@ ScoredCoordinate Jane::bestShotOn(const Board& board) {
   Logger::debug() << "hit count = " << hits.size();
   assert(hits.size() == hitCount);
   if (hits.size() > 1) {
+    if (debugBot) {
+      Logger::debug() << "searching" << board.toString();
+    }
     resetSearchVars();
     doSearch(0, desc);
     finishSearch();
   }
 
-  return Sal9000::bestShotOn(board);
+  return Edgar::bestShotOn(board);
 }
 
 //-----------------------------------------------------------------------------
 void Jane::frenzyScore(const Board& board, ScoredCoordinate& coord,
-                       const double weigth)
+                       const double weight)
 {
-  if (hits.size() > 1) {
-    const unsigned sqr = idx(coord);
-    const SquareCountMap& count = placeCount[boardKey];
-    SquareCountMap::const_iterator it = count.find(sqr);
-    double score = (it == count.end()) ? 0 : it->second;
-    coord.setScore((unsigned)floor(score * weigth));
-    if (debugMode) {
-      frenzyCoords.push_back(coord);
+  const unsigned sqr = idx(coord);
+  if (hits.size() < 2) {
+    Edgar::frenzyScore(board, coord, weight);
+  } else if (adjacentHits[sqr]) {
+    if (shots.count(sqr)) {
+      Edgar::frenzyScore(board, coord, weight);
+    } else {
+      coord.setScore(0);
     }
   } else {
-    Sal9000::frenzyScore(board, coord, weigth);
+    searchScore(board, coord, weight);
   }
 }
 
@@ -86,30 +89,30 @@ void Jane::searchScore(const Board& board, ScoredCoordinate& coord,
 {
   if (hits.size() > 1) {
     const unsigned sqr = idx(coord);
-    const SquareCountMap& count = placeCount[boardKey];
-    SquareCountMap::const_iterator it = count.find(sqr);
-    double score = (it == count.end()) ? 0 : it->second;
-    coord.setScore((unsigned)floor(score * weight * 0.5)); // TODO
-    if (debugMode) {
-      searchCoords.push_back(coord);
+    if (!shots.count(sqr)) {
+      coord.setScore(0);
+      return;
     }
-  } else {
-    Sal9000::searchScore(board, coord, weight);
   }
+  Edgar::searchScore(board, coord, weight);
 }
 
 //-----------------------------------------------------------------------------
-void Jane::incSquareCounts() {
-  std::set<Placement>::const_iterator it;
+void Jane::saveResult() {
+  PlacementSet::const_iterator it;
+  PlacementSet& placementRef = placementMap[boardKey];
+  placementRef.clear();
   for (it = placements.begin(); it != placements.end(); ++it) {
-    it->incSquareCounts(sqrCount);
+    const Placement& placement = (*it);
+    placementRef.insert(placement);
+    placement.getSquares(shots);
   }
 }
 
 //-----------------------------------------------------------------------------
 void Jane::resetSearchVars() {
   placements.clear(); // current boat placements
-  sqrCount.clear();   // legal placement count per square
+  shots.clear();      // legal shots found by search
   examined.clear();   // which boat indexes have already been examined
   tryCount.clear();   // attempted boat placements per ply
   okCount.clear();    // successful boat placements per ply
@@ -122,12 +125,9 @@ void Jane::resetSearchVars() {
 }
 
 //-----------------------------------------------------------------------------
-Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
-  assert(hits.size() > 0);
-  if (examined.size() >= config.getBoatCount()) {
-    return IMPOSSIBLE;
-  }
-
+bool Jane::getPlacements(std::vector<Placement>& candidates,
+                         const std::string& desc)
+{
   unsigned left = config.getPointGoal();
   SquareSet::const_iterator it;
   for (it = examined.begin(); it != examined.end(); ++it) {
@@ -135,14 +135,20 @@ Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
   }
   assert(left > 0);
 
-  std::set<Placement> unique;
-  std::vector<Placement> candidates;
-  const SquareCountMap& sqrProb = placeCount[boardKey];
+  std::set<unsigned> squares(hits.begin(), hits.end());
+  if (squares.empty()) {
+    for (unsigned i = 0; i < desc.size(); ++i) {
+      if (desc[i] == Boat::NONE) {
+        squares.insert(i);
+      }
+    }
+  }
 
+  std::set<Placement> unique;
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     if (!examined.count(i)) {
       const Boat& boat = config.getBoat(i);
-      for (it = hits.begin(); (it != hits.end()); ++it) {
+      for (it = squares.begin(); (it != squares.end()); ++it) {
         const unsigned sqr = (*it);
         const unsigned x = (sqr % width);
         const unsigned y = (sqr / width);
@@ -173,14 +179,15 @@ Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
           unsigned start = (sqr - (north * width));
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
-            Placement placement(boat, i, start, width, desc, false);
+            Placement placement(boat, i, start, width);
             assert(placement.isValid());
             if (((boat.getLength() - placement.getHitCount()) <= left) &&
                 !unique.count(placement))
             {
-              placement.boostScore(sqrProb, desc);
-              unique.insert(placement);
+              assert(!placements.count(placement));
+              placement.setScore(width, height, desc);
               candidates.push_back(placement);
+              unique.insert(placement);
               assert(placement == candidates.back());
             }
             start += width;
@@ -193,14 +200,15 @@ Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
           unsigned start = (sqr - west);
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
-            Placement placement(boat, i, start, 1, desc, false);
+            Placement placement(boat, i, start, 1);
             assert(placement.isValid());
             if (((boat.getLength() - placement.getHitCount()) <= left) &&
                 !unique.count(placement))
             {
-              placement.boostScore(sqrProb, desc);
-              unique.insert(placement);
+              assert(!placements.count(placement));
+              placement.setScore(width, height, desc);
               candidates.push_back(placement);
+              unique.insert(placement);
               assert(placement == candidates.back());
             }
             start++;
@@ -211,42 +219,31 @@ Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
   }
 
   assert(unique.size() == candidates.size());
-  if (candidates.empty()) {
+  std::sort(candidates.begin(), candidates.end(), Placement::GreaterScore);
+  return (candidates.size() > 0);
+}
+
+//-----------------------------------------------------------------------------
+Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
+  std::vector<Placement> candidates;
+  if (!getPlacements(candidates, desc)) {
     return IMPOSSIBLE;
   }
 
-  // sort best first
-  std::sort(candidates.begin(), candidates.end(), Placement::GreaterScore);
-
-//  unsigned matchHits = 0;
-  unsigned improbCount = 0;
-  unsigned limit = std::max<unsigned>(25, (candidates.size() / 2));
   SearchResult result = IMPOSSIBLE;
-
   for (unsigned i = 0; i < candidates.size(); ++i) {
     const Placement& placement = candidates[i];
     assert(placement.isValid());
-//    if (matchHits && (placement.getHitCount() != matchHits)) {
-//      break;
-//    }
     examined.insert(placement.getBoatIndex());
     placements.insert(placement);
-    SearchResult tmp = canPlace(ply, desc, placement);
-    if (tmp == POSSIBLE) {
+    if (canPlace(ply, desc, placement) == POSSIBLE) {
       result = POSSIBLE;
-      incSquareCounts();
-//      matchHits = placement.getHitCount();
-    } else if (!fullSearch && ((i + 1) < candidates.size()) &&
-               (++improbCount >= limit))
-    {
-      result = IMPROBABLE;
+      break;
     }
     examined.erase(placement.getBoatIndex());
     placements.erase(placement);
-    if (result == IMPROBABLE) {
-      break;
-    }
   }
+
   return result;
 }
 
@@ -255,44 +252,47 @@ Jane::SearchResult Jane::canPlace(const unsigned ply, std::string& desc,
                                   const Placement& placement)
 {
   assert(placement.isValid());
+  assert(placement.getHitCount() <= hits.size());
+  assert(examined.size() > 0);
+  assert(examined.size() <= config.getBoatCount());
+  assert(placements.size() == examined.size());
+  assert(ply == (examined.size() - 1));
   assert(ply < tryCount.size());
-  assert(hits.size() > 0);
 
   maxPly = std::max(maxPly, ply);
   tryCount[ply]++;
   nodeCount++;
 
-  // does this placement overlap all the remaining hits?
-  assert(placement.getHitCount() <= hits.size());
-  if (placement.getHitCount() == hits.size()) {
-    okCount[ply]++;
-    posCount++;
-    return POSSIBLE;
-  }
-
   // place boat and remove overlapped hits
   placement.exec(desc, hits);
 
-  // see if the remaining boats can be placed
-  SearchResult result = doSearch((ply + 1), desc);
-  if (result == POSSIBLE) {
-    okCount[ply]++;
+  SearchResult result;
+  if (examined.size() < config.getBoatCount()) {
+    // try to place remaining boats
+    result = doSearch((ply + 1), desc);
+  } else if (hits.empty()) {
+    // all boats have been successfully placed
+    if (debugBot) {
+      Logger::debug() << "legal position" << Board::toString(desc, width);
+    }
+    result = POSSIBLE;
+    saveResult();
+    posCount++;
+  } else {
+    result = IMPOSSIBLE;
   }
 
   // remove boat and restore overlapped hits
   placement.undo(desc, hits);
 
+  if (result == POSSIBLE) {
+    okCount[ply]++;
+  }
   return result;
 }
 
 //-----------------------------------------------------------------------------
 void Jane::finishSearch() {
-  SquareCountMap::iterator it;
-  SquareCountMap& ref = placeCount[boardKey];
-  for (it = sqrCount.begin(); it != sqrCount.end(); ++it) {
-    ref[it->first] += it->second;
-  }
-
   if (Logger::getInstance().getLogLevel() == Logger::DEBUG) {
     Logger::debug() << "nodeCount = " << nodeCount
                     << ", posCount = " << posCount
@@ -305,8 +305,11 @@ void Jane::finishSearch() {
       }
     }
 
-    for (it = ref.begin(); it != ref.end(); ++it) {
-      Logger::debug() << "sqr[" << it->first << "] " << it->second;
+    if (debugBot) {
+      SquareSet::const_iterator it;
+      for (it = shots.begin(); it != shots.end(); ++it) {
+        Logger::debug() << "shot[" << toCoord(*it) << "]";
+      }
     }
   }
 }

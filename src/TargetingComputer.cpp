@@ -26,7 +26,7 @@ TargetingComputer::TargetingComputer()
     width(0),
     height(0),
     boardLen(0),
-    debugMode(CommandArgs::getInstance().indexOf("--debugBot") > 0)
+    debugBot(CommandArgs::getInstance().indexOf("--debugBot") > 0)
 { }
 
 //-----------------------------------------------------------------------------

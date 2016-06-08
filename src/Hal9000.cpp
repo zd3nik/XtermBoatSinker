@@ -37,7 +37,7 @@ ScoredCoordinate Hal9000::bestShotOn(const Board& board) {
     return coords[random(coords.size())].setScore(0);
   }
 
-  if (debugMode) {
+  if (debugBot) {
     frenzyCoords.clear();
     searchCoords.clear();
   }
@@ -46,7 +46,7 @@ ScoredCoordinate Hal9000::bestShotOn(const Board& board) {
   ScoredCoordinate best = hitCount ? frenzyShot(board, weight)
                                    : searchShot(board, weight);
 
-  if (debugMode) {
+  if (debugBot) {
     std::stable_sort(frenzyCoords.begin(), frenzyCoords.end());
     std::stable_sort(searchCoords.begin(), searchCoords.end());
     for (unsigned i = 0; i < frenzyCoords.size(); ++i) {
@@ -88,7 +88,7 @@ void Hal9000::frenzyScore(const Board& board, ScoredCoordinate& coord,
     unsigned len   = std::max(north, std::max(south, std::max(east, west)));
     assert(len >= adj);
     coord.setScore((unsigned)floor(std::min(longBoat, len) * weight));
-    if (debugMode) {
+    if (debugBot) {
       frenzyCoords.push_back(coord);
     }
   } else {
@@ -105,7 +105,7 @@ void Hal9000::searchScore(const Board&, ScoredCoordinate& coord,
   } else {
     coord.setScore((unsigned)floor(weight / 2));
   }
-  if (debugMode) {
+  if (debugBot) {
     searchCoords.push_back(coord);
   }
 }

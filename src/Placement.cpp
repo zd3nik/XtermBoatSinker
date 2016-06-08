@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "Placement.h"
+#include "Coordinate.h"
 
 namespace xbs
 {
@@ -38,8 +39,8 @@ Placement::Placement(const Placement& other)
 
 //-----------------------------------------------------------------------------
 Placement::Placement(const Boat& boat, const unsigned boatIndex,
-                     const unsigned start, const unsigned inc,
-                     const std::string& desc, bool weightByLength)
+                     const unsigned start, const unsigned inc)
+
   : boat(boat),
     boatIndex(boatIndex),
     start(start),
@@ -47,31 +48,7 @@ Placement::Placement(const Boat& boat, const unsigned boatIndex,
     hashValue((start << 16) | (inc << 8) | boat.getLength()),
     hitCount(0),
     score(0)
-{
-  unsigned tail = 0;
-  unsigned between = 0;
-  unsigned sqr = start;
-  unsigned len = boat.getLength();
-  for (unsigned i = 0; i < len; ++i) {
-    assert(sqr < desc.size());
-    if (desc[sqr] == Boat::HIT) {
-      hitCount++;
-      tail = 0;
-    } else if (hitCount) {
-      between++;
-      tail++;
-    }
-    sqr += inc;
-  }
-  score = hitCount;
-  if (between > tail) {
-    score -= (0.5 * (between - tail));
-  }
-  if (weightByLength) {
-    // prefer when boat length more closely matches hit count
-    score -= (double(abs(int(len) - int(hitCount))) / len);
-  }
-}
+{ }
 
 //-----------------------------------------------------------------------------
 Placement& Placement::operator=(const Placement& other) {
@@ -116,35 +93,51 @@ bool Placement::overlaps(const std::set<unsigned>& squares) const {
 }
 
 //-----------------------------------------------------------------------------
-void Placement::boostScore(const std::map<unsigned, unsigned>& sqrCount,
-                           const std::string& desc)
+void Placement::setScore(const unsigned width, const unsigned height,
+                         const std::string& desc)
 {
-  std::map<unsigned, unsigned>::const_iterator it;
-  double boost = 0;
-  unsigned num = 0;
+  hitCount = 0;
+  score = boat.getLength();
+
+  const unsigned len = boat.getLength();
   unsigned sqr = start;
-  for (unsigned i = 0; i < boat.getLength(); ++i) {
-    if (desc[sqr] != Boat::HIT) {
-      if ((it = sqrCount.find(sqr)) != sqrCount.end()) {
-        unsigned possiblePlacementOverlaps = it->second;
-        if (possiblePlacementOverlaps > 0) {
-          boost += possiblePlacementOverlaps;
-          num++;
-        }
+  unsigned empty = 0;
+
+  for (unsigned i = 0; i < len; ++i) {
+    assert(sqr < desc.size());
+    if (desc[sqr] == Boat::HIT) {
+      hitCount++;
+      score -= (empty * 0.50);
+      empty = 0;
+    } else if (hitCount) {
+      empty++;
+    } else {
+      unsigned x = (sqr % width);
+      unsigned y = (sqr / width);
+      if ((x > 0) && Boat::isHit(desc[sqr - 1])) {
+        score += 1;
+      }
+      if (((x + 1) < width) && Boat::isHit(desc[sqr + 1])) {
+        score += 1;
+      }
+      if ((y > 0) && Boat::isHit(desc[sqr - width])) {
+        score += 1;
+      }
+      if (((y + 1) < height) && Boat::isHit(desc[sqr + width])) {
+        score += 1;
       }
     }
     sqr += inc;
   }
-  if (num > 0) {
-    score += log(boost / num);
-  }
+
+  score += hitCount;
 }
 
 //-----------------------------------------------------------------------------
-void Placement::incSquareCounts(std::map<unsigned, unsigned>& count) const {
+void Placement::getSquares(std::set<unsigned>& squares) const {
   unsigned sqr = start;
   for (unsigned i = 0; i < boat.getLength(); ++i) {
-    count[sqr]++;
+    squares.insert(sqr);
     sqr += inc;
   }
 }

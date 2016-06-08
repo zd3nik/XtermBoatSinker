@@ -72,7 +72,7 @@ protected:
   unsigned hitCount;
   unsigned remain;
   bool parity;
-  bool debugMode;
+  bool debugBot;
   ScoredCoordinateVector coords;
   SquareVector adjacentHits;
   SquareVector adjacentFree;
