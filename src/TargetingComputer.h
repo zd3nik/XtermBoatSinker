@@ -43,12 +43,6 @@ protected:
   unsigned random(const unsigned bound) const;
   const ScoredCoordinate& getBestFromCoords();
 
-  unsigned back(const std::string& desc, unsigned i, unsigned last,
-                unsigned inc);
-
-  unsigned forward(const std::string& desc, unsigned i, unsigned last,
-                   unsigned inc);
-
   unsigned idx(const Coordinate& coord) const {
     return ((coord.getX() - 1) + (width * (coord.getY() - 1)));
   }

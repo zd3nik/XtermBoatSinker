@@ -31,8 +31,8 @@ protected:
     IMPOSSIBLE
   };
 
-  void saveResult();
   void resetSearchVars();
+  void saveResult();
   bool getPlacements(std::vector<Placement>&, const std::string& desc);
   SearchResult doSearch(const unsigned ply, std::string& desc);
   SearchResult canPlace(const unsigned ply, std::string& desc, const Placement&);

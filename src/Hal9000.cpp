@@ -31,8 +31,8 @@ ScoredCoordinate Hal9000::bestShotOn(const Board& board) {
   }
 
   double weight = (boardLen * log(remain + 1));
-  ScoredCoordinate best = frenzySquares.size() ? frenzyShot(board, weight)
-                                               : searchShot(board, weight);
+  scoreFrenzyShots(board, weight);
+  scoreSearchShots(board, weight);
 
   if (debugBot) {
     std::vector<ScoredCoordinate> frenzyCoords;
@@ -54,29 +54,32 @@ ScoredCoordinate Hal9000::bestShotOn(const Board& board) {
       Logger::debug() << "search " << searchCoords[i];
     }
   }
-  return best;
+
+  return getBestFromCoords();
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Hal9000::frenzyShot(const Board& board, const double weight) {
+void Hal9000::scoreFrenzyShots(const Board& board, const double weight) {
   for (unsigned i = 0; i < coords.size(); ++i) {
     ScoredCoordinate& coord = coords[i];
     unsigned sqr = idx(coord);
+    assert(!frenzySquares.count(sqr) == !adjacentHits[sqr]);
     if (adjacentHits[sqr]) {
       frenzyScore(board, coord, weight);
-    } else {
-      searchScore(board, coord, weight);
     }
   }
-  return getBestFromCoords();
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Hal9000::searchShot(const Board& board, const double weight) {
+void Hal9000::scoreSearchShots(const Board& board, const double weight) {
   for (unsigned i = 0; i < coords.size(); ++i) {
-    searchScore(board, coords[i], weight);
+    ScoredCoordinate& coord = coords[i];
+    unsigned sqr = idx(coord);
+    assert(!frenzySquares.count(sqr) == !adjacentHits[sqr]);
+    if (!adjacentHits[sqr]) {
+      searchScore(board, coord, weight);
+    }
   }
-  return getBestFromCoords();
 }
 
 //-----------------------------------------------------------------------------

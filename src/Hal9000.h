@@ -11,7 +11,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Hal9000: public TargetingComputer
+class Hal9000 : public TargetingComputer
 {
 public:
   virtual std::string getName() const;
@@ -19,8 +19,8 @@ public:
 
 protected:
   virtual ScoredCoordinate bestShotOn(const Board&);
-  virtual ScoredCoordinate frenzyShot(const Board&, const double weight);
-  virtual ScoredCoordinate searchShot(const Board&, const double weight);
+  virtual void scoreFrenzyShots(const Board&, const double weight);
+  virtual void scoreSearchShots(const Board&, const double weight);
   virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
   virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 };

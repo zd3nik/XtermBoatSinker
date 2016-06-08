@@ -292,37 +292,4 @@ void TargetingComputer::test(std::string testDB, unsigned positions,
   }
 }
 
-//-----------------------------------------------------------------------------
-unsigned TargetingComputer::back(const std::string& desc, unsigned i,
-                                 unsigned last, unsigned inc)
-{
-  unsigned count = 0;
-  while (i > last) {
-    if (desc[i -= inc] == Boat::NONE) {
-      count++;
-    } else {
-      return count;
-    }
-  }
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned TargetingComputer::forward(const std::string& desc, unsigned i,
-                                    unsigned last, unsigned inc)
-{
-  unsigned count = 0;
-  while ((i + inc) < last) {
-    switch (desc[i += inc]) {
-    case Boat::NONE:
-    case Boat::HIT:
-      count++;
-      break;
-    default:
-      return count;
-    }
-  }
-  return count;
-}
-
 } // namespace xbs

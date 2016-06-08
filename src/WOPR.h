@@ -7,14 +7,13 @@
 
 #include <map>
 #include <set>
-#include "Edgar.h"
-#include "Placement.h"
+#include "Jane.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class WOPR : public Edgar
+class WOPR : public Jane
 {
 public:
   WOPR();
@@ -25,27 +24,17 @@ public:
 protected:
   virtual void newBoard(const Board&, const bool parity);
   virtual ScoredCoordinate bestShotOn(const Board&);
+  virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
+  virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 
-  enum TestResult {
-    POSSIBLE,
-    IMPROBABLE,
-    IMPOSSIBLE
-  };
+  void verify(const Board&, ScoredCoordinate&);
+  SearchResult isPossible(const unsigned ply, std::string& desc);
 
-  TestResult isPossible(const Board&, std::string& desc, const Coordinate&);
-  TestResult isPossible(const unsigned ply, std::string& desc);
-  TestResult canPlace(const unsigned ply, std::string& desc, const Placement&);
-
-  std::string boardKey;
   std::map<std::string, SquareSet> impossible;
   std::map<std::string, SquareSet> improbable;
-  SquareSet hits;
-  SquareSet examined;
-  SquareVector tryCount;
-  SquareVector okCount;
-  unsigned nodeCount;
-  unsigned posCount;
-  unsigned maxPly;
+  ScoredCoordinateVector verifyList;
+  SquareSet verifySet;
+  double maxScore;
   bool fullSearch;
 };
 

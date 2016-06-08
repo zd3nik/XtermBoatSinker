@@ -14,7 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version JANE_VERSION("1.1");
+const Version JANE_VERSION("1.2");
 
 //-----------------------------------------------------------------------------
 std::string Jane::getName() const {
@@ -89,18 +89,6 @@ void Jane::searchScore(const Board& board, ScoredCoordinate& coord,
 }
 
 //-----------------------------------------------------------------------------
-void Jane::saveResult() {
-  PlacementSet::const_iterator it;
-  PlacementSet& placementRef = placementMap[boardKey];
-  placementRef.clear();
-  for (it = placements.begin(); it != placements.end(); ++it) {
-    const Placement& placement = (*it);
-    placementRef.insert(placement);
-    placement.getSquares(shots);
-  }
-}
-
-//-----------------------------------------------------------------------------
 void Jane::resetSearchVars() {
   placements.clear(); // current boat placements
   shots.clear();      // legal shots found by search
@@ -113,6 +101,51 @@ void Jane::resetSearchVars() {
 
   tryCount.assign(config.getBoatCount(), 0);
   okCount.assign(config.getBoatCount(), 0);
+}
+
+//-----------------------------------------------------------------------------
+void Jane::saveResult() {
+  PlacementSet::const_iterator it;
+  PlacementSet& placementRef = placementMap[boardKey];
+  placementRef.clear();
+  for (it = placements.begin(); it != placements.end(); ++it) {
+    const Placement& placement = (*it);
+    placementRef.insert(placement);
+    placement.getSquares(shots);
+  }
+}
+
+//-----------------------------------------------------------------------------
+static unsigned back(const std::string& desc, unsigned i, unsigned last,
+                     unsigned inc)
+{
+  unsigned count = 0;
+  while (i > last) {
+    if (desc[i -= inc] == Boat::NONE) {
+      count++;
+    } else {
+      return count;
+    }
+  }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+static unsigned forward(const std::string& desc, unsigned i, unsigned last,
+                        unsigned inc)
+{
+  unsigned count = 0;
+  while ((i + inc) < last) {
+    switch (desc[i += inc]) {
+    case Boat::NONE:
+    case Boat::HIT:
+      count++;
+      break;
+    default:
+      return count;
+    }
+  }
+  return count;
 }
 
 //-----------------------------------------------------------------------------
@@ -249,10 +282,12 @@ Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
     placements.insert(placement);
     if (canPlace(ply, desc, placement) == POSSIBLE) {
       result = POSSIBLE;
-      break;
     }
     examined.erase(placement.getBoatIndex());
     placements.erase(placement);
+    if (result != IMPOSSIBLE) {
+      break;
+    }
   }
 
   return result;
@@ -263,7 +298,6 @@ Jane::SearchResult Jane::canPlace(const unsigned ply, std::string& desc,
                                   const Placement& placement)
 {
   assert(placement.isValid());
-  assert(placement.getHitCount() <= hits.size());
   assert(examined.size() > 0);
   assert(examined.size() <= config.getBoatCount());
   assert(placements.size() == examined.size());

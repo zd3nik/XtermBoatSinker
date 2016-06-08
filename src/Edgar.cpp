@@ -9,7 +9,7 @@
 namespace xbs {
 
 //-----------------------------------------------------------------------------
-const Version EDGAR_VERSION("1.2");
+const Version EDGAR_VERSION("1.3");
 
 //-----------------------------------------------------------------------------
 std::string Edgar::getName() const {
@@ -25,6 +25,18 @@ Version Edgar::getVersion() const {
 void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
                         const double weight)
 {
+  // if 1 shot left it's guaranteed to be adjacent to an existing hit
+  double w = weight;
+  if (remain == 1) {
+    unsigned n = 0;
+    for (unsigned i = 0; i < coords.size(); ++i) {
+      if (adjacentHits[i]) {
+        n++;
+      }
+    }
+    w *= (2 + (config.getPointGoal() - std::min(config.getPointGoal(), n)));
+  }
+
   double score = 0;
   unsigned len = board.maxInlineHits(coord);
   if (len > 1) {
@@ -49,9 +61,9 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
       }
       switch (len) {
       case 1: score =  99; break;
-      case 2: score = 1.5; break;
-      case 3: score = 1.1; break;
-      case 4: score = 1.0; break;
+      case 2: score = 2.0; break;
+      case 3: score = 1.8; break;
+      case 4: score = 1.5; break;
       default:
         assert(false);
       }
@@ -60,12 +72,12 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
       switch (!np + !sp + !ep + !wp) {
       case 0:
         // adjacent to 4 perpendicular lines (center of a closed box)
-        searchScore(board, coord, (weight * 1.4));
-        break;
+        searchScore(board, coord, (w * 1.4));
+        return;
       case 1:
         // adjacent to 3 perpendicular lines
-        searchScore(board, coord, (weight * 1.5));
-        break;
+        searchScore(board, coord, (w * 1.5));
+        return;
       case 2:
         if (np && sp) {
           assert(!(ep | wp));
@@ -75,10 +87,11 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
           d = (board.getSquare((coord + South) + West) == Boat::HIT);
           if (a & b & c & d) {
             // between parallel horizontal lines
-            searchScore(board, coord, (weight * 1.2));
+            searchScore(board, coord, (w * 1.3));
+            return;
           } else {
             // possible elbow pattern
-            searchScore(board, coord, (weight * 1.7));
+            score = 1.5;
           }
         } else if (ep && wp) {
           assert(!(np | sp));
@@ -88,14 +101,15 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
           d = (board.getSquare((coord + South) + West) == Boat::HIT);
           if (a & b & c & d) {
             // between parallel vertical lines
-            searchScore(board, coord, (weight * 1.2));
+            searchScore(board, coord, (w * 1.3));
+            return;
           } else {
             // possible elbow pattern
-            searchScore(board, coord, (weight * 1.7));
+            score = 1.5;
           }
         } else {
           // inside the bend of an elbow
-          searchScore(board, coord, (weight * 1.6));
+          score = 1.5;
         }
         break;
       case 3:
@@ -121,19 +135,19 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
         }
         if (a & b) {
           // probably side of a boat
-          searchScore(board, coord, (weight * 1.1));
+          searchScore(board, coord, (w * 1.1));
         } else {
           // adjacent to end of a perpendicular line (possible elbow pattern)
           assert(a | b);
-          searchScore(board, coord, (weight * 1.8));
+          searchScore(board, coord, (w * 1.8));
         }
-        break;
+        return;
       default:
         assert(false);
       }
-      return;
     }
   }
+
   coord.setScore(score * weight);
 }
 
