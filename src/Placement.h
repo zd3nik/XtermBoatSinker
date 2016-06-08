@@ -26,6 +26,7 @@ public:
   Placement& operator=(const Placement&);
   std::string toString(const unsigned width) const;
   bool isValid() const;
+  bool isValid(const std::string& desc) const;
   bool operator<(const Placement&) const;
   bool operator==(const Placement&) const;
   bool overlaps(const std::set<unsigned>& squares) const;
@@ -34,6 +35,10 @@ public:
   void getSquares(std::set<unsigned>& squares) const;
   void setScore(const unsigned width, const unsigned height,
                 const std::string& desc);
+
+  void setScore(const double score) {
+    this->score = score;
+  }
 
   const Boat& getBoat() const {
     return boat;

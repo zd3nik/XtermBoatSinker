@@ -104,6 +104,7 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
   adjacentFree.clear();
   adjacentHits.assign(boardLen, 0);
   adjacentFree.assign(boardLen, 0);
+  frenzySquares.clear();
 
   for (unsigned i = 0; i < boardLen; ++i) {
     const Coordinate coord(toCoord(i));
@@ -111,7 +112,10 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
     adjacentFree[i] = board.adjacentFree(coord);
     if (desc[i] == Boat::NONE) {
       const ScoredCoordinate coord(0, ((i % width) + 1), ((i / width) + 1));
-      if (adjacentHits[i] || (coord.parity() == parity)) {
+      if (adjacentHits[i]) {
+        frenzySquares.insert(i);
+        coords.push_back(coord);
+      } else if (adjacentFree[i] && (coord.parity() == parity)) {
         coords.push_back(coord);
       }
     }

@@ -12,7 +12,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version SAL_VERSION("1.1");
+const Version SAL_VERSION("1.2");
 
 //-----------------------------------------------------------------------------
 std::string Sal9000::getName() const {
@@ -28,19 +28,12 @@ Version Sal9000::getVersion() const {
 void Sal9000::searchScore(const Board& board, ScoredCoordinate& coord,
                           const double weight)
 {
-  if ((remain == 1) && !adjacentHits[idx(coord)]) {
-    coord.setScore(0);
-  } else {
-    unsigned north = board.freeNorthOf(coord);
-    unsigned south = board.freeSouthOf(coord);
-    unsigned east  = board.freeEastOf(coord);
-    unsigned west  = board.freeWestOf(coord);
-    double score   = (double(north + south + east + west) / (4 * maxLen));
-    coord.setScore((unsigned)floor(score * weight));
-  }
-  if (debugBot) {
-    searchCoords.push_back(coord);
-  }
+  double north = board.freeNorthOf(coord);
+  double south = board.freeSouthOf(coord);
+  double east  = board.freeEastOf(coord);
+  double west  = board.freeWestOf(coord);
+  double score = ((north + south + east + west) / (4 * maxLen));
+  coord.setScore((unsigned)floor(score * weight));
 }
 
 } // namespace xbs

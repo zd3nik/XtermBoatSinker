@@ -9,7 +9,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version RUFUS_VERSION("1.2");
+const Version RUFUS_VERSION("1.3");
 
 //-----------------------------------------------------------------------------
 std::string RandomRufus::getName() const {
@@ -23,7 +23,7 @@ Version RandomRufus::getVersion() const {
 
 //-----------------------------------------------------------------------------
 ScoredCoordinate RandomRufus::bestShotOn(const Board& board) {
-  const unsigned score = (unsigned)floor(boardLen * log(remain + 1));
+  const unsigned score = (unsigned)floor(coords.size() * log(remain + 1));
   return coords[random(coords.size())].setScore(score);
 }
 

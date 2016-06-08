@@ -16,8 +16,6 @@ namespace xbs
 class Jane : public Edgar
 {
 public:
-  Jane();
-
   virtual std::string getName() const;
   virtual Version getVersion() const;
 
@@ -53,7 +51,6 @@ protected:
   unsigned nodeCount;
   unsigned posCount;
   unsigned maxPly;
-  bool fullSearch;
 };
 
 } // namespace xbs

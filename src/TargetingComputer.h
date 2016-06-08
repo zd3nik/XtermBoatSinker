@@ -76,6 +76,7 @@ protected:
   ScoredCoordinateVector coords;
   SquareVector adjacentHits;
   SquareVector adjacentFree;
+  SquareSet frenzySquares;
 };
 
 } // namespace xbs

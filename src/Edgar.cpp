@@ -9,7 +9,7 @@
 namespace xbs {
 
 //-----------------------------------------------------------------------------
-const Version EDGAR_VERSION("1.1");
+const Version EDGAR_VERSION("1.2");
 
 //-----------------------------------------------------------------------------
 std::string Edgar::getName() const {
@@ -25,53 +25,33 @@ Version Edgar::getVersion() const {
 void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
                         const double weight)
 {
-  int n = (int)board.hitsNorthOf(coord);
-  int s = (int)board.hitsSouthOf(coord);
-  int e = (int)board.hitsEastOf(coord);
-  int w = (int)board.hitsWestOf(coord);
-  if (!(n | s | e | w)) {
-    searchScore(board, coord, weight);
-    return;
-  }
-
   double score = 0;
-  int len = std::max(n, std::max(s, std::max(e, w)));
+  unsigned len = board.maxInlineHits(coord);
   if (len > 1) {
     // inline with 2 or more sequential hits
-    score = (2 + (longBoat - std::min<unsigned>(longBoat, len)));
+    score = (2 + (longBoat - std::min(longBoat, len)));
   } else {
     // perpendicular hits
-    int np = (int)board.horizontalHits(coord + North);
-    int sp = (int)board.horizontalHits(coord + South);
-    int ep = (int)board.verticalHits(coord + East);
-    int wp = (int)board.verticalHits(coord + West);
-    assert((!n == !np) && (!s == !sp) && (!e == !ep) && (!w == !wp));
-
+    unsigned np = board.horizontalHits(coord + North);
+    unsigned sp = board.horizontalHits(coord + South);
+    unsigned ep = board.verticalHits(coord + East);
+    unsigned wp = board.verticalHits(coord + West);
     if ((np + sp + ep + wp) == 1) {
-      // no perpendicular line (adjacent to a lone hit)
-      if (n) {
+      // adjacent to a lone hit
+      if (board.hitsNorthOf(coord)) {
         len = board.adjacentFree(coord + North);
-      } else if (s) {
+      } else if (board.hitsSouthOf(coord)) {
         len = board.adjacentFree(coord + South);
-      } else if (e) {
+      } else if (board.hitsEastOf(coord)) {
         len = board.adjacentFree(coord + East);
       } else {
         len = board.adjacentFree(coord + West);
       }
       switch (len) {
-      case 1:
-        // guaranteed hit
-        score = 999;
-        break;
-      case 2:
-        score = 1.5;
-        break;
-      case 3:
-        score = 1.1;
-        break;
-      case 4:
-        score = 1;
-        break;
+      case 1: score =  99; break;
+      case 2: score = 1.5; break;
+      case 3: score = 1.1; break;
+      case 4: score = 1.0; break;
       default:
         assert(false);
       }
@@ -154,11 +134,7 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
       return;
     }
   }
-
   coord.setScore(score * weight);
-  if (debugBot) {
-    frenzyCoords.push_back(coord);
-  }
 }
 
 } // namespace xbs

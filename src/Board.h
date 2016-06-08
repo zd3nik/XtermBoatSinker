@@ -100,6 +100,7 @@ public:
   unsigned getTurns() const;
   unsigned adjacentFree(const Coordinate&) const;
   unsigned adjacentHits(const Coordinate&) const;
+  unsigned maxInlineHits(const Coordinate&) const;
   unsigned horizontalHits(const Coordinate&) const;
   unsigned verticalHits(const Coordinate&) const;
   unsigned freeNorthOf(Coordinate) const;

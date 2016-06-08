@@ -14,12 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version JANE_VERSION("1.0");
-
-//-----------------------------------------------------------------------------
-Jane::Jane()
-  : fullSearch(CommandArgs::getInstance().indexOf("--fullSearch") > 0)
-{ }
+const Version JANE_VERSION("1.1");
 
 //-----------------------------------------------------------------------------
 std::string Jane::getName() const {
@@ -54,12 +49,16 @@ ScoredCoordinate Jane::bestShotOn(const Board& board) {
   Logger::debug() << "hit count = " << hits.size();
   assert(hits.size() == hitCount);
   if (hits.size() > 1) {
+    Timer timer;
     if (debugBot) {
       Logger::debug() << "searching" << board.toString();
     }
     resetSearchVars();
     doSearch(0, desc);
     finishSearch();
+    if (!debugBot && (timer.tick() >= Timer::ONE_SECOND)) {
+      Logger::info() << "difficult position" << board.toString();
+    }
   }
 
   return Edgar::bestShotOn(board);
@@ -70,16 +69,10 @@ void Jane::frenzyScore(const Board& board, ScoredCoordinate& coord,
                        const double weight)
 {
   const unsigned sqr = idx(coord);
-  if (hits.size() < 2) {
-    Edgar::frenzyScore(board, coord, weight);
-  } else if (adjacentHits[sqr]) {
-    if (shots.count(sqr)) {
-      Edgar::frenzyScore(board, coord, weight);
-    } else {
-      coord.setScore(0);
-    }
+  if ((hits.size() > 1) && !shots.count(sqr)) {
+    coord.setScore(0);
   } else {
-    searchScore(board, coord, weight);
+    Edgar::frenzyScore(board, coord, weight);
   }
 }
 
@@ -87,14 +80,12 @@ void Jane::frenzyScore(const Board& board, ScoredCoordinate& coord,
 void Jane::searchScore(const Board& board, ScoredCoordinate& coord,
                        const double weight)
 {
-  if (hits.size() > 1) {
-    const unsigned sqr = idx(coord);
-    if (!shots.count(sqr)) {
-      coord.setScore(0);
-      return;
-    }
+  const unsigned sqr = idx(coord);
+  if ((hits.size() > 1) && !shots.count(sqr)) {
+    coord.setScore(0);
+  } else {
+    Edgar::searchScore(board, coord, weight);
   }
-  Edgar::searchScore(board, coord, weight);
 }
 
 //-----------------------------------------------------------------------------
@@ -145,6 +136,26 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
   }
 
   std::set<Placement> unique;
+  PlacementSet::const_iterator p;
+  const PlacementSet& placementRef = placementMap[boardKey];
+  for (p = placementRef.begin(); p != placementRef.end(); ++p) {
+    Placement placement = (*p);
+    assert(placement.isValid());
+    if (placement.isValid(desc) && placement.overlaps(hits)) {
+      const Boat& boat = placement.getBoat();
+      if (!examined.count(placement.getBoatIndex()) &&
+          ((boat.getLength() - placement.getHitCount()) <= left) &&
+          !unique.count(placement))
+      {
+        assert(!placements.count(placement));
+        placement.setScore(~0U);
+        candidates.push_back(placement);
+        unique.insert(placement);
+        assert(placement == candidates.back());
+      }
+    }
+  }
+
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     if (!examined.count(i)) {
       const Boat& boat = config.getBoat(i);

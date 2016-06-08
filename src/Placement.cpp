@@ -68,6 +68,21 @@ bool Placement::isValid() const {
 }
 
 //-----------------------------------------------------------------------------
+bool Placement::isValid(const std::string& desc) const {
+  if (!isValid()) {
+    return false;
+  }
+  unsigned sqr = start;
+  for (unsigned i = 0; i < boat.getLength(); ++i) {
+    if ((desc[sqr] != Boat::NONE) && (desc[sqr] != Boat::HIT)) {
+      return false;
+    }
+    sqr += inc;
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
 bool Placement::operator<(const Placement& other) const {
   return (hashValue < other.hashValue);
 }

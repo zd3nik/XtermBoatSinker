@@ -385,6 +385,15 @@ unsigned Board::adjacentHits(const Coordinate& coord) const {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Board::maxInlineHits(const Coordinate& coord) const {
+  unsigned north = hitsNorthOf(coord);
+  unsigned south = hitsSouthOf(coord);
+  unsigned east  = hitsEastOf(coord);
+  unsigned west  = hitsWestOf(coord);
+  return std::max(north, std::max(south, std::max(east, west)));
+}
+
+//-----------------------------------------------------------------------------
 unsigned Board::horizontalHits(const Coordinate& coord) const {
   unsigned count = 0;
   if (getSquare(coord) == Boat::HIT) {
