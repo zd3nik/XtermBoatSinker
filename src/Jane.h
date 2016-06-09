@@ -33,7 +33,9 @@ protected:
 
   void resetSearchVars();
   void saveResult();
-  bool getPlacements(std::vector<Placement>&, const std::string& desc);
+  bool getPlacements(std::vector<Placement>&, const std::string& desc,
+                     const bool preferExact);
+
   SearchResult doSearch(const unsigned ply, std::string& desc);
   SearchResult canPlace(const unsigned ply, std::string& desc, const Placement&);
   void finishSearch();

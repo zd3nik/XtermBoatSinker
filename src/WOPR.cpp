@@ -14,7 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version WOPR_VERSION("1.5");
+const Version WOPR_VERSION("1.6");
 
 //-----------------------------------------------------------------------------
 WOPR::WOPR()
@@ -172,7 +172,8 @@ void WOPR::verify(const Board& board, ScoredCoordinate& coord) {
 //-----------------------------------------------------------------------------
 WOPR::SearchResult WOPR::isPossible(const unsigned ply, std::string& desc) {
   std::vector<Placement> candidates;
-  if (!getPlacements(candidates, desc)) {
+  const bool preferExactHitOverlays = (ply == (config.getBoatCount() - 1));
+  if (!getPlacements(candidates, desc, preferExactHitOverlays)) {
     return IMPOSSIBLE;
   }
 

@@ -14,7 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version JANE_VERSION("1.2");
+const Version JANE_VERSION("1.3");
 
 //-----------------------------------------------------------------------------
 std::string Jane::getName() const {
@@ -150,7 +150,7 @@ static unsigned forward(const std::string& desc, unsigned i, unsigned last,
 
 //-----------------------------------------------------------------------------
 bool Jane::getPlacements(std::vector<Placement>& candidates,
-                         const std::string& desc)
+                         const std::string& desc, const bool preferExact)
 {
   unsigned left = config.getPointGoal();
   SquareSet::const_iterator it;
@@ -229,7 +229,7 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
                 !unique.count(placement))
             {
               assert(!placements.count(placement));
-              placement.setScore(width, height, desc);
+              placement.setScore(width, height, desc, preferExact);
               candidates.push_back(placement);
               unique.insert(placement);
               assert(placement == candidates.back());
@@ -250,7 +250,7 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
                 !unique.count(placement))
             {
               assert(!placements.count(placement));
-              placement.setScore(width, height, desc);
+              placement.setScore(width, height, desc, preferExact);
               candidates.push_back(placement);
               unique.insert(placement);
               assert(placement == candidates.back());
@@ -270,7 +270,8 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
 //-----------------------------------------------------------------------------
 Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
   std::vector<Placement> candidates;
-  if (!getPlacements(candidates, desc)) {
+  const bool preferExactHitOverlays = (ply == (config.getBoatCount() - 1));
+  if (!getPlacements(candidates, desc, preferExactHitOverlays)) {
     return IMPOSSIBLE;
   }
 

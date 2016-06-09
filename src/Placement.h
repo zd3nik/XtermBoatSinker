@@ -34,7 +34,7 @@ public:
   void undo(std::string& desc, std::set<unsigned>& hits) const;
   void getSquares(std::set<unsigned>& squares) const;
   void setScore(const unsigned width, const unsigned height,
-                const std::string& desc);
+                const std::string& desc, const bool preferExact);
 
   void setScore(const double score) {
     this->score = score;

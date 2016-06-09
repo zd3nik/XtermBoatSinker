@@ -109,40 +109,68 @@ bool Placement::overlaps(const std::set<unsigned>& squares) const {
 
 //-----------------------------------------------------------------------------
 void Placement::setScore(const unsigned width, const unsigned height,
-                         const std::string& desc)
+                         const std::string& desc, const bool preferExact)
 {
   hitCount = 0;
-  score = boat.getLength();
+  score = (preferExact ? 0 : boat.getLength());
 
   const unsigned len = boat.getLength();
   unsigned sqr = start;
-  unsigned empty = 0;
+  unsigned tail = 0;
+  unsigned adj = 0;
 
   for (unsigned i = 0; i < len; ++i) {
     assert(sqr < desc.size());
     if (desc[sqr] == Boat::HIT) {
       hitCount++;
-      score -= (empty * 0.50);
-      empty = 0;
+      score -= (tail * 0.50);
+      tail = 0;
     } else if (hitCount) {
-      empty++;
+      tail++;
     } else {
       unsigned x = (sqr % width);
       unsigned y = (sqr / width);
       if ((x > 0) && Boat::isHit(desc[sqr - 1])) {
-        score += 1;
+        adj += 1;
       }
       if (((x + 1) < width) && Boat::isHit(desc[sqr + 1])) {
-        score += 1;
+        adj += 1;
       }
       if ((y > 0) && Boat::isHit(desc[sqr - width])) {
-        score += 1;
+        adj += 1;
       }
       if (((y + 1) < height) && Boat::isHit(desc[sqr + width])) {
-        score += 1;
+        adj += 1;
       }
     }
     sqr += inc;
+  }
+
+  if (hitCount) {
+    assert(len >= hitCount);
+    score += hitCount;
+    if (preferExact) {
+      // prefer when boat length more closely matches hit count
+      score -= abs(int(len) - int(hitCount));
+    } else {
+      // prefer when ship extendds out from inline hits
+      unsigned head = 0;
+      sqr = start;
+      for (unsigned i = 0; i < len; ++i) {
+        assert(sqr < desc.size());
+        if (desc[sqr] == Boat::NONE) {
+          head++;
+        } else {
+          assert((desc[sqr] == Boat::HIT) ||
+                 (toupper(desc[sqr]) == boat.getID()));
+          break;
+        }
+        sqr += inc;
+      }
+      score += (double((head + 1) * (tail + 1)) / (len + 1 - hitCount));
+    }
+  } else {
+    score += (double(adj) / 2);
   }
 
   score += hitCount;
