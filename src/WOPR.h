@@ -27,7 +27,7 @@ protected:
   virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
   virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 
-  void verify(const Board&, ScoredCoordinate&);
+  SearchResult verify(const Board&, ScoredCoordinate&, const bool fullSearch);
   SearchResult isPossible(const unsigned ply, std::string& desc);
 
   std::map<std::string, SquareSet> impossible;
@@ -35,7 +35,7 @@ protected:
   ScoredCoordinateVector verifyList;
   SquareSet verifySet;
   double maxScore;
-  bool fullSearch;
+  unsigned improbLimit;
 };
 
 } // namespace xbs

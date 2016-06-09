@@ -26,15 +26,15 @@ public:
   Placement& operator=(const Placement&);
   std::string toString(const unsigned width) const;
   bool isValid() const;
-  bool isValid(const std::string& desc) const;
+  bool isValid(const std::string& desc, const std::set<unsigned>& sqrs) const;
+  bool overlaps(const std::set<unsigned>& squares) const;
   bool operator<(const Placement&) const;
   bool operator==(const Placement&) const;
-  bool overlaps(const std::set<unsigned>& squares) const;
   void exec(std::string& desc, std::set<unsigned>& hits) const;
   void undo(std::string& desc, std::set<unsigned>& hits) const;
   void getSquares(std::set<unsigned>& squares) const;
   void setScore(const unsigned width, const unsigned height,
-                const std::string& desc, const bool preferExact);
+                const std::string& desc);
 
   void setScore(const double score) {
     this->score = score;
@@ -42,6 +42,10 @@ public:
 
   const Boat& getBoat() const {
     return boat;
+  }
+
+  unsigned getBoatLength() const {
+    return boat.getLength();
   }
 
   unsigned getBoatIndex() const {

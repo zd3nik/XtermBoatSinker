@@ -68,18 +68,35 @@ bool Placement::isValid() const {
 }
 
 //-----------------------------------------------------------------------------
-bool Placement::isValid(const std::string& desc) const {
+bool Placement::isValid(const std::string& desc,
+                        const std::set<unsigned>& squares) const
+{
   if (!isValid()) {
     return false;
   }
+  unsigned sqrCount = 0;
   unsigned sqr = start;
   for (unsigned i = 0; i < boat.getLength(); ++i) {
     if ((desc[sqr] != Boat::NONE) && (desc[sqr] != Boat::HIT)) {
       return false;
+    } else if (squares.count(sqr)) {
+      sqrCount++;
     }
     sqr += inc;
   }
-  return true;
+  return (sqrCount > 0);
+}
+
+//-----------------------------------------------------------------------------
+bool Placement::overlaps(const std::set<unsigned>& squares) const {
+  unsigned sqr = start;
+  for (unsigned i = 0; i < boat.getLength(); ++i) {
+    if (squares.count(sqr)) {
+      return true;
+    }
+    sqr += inc;
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -96,23 +113,11 @@ bool Placement::operator==(const Placement& other) const {
 }
 
 //-----------------------------------------------------------------------------
-bool Placement::overlaps(const std::set<unsigned>& squares) const {
-  unsigned sqr = start;
-  for (unsigned i = 0; i < boat.getLength(); ++i) {
-    if (squares.count(sqr)) {
-      return true;
-    }
-    sqr += inc;
-  }
-  return false;
-}
-
-//-----------------------------------------------------------------------------
 void Placement::setScore(const unsigned width, const unsigned height,
-                         const std::string& desc, const bool preferExact)
+                         const std::string& desc)
 {
   hitCount = 0;
-  score = (preferExact ? 0 : boat.getLength());
+  score = boat.getLength();
 
   const unsigned len = boat.getLength();
   unsigned sqr = start;
@@ -149,26 +154,20 @@ void Placement::setScore(const unsigned width, const unsigned height,
   if (hitCount) {
     assert(len >= hitCount);
     score += hitCount;
-    if (preferExact) {
-      // prefer when boat length more closely matches hit count
-      score -= abs(int(len) - int(hitCount));
-    } else {
-      // prefer when ship extendds out from inline hits
-      unsigned head = 0;
-      sqr = start;
-      for (unsigned i = 0; i < len; ++i) {
-        assert(sqr < desc.size());
-        if (desc[sqr] == Boat::NONE) {
-          head++;
-        } else {
-          assert((desc[sqr] == Boat::HIT) ||
-                 (toupper(desc[sqr]) == boat.getID()));
-          break;
-        }
-        sqr += inc;
+    unsigned head = 0;
+    sqr = start;
+    for (unsigned i = 0; i < len; ++i) {
+      assert(sqr < desc.size());
+      if (desc[sqr] == Boat::NONE) {
+        head++;
+      } else {
+        assert((desc[sqr] == Boat::HIT) ||
+               (toupper(desc[sqr]) == boat.getID()));
+        break;
       }
-      score += (double((head + 1) * (tail + 1)) / (len + 1 - hitCount));
+      sqr += inc;
     }
+    score += (double((head + 1) * (tail + 1)) / (len + 1 - hitCount));
   } else {
     score += (double(adj) / 2);
   }

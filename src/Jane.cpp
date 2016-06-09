@@ -14,7 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version JANE_VERSION("1.3");
+const Version JANE_VERSION("1.4");
 
 //-----------------------------------------------------------------------------
 std::string Jane::getName() const {
@@ -51,7 +51,7 @@ ScoredCoordinate Jane::bestShotOn(const Board& board) {
   if (hits.size() > 1) {
     Timer timer;
     if (debugBot) {
-      Logger::debug() << "searching" << board.toString();
+      Logger::info() << "searching" << board.toString();
     }
     resetSearchVars();
     doSearch(0, desc);
@@ -70,6 +70,9 @@ void Jane::frenzyScore(const Board& board, ScoredCoordinate& coord,
 {
   const unsigned sqr = idx(coord);
   if ((hits.size() > 1) && !shots.count(sqr)) {
+    if (debugBot) {
+      Logger::info() << "setting score to 0 on frenzy " << coord;
+    }
     coord.setScore(0);
   } else {
     Edgar::frenzyScore(board, coord, weight);
@@ -82,6 +85,9 @@ void Jane::searchScore(const Board& board, ScoredCoordinate& coord,
 {
   const unsigned sqr = idx(coord);
   if ((hits.size() > 1) && !shots.count(sqr)) {
+    if (debugBot) {
+      Logger::info() << "setting score to 0 on search " << coord;
+    }
     coord.setScore(0);
   } else {
     Edgar::searchScore(board, coord, weight);
@@ -96,8 +102,12 @@ void Jane::resetSearchVars() {
   tryCount.clear();   // attempted boat placements per ply
   okCount.clear();    // successful boat placements per ply
   nodeCount = 0;      // total number of placements attempted
-  posCount = 0;       // total number of unique legal positions found
   maxPly = 0;         // deepest ply searched this turn
+  unplacedPoints = 0; // current point count of unplaced boats
+
+  for (unsigned i = 0; i < config.getBoatCount(); ++i) {
+    unplacedPoints += config.getBoat(i).getLength();
+  }
 
   tryCount.assign(config.getBoatCount(), 0);
   okCount.assign(config.getBoatCount(), 0);
@@ -112,6 +122,25 @@ void Jane::saveResult() {
     const Placement& placement = (*it);
     placementRef.insert(placement);
     placement.getSquares(shots);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Jane::finishSearch() {
+  if (Logger::getInstance().getLogLevel() == Logger::DEBUG) {
+    Logger::debug() << "nodeCount = " << nodeCount << ", maxPly = " << maxPly;
+    for (unsigned ply = 0; ply < config.getBoatCount(); ++ply) {
+      if (tryCount[ply]) {
+        Logger::debug() << "tryCount[" << ply << "] " << (tryCount[ply])
+                        << ", okCount[" << ply << "] " << (okCount[ply]);
+      }
+    }
+    if (debugBot) {
+      SquareSet::const_iterator it;
+      for (it = shots.begin(); it != shots.end(); ++it) {
+        Logger::debug() << "shot[" << toCoord(*it) << "]";
+      }
+    }
   }
 }
 
@@ -150,16 +179,12 @@ static unsigned forward(const std::string& desc, unsigned i, unsigned last,
 
 //-----------------------------------------------------------------------------
 bool Jane::getPlacements(std::vector<Placement>& candidates,
-                         const std::string& desc, const bool preferExact)
+                         const std::string& desc)
 {
-  unsigned left = config.getPointGoal();
-  SquareSet::const_iterator it;
-  for (it = examined.begin(); it != examined.end(); ++it) {
-    left -= config.getBoat(*it).getLength();
-  }
-  assert(left > 0);
+  // TODO if remaining boat count > hit islands return false
+  // NOTE: count inline hits separated by < maxBoatLength as part of 1 island
 
-  std::set<unsigned> squares(hits.begin(), hits.end());
+  SquareSet squares(hits.begin(), hits.end());
   if (squares.empty()) {
     for (unsigned i = 0; i < desc.size(); ++i) {
       if (desc[i] == Boat::NONE) {
@@ -168,23 +193,21 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
     }
   }
 
-  std::set<Placement> unique;
-  PlacementSet::const_iterator p;
-  const PlacementSet& placementRef = placementMap[boardKey];
-  for (p = placementRef.begin(); p != placementRef.end(); ++p) {
-    Placement placement = (*p);
-    assert(placement.isValid());
-    if (placement.isValid(desc) && placement.overlaps(hits)) {
-      const Boat& boat = placement.getBoat();
-      if (!examined.count(placement.getBoatIndex()) &&
-          ((boat.getLength() - placement.getHitCount()) <= left) &&
+  PlacementSet unique;
+  if (hits.size()) {
+    const PlacementSet& placementRef = placementMap[boardKey];
+    PlacementSet::const_iterator it;
+    for (it = placementRef.begin(); it != placementRef.end(); ++it) {
+      Placement placement = (*it);
+      assert(placement.isValid());
+      if (placement.isValid(desc, hits) &&
+          !examined.count(placement.getBoatIndex()) &&
           !unique.count(placement))
       {
         assert(!placements.count(placement));
         placement.setScore(~0U);
         candidates.push_back(placement);
         unique.insert(placement);
-        assert(placement == candidates.back());
       }
     }
   }
@@ -192,6 +215,7 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
   for (unsigned i = 0; i < config.getBoatCount(); ++i) {
     if (!examined.count(i)) {
       const Boat& boat = config.getBoat(i);
+      SquareSet::const_iterator it;
       for (it = squares.begin(); (it != squares.end()); ++it) {
         const unsigned sqr = (*it);
         const unsigned x = (sqr % width);
@@ -225,14 +249,11 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
           for (unsigned slide = 0; slide < slides; ++slide) {
             Placement placement(boat, i, start, width);
             assert(placement.isValid());
-            if (((boat.getLength() - placement.getHitCount()) <= left) &&
-                !unique.count(placement))
-            {
+            if (!unique.count(placement)) {
               assert(!placements.count(placement));
-              placement.setScore(width, height, desc, preferExact);
+              placement.setScore(width, height, desc);
               candidates.push_back(placement);
               unique.insert(placement);
-              assert(placement == candidates.back());
             }
             start += width;
           }
@@ -246,14 +267,11 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
           for (unsigned slide = 0; slide < slides; ++slide) {
             Placement placement(boat, i, start, 1);
             assert(placement.isValid());
-            if (((boat.getLength() - placement.getHitCount()) <= left) &&
-                !unique.count(placement))
-            {
+            if (!unique.count(placement)) {
               assert(!placements.count(placement));
-              placement.setScore(width, height, desc, preferExact);
+              placement.setScore(width, height, desc);
               candidates.push_back(placement);
               unique.insert(placement);
-              assert(placement == candidates.back());
             }
             start++;
           }
@@ -270,8 +288,20 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
 //-----------------------------------------------------------------------------
 Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
   std::vector<Placement> candidates;
-  const bool preferExactHitOverlays = (ply == (config.getBoatCount() - 1));
-  if (!getPlacements(candidates, desc, preferExactHitOverlays)) {
+  if (unplacedPoints == 0) {
+    if (hits.empty()) {
+      if (debugBot) {
+        Logger::info() << "legal position after " << nodeCount << " nodes"
+                       << Board::toString(desc, width);
+      }
+      saveResult();
+      return POSSIBLE;
+    } else {
+      return IMPOSSIBLE;
+    }
+  } else if (unplacedPoints < hits.size()) {
+    return IMPOSSIBLE;
+  } else if (!getPlacements(candidates, desc)) {
     return IMPOSSIBLE;
   }
 
@@ -290,7 +320,6 @@ Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
       break;
     }
   }
-
   return result;
 }
 
@@ -302,6 +331,7 @@ Jane::SearchResult Jane::canPlace(const unsigned ply, std::string& desc,
   assert(examined.size() > 0);
   assert(examined.size() <= config.getBoatCount());
   assert(placements.size() == examined.size());
+  assert(unplacedPoints >= placement.getBoatLength());
   assert(ply == (examined.size() - 1));
   assert(ply < tryCount.size());
 
@@ -311,53 +341,19 @@ Jane::SearchResult Jane::canPlace(const unsigned ply, std::string& desc,
 
   // place boat and remove overlapped hits
   placement.exec(desc, hits);
+  unplacedPoints -= placement.getBoatLength();
 
-  SearchResult result;
-  if (examined.size() < config.getBoatCount()) {
-    // try to place remaining boats
-    result = doSearch((ply + 1), desc);
-  } else if (hits.empty()) {
-    // all boats have been successfully placed
-    if (debugBot) {
-      Logger::debug() << "legal position" << Board::toString(desc, width);
-    }
-    result = POSSIBLE;
-    saveResult();
-    posCount++;
-  } else {
-    result = IMPOSSIBLE;
-  }
+  // see if remaining boats can be placed
+  SearchResult result = doSearch((ply + 1), desc);
 
   // remove boat and restore overlapped hits
   placement.undo(desc, hits);
+  unplacedPoints += placement.getBoatLength();
 
   if (result == POSSIBLE) {
     okCount[ply]++;
   }
   return result;
-}
-
-//-----------------------------------------------------------------------------
-void Jane::finishSearch() {
-  if (Logger::getInstance().getLogLevel() == Logger::DEBUG) {
-    Logger::debug() << "nodeCount = " << nodeCount
-                    << ", posCount = " << posCount
-                    << ", maxPly = " << maxPly;
-
-    for (unsigned ply = 0; ply < config.getBoatCount(); ++ply) {
-      if (tryCount[ply]) {
-        Logger::debug() << "tryCount[" << ply << "] " << (tryCount[ply])
-                        << ", okCount[" << ply << "] " << (okCount[ply]);
-      }
-    }
-
-    if (debugBot) {
-      SquareSet::const_iterator it;
-      for (it = shots.begin(); it != shots.end(); ++it) {
-        Logger::debug() << "shot[" << toCoord(*it) << "]";
-      }
-    }
-  }
 }
 
 } //namespace xbs

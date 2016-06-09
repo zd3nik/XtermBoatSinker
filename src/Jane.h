@@ -33,12 +33,10 @@ protected:
 
   void resetSearchVars();
   void saveResult();
-  bool getPlacements(std::vector<Placement>&, const std::string& desc,
-                     const bool preferExact);
-
+  void finishSearch();
+  bool getPlacements(std::vector<Placement>&, const std::string& desc);
   SearchResult doSearch(const unsigned ply, std::string& desc);
   SearchResult canPlace(const unsigned ply, std::string& desc, const Placement&);
-  void finishSearch();
 
   typedef std::set<Placement> PlacementSet;
 
@@ -51,8 +49,8 @@ protected:
   SquareVector tryCount;
   SquareVector okCount;
   unsigned nodeCount;
-  unsigned posCount;
   unsigned maxPly;
+  unsigned unplacedPoints;
 };
 
 } // namespace xbs

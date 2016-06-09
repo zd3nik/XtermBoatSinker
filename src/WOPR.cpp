@@ -14,12 +14,18 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version WOPR_VERSION("1.6");
+const Version WOPR_VERSION("1.7");
 
 //-----------------------------------------------------------------------------
 WOPR::WOPR()
-  : fullSearch(CommandArgs::getInstance().indexOf("--fullSearch") > 0)
-{ }
+  : improbLimit(15)
+{
+  const CommandArgs& args = CommandArgs::getInstance();
+  const char* val = args.getValueOf("--improbLimit");
+  if (val && isdigit(*val)) {
+    improbLimit = (unsigned)atoi(val);
+  }
+}
 
 //-----------------------------------------------------------------------------
 std::string WOPR::getName() const {
@@ -45,11 +51,14 @@ ScoredCoordinate WOPR::bestShotOn(const Board& board) {
   maxScore = -9999;
 
   ScoredCoordinate best = Jane::bestShotOn(board);
-  if (verifyList.empty() || !verifySet.count(idx(best))) {
+  if (!verifySet.count(idx(best))) {
     return best;
   }
 
+  bool doFullSearch = false;
+  std::vector<unsigned> fullSearchList;
   std::sort(verifyList.begin(), verifyList.end());
+
   while (verifyList.size()) {
     ScoredCoordinate coord = verifyList.back();
     verifyList.pop_back();
@@ -62,14 +71,32 @@ ScoredCoordinate WOPR::bestShotOn(const Board& board) {
       }
     }
     if (pos < coords.size()) {
-      verify(board, coords[pos]);
-      if (coords[pos].getScore() >= maxScore) {
-        break;
+      SearchResult result = verify(board, coords[pos], false);
+      if (result == POSSIBLE) {
+        if (coords[pos].getScore() >= maxScore) {
+          doFullSearch = false;
+          break;
+        }
+      } else if (result == IMPROBABLE) {
+        fullSearchList.push_back(pos);
+        doFullSearch = (improbLimit > 0);
       }
     } else {
       assert(false);
     }
   }
+
+  if (doFullSearch) {
+    for (unsigned i = 0; i < fullSearchList.size(); ++i) {
+      ScoredCoordinate& coord = coords[fullSearchList[i]];
+      if ((verify(board, coord, true) == POSSIBLE) &&
+          (coord.getScore() >= maxScore))
+      {
+        break;
+      }
+    }
+  }
+
   return getBestFromCoords();
 }
 
@@ -108,7 +135,9 @@ void WOPR::searchScore(const Board& board, ScoredCoordinate& coord,
 }
 
 //-----------------------------------------------------------------------------
-void WOPR::verify(const Board& board, ScoredCoordinate& coord) {
+Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
+                                const bool fullSearch)
+{
   std::string desc = board.getDescriptor();
   const unsigned sqr = idx(coord);
   assert(desc[sqr] == Boat::NONE);
@@ -116,20 +145,22 @@ void WOPR::verify(const Board& board, ScoredCoordinate& coord) {
   if (impossible[boardKey].count(sqr)) {
     Logger::info() << "setting score to 0 on impossible " << coord;
     coord.setScore(0);
-    return;
+    return IMPOSSIBLE;
   }
-  if (improbable[boardKey].count(sqr)) {
-    Logger::info() << "lowering score on impossible " << coord;
-    coord.setScore(coord.getScore() / 4);
-    return;
+  if (!fullSearch && improbable[boardKey].count(sqr)) {
+    return IMPROBABLE;
   }
 
   if (debugBot) {
-    Logger::debug() << "verfiying " << coord << board.toString();
+    Logger::info() << "verfiying " << coord << board.toString();
   } else {
     Logger::debug() << "verifying " << coord;
   }
 
+  const unsigned savedImprobLimit = improbLimit;
+  if (fullSearch) {
+    improbLimit = 0;
+  }
   desc[sqr] = Boat::HIT;
   hits.insert(sqr);
 
@@ -141,6 +172,9 @@ void WOPR::verify(const Board& board, ScoredCoordinate& coord) {
   assert(desc[sqr] == Boat::HIT);
   desc[sqr] = Boat::NONE;
   hits.erase(sqr);
+  if (fullSearch) {
+    improbLimit = savedImprobLimit;
+  }
 
   if (!debugBot && (timer.tick() >= Timer::ONE_SECOND)) {
     Logger::info() << "difficult position" << board.toString();
@@ -148,39 +182,58 @@ void WOPR::verify(const Board& board, ScoredCoordinate& coord) {
 
   switch (result) {
   case POSSIBLE:
-    Logger::debug() << coord << " verified!";
+    if (fullSearch) {
+      Logger::info() << coord << " verified!" << board.toString();
+      improbable[boardKey].erase(sqr);
+    } else {
+      Logger::debug() << coord << " verified!";
+    }
     break;
   case IMPROBABLE:
-    Logger::info() << "lowering score on improbable " << coord;
+    assert(!fullSearch);
     if (debugBot) {
-      Logger::info() << board.toString();
+      Logger::info() << "improbable " << coord << board.toString();
     }
     improbable[boardKey].insert(sqr);
-    coord.setScore(coord.getScore() / 4);
-    break;
+    return IMPROBABLE;
   case IMPOSSIBLE:
-    Logger::info() << "setting score to 0 on impossible " << coord;
     if (debugBot) {
-      Logger::info() << board.toString();
+      Logger::info() << "setting score to 0 on impossible " << coord
+                     << board.toString();
     }
     impossible[boardKey].insert(sqr);
     coord.setScore(0);
-    break;
+    return IMPOSSIBLE;
   }
+
+  return POSSIBLE;
 }
 
 //-----------------------------------------------------------------------------
 WOPR::SearchResult WOPR::isPossible(const unsigned ply, std::string& desc) {
   std::vector<Placement> candidates;
-  const bool preferExactHitOverlays = (ply == (config.getBoatCount() - 1));
-  if (!getPlacements(candidates, desc, preferExactHitOverlays)) {
+  if (unplacedPoints == 0) {
+    if (hits.empty()) {
+      if (debugBot) {
+        Logger::info() << "legal position after " << nodeCount << " nodes"
+                       << Board::toString(desc, width);
+      }
+      saveResult();
+      return POSSIBLE;
+    } else {
+      return IMPOSSIBLE;
+    }
+  } else if (unplacedPoints < hits.size()) {
+    return IMPOSSIBLE;
+  } else if (!getPlacements(candidates, desc)) {
     return IMPOSSIBLE;
   }
 
-  // rearrange so we alternate between boat lengths
   std::map<unsigned, unsigned> lengthCount;
-  unsigned maxCount = 2;
   unsigned half = (candidates.size() / 2);
+  unsigned maxCount = 2;
+
+  // rearrange so we alternate between boat lengths
   for (unsigned i = 0; i < half; ++i) {
     const Placement& placement = candidates[i];
     assert(placement.isValid());
@@ -201,11 +254,14 @@ WOPR::SearchResult WOPR::isPossible(const unsigned ply, std::string& desc) {
     maxCount = std::max(maxCount, count);
   }
 
-  const unsigned limit = (4 * config.getBoatCount());
-  unsigned improbCount = 0;
+  unsigned tryCount = 0;
   SearchResult result = IMPOSSIBLE;
 
   for (unsigned i = 0; i < candidates.size(); ++i) {
+    if (improbLimit && (++tryCount > improbLimit)) {
+      result = IMPROBABLE;
+      break;
+    }
     const Placement& placement = candidates[i];
     assert(placement.isValid());
     examined.insert(placement.getBoatIndex());
@@ -213,10 +269,6 @@ WOPR::SearchResult WOPR::isPossible(const unsigned ply, std::string& desc) {
     SearchResult tmp = canPlace(ply, desc, placement);
     if (tmp == POSSIBLE) {
       result = POSSIBLE;
-    } else if (!fullSearch && ((i + 1) < candidates.size()) &&
-               (++improbCount >= limit))
-    {
-      result = IMPROBABLE;
     }
     examined.erase(placement.getBoatIndex());
     placements.erase(placement);
