@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <algorithm>
+#include <stdexcept>
 #include <cstdio>
 #include "Server.h"
 #include "CommandArgs.h"

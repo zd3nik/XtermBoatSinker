@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdexcept>
 #include "Client.h"
 #include "CommandArgs.h"
 #include "Logger.h"
@@ -565,7 +566,6 @@ bool Client::setupBoard() {
   char sbuf[32];
   std::vector<Container*> children;
   std::vector<Board> boards;
-  std::string str;
 
   boards.reserve(9);
   for (unsigned i = 0; i < 9; ++i) {

@@ -49,7 +49,6 @@ void TargetingComputer::setConfig(const Configuration& configuration) {
 
 //-----------------------------------------------------------------------------
 unsigned TargetingComputer::random(const unsigned bound) const {
-  srand(clock());
   return ((((unsigned)(rand() >> 3)) & 0x7FFFU) % bound);
 }
 
@@ -85,7 +84,6 @@ Board* TargetingComputer::getTargetBoard(const std::string& me,
       }
     }
   }
-  srand(clock());
   return bestBoard;
 }
 

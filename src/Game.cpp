@@ -3,6 +3,7 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include <algorithm>
+#include <stdexcept>
 #include "Game.h"
 #include "Screen.h"
 #include "Logger.h"

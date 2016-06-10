@@ -568,7 +568,6 @@ unsigned random(const unsigned bound) {
 
 //-----------------------------------------------------------------------------
 bool Board::addRandomBoats(const Configuration& config) {
-  srand(clock());
   clearBoatArea();
   unsigned maxTries = (10 * boatAreaWidth * boatAreaHeight);
   unsigned boatCount = 0;

@@ -2,6 +2,7 @@
 // ServerMain.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
+#include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
 #include "CommandArgs.h"
@@ -19,7 +20,7 @@ void termSizeChanged(int) {
 //-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
-    srand((unsigned)time(NULL));
+    srand((unsigned)time(NULL) * (unsigned)getpid());
     CommandArgs::initialize(argc, argv);
     Server server;
 
