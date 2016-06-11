@@ -23,7 +23,6 @@ protected:
   virtual void newBoard(const Board&, const bool parity);
   virtual ScoredCoordinate bestShotOn(const Board&);
   virtual void frenzyScore(const Board&, ScoredCoordinate&, const double wght);
-  virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
 
   enum SearchResult {
     POSSIBLE,

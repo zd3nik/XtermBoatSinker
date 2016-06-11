@@ -14,7 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version WOPR_VERSION("1.7");
+const Version WOPR_VERSION("1.8");
 
 //-----------------------------------------------------------------------------
 WOPR::WOPR()
@@ -70,6 +70,7 @@ ScoredCoordinate WOPR::bestShotOn(const Board& board) {
         break;
       }
     }
+
     if (pos < coords.size()) {
       SearchResult result = verify(board, coords[pos], false);
       if (result == POSSIBLE) {
@@ -105,14 +106,19 @@ void WOPR::frenzyScore(const Board& board, ScoredCoordinate& coord,
                        const double weight)
 {
   const unsigned sqr = idx(coord);
-  Edgar::frenzyScore(board, coord, weight);
-  if ((hits.size() > 1) && !shots.count(sqr)) {
-    if (!verifySet.count(sqr)) {
-      verifySet.insert(sqr);
-      verifyList.push_back(coord);
+  if (impossible[boardKey].count(sqr)) {
+    Logger::info() << "setting score to 0 on impoosible " << coord;
+    coord.setScore(0);
+  } else {
+    Edgar::frenzyScore(board, coord, weight);
+    if ((hits.size() > 1) && frenzySquares.size() && !shots.count(sqr)) {
+      if (!verifySet.count(sqr)) {
+        verifySet.insert(sqr);
+        verifyList.push_back(coord);
+      }
+    } else if (coord.getScore() > maxScore) {
+      maxScore = coord.getScore();
     }
-  } else if (coord.getScore() > maxScore) {
-    maxScore = coord.getScore();
   }
 }
 
@@ -121,44 +127,43 @@ void WOPR::searchScore(const Board& board, ScoredCoordinate& coord,
                        const double weight)
 {
   const unsigned sqr = idx(coord);
-  Edgar::searchScore(board, coord, weight);
-  if ((hits.size() > 1) && !shots.count(idx(coord)) &&
-      (coord.getScore() >= maxScore))
-  {
-    if (!verifySet.count(sqr)) {
-      verifySet.insert(sqr);
-      verifyList.push_back(coord);
-    }
-  } else if (coord.getScore() > maxScore) {
-    maxScore = coord.getScore();
+  if (impossible[boardKey].count(sqr)) {
+    Logger::info() << "setting score to 0 on impoosible " << coord;
+    coord.setScore(0);
+  } else {
+    Sal9000::searchScore(board, coord, weight);
   }
 }
 
 //-----------------------------------------------------------------------------
 Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
-                                const bool fullSearch)
+                                const bool full)
 {
   std::string desc = board.getDescriptor();
   const unsigned sqr = idx(coord);
   assert(desc[sqr] == Boat::NONE);
+
+  if (debugBot) {
+    Logger::info() << "verfiying " << coord
+                   << (full ? " with full search" : " with quick search")
+                   << board.toString();
+  } else {
+    Logger::debug() << "verifying " << coord
+                    << (full ? " with full search" : " with quick search");
+  }
 
   if (impossible[boardKey].count(sqr)) {
     Logger::info() << "setting score to 0 on impossible " << coord;
     coord.setScore(0);
     return IMPOSSIBLE;
   }
-  if (!fullSearch && improbable[boardKey].count(sqr)) {
+  if (!full && improbable[boardKey].count(sqr)) {
+    coord.setScore(coord.getScore() / 2);
     return IMPROBABLE;
   }
 
-  if (debugBot) {
-    Logger::info() << "verfiying " << coord << board.toString();
-  } else {
-    Logger::debug() << "verifying " << coord;
-  }
-
   const unsigned savedImprobLimit = improbLimit;
-  if (fullSearch) {
+  if (full) {
     improbLimit = 0;
   }
   desc[sqr] = Boat::HIT;
@@ -172,7 +177,7 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
   assert(desc[sqr] == Boat::HIT);
   desc[sqr] = Boat::NONE;
   hits.erase(sqr);
-  if (fullSearch) {
+  if (full) {
     improbLimit = savedImprobLimit;
   }
 
@@ -182,19 +187,27 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
 
   switch (result) {
   case POSSIBLE:
-    if (fullSearch) {
+    if (full) {
       Logger::info() << coord << " verified!" << board.toString();
-      improbable[boardKey].erase(sqr);
     } else {
       Logger::debug() << coord << " verified!";
     }
+    if (impossible[boardKey].count(sqr)) {
+      assert(false); // should never happen
+      impossible[boardKey].erase(sqr);
+    }
+    if (improbable[boardKey].count(sqr)) {
+      improbable[boardKey].erase(sqr);
+      coord.setScore(coord.getScore() * 2);
+    }
     break;
   case IMPROBABLE:
-    assert(!fullSearch);
+    assert(!full);
     if (debugBot) {
       Logger::info() << "improbable " << coord << board.toString();
     }
     improbable[boardKey].insert(sqr);
+    coord.setScore(coord.getScore() / 2);
     return IMPROBABLE;
   case IMPOSSIBLE:
     if (debugBot) {
@@ -202,6 +215,7 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
                      << board.toString();
     }
     impossible[boardKey].insert(sqr);
+    improbable[boardKey].erase(sqr);
     coord.setScore(0);
     return IMPOSSIBLE;
   }

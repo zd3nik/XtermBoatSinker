@@ -14,7 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version JANE_VERSION("1.4");
+const Version JANE_VERSION("1.5");
 
 //-----------------------------------------------------------------------------
 std::string Jane::getName() const {
@@ -48,7 +48,7 @@ ScoredCoordinate Jane::bestShotOn(const Board& board) {
 
   Logger::debug() << "hit count = " << hits.size();
   assert(hits.size() == hitCount);
-  if (hits.size() > 1) {
+  if ((hits.size() > 1) && frenzySquares.size()) {
     Timer timer;
     if (debugBot) {
       Logger::info() << "searching" << board.toString();
@@ -69,28 +69,13 @@ void Jane::frenzyScore(const Board& board, ScoredCoordinate& coord,
                        const double weight)
 {
   const unsigned sqr = idx(coord);
-  if ((hits.size() > 1) && !shots.count(sqr)) {
+  if ((hits.size() > 1) && frenzySquares.size() && !shots.count(sqr)) {
     if (debugBot) {
       Logger::info() << "setting score to 0 on frenzy " << coord;
     }
     coord.setScore(0);
   } else {
     Edgar::frenzyScore(board, coord, weight);
-  }
-}
-
-//-----------------------------------------------------------------------------
-void Jane::searchScore(const Board& board, ScoredCoordinate& coord,
-                       const double weight)
-{
-  const unsigned sqr = idx(coord);
-  if ((hits.size() > 1) && !shots.count(sqr)) {
-    if (debugBot) {
-      Logger::info() << "setting score to 0 on search " << coord;
-    }
-    coord.setScore(0);
-  } else {
-    Edgar::searchScore(board, coord, weight);
   }
 }
 
