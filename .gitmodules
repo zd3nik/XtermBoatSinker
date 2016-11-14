@@ -1,3 +1,6 @@
-[submodule "BoatSinkerBot"]
+[submodule "BotExamples/python3/BoatSinkerBot"]
 	path = BotExamples/python3/BoatSinkerBot
 	url = https://github.com/hjbrock/BoatSinkerBot.git
+[submodule "BotExamples/ruby/rb-boat"]
+	path = BotExamples/ruby/rb-boat
+	url = https://github.com/boccobrock/rb-boat.git
