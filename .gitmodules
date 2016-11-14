@@ -1,0 +1,3 @@
+[submodule "BoatSinkerBot"]
+	path = BotExamples/python3/BoatSinkerBot
+	url = https://github.com/hjbrock/BoatSinkerBot.git
