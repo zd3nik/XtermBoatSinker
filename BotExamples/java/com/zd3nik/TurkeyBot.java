@@ -184,7 +184,7 @@ public class TurkeyBot {
 
     public static void main(String[] args) {
         if (helpRequested(args)) {
-            System.out.println("usage: java -jar turkey.jar [username] [server_address] [server_port]");
+            System.out.println("usage: java -jar turkey.jar [username [server_address [server_port]]]");
             return;
         }
 
