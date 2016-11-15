@@ -100,7 +100,7 @@ More info:
     Joined game      J|player
     Game started     S|player1|player2|...
     Next turn        N|player
-    Hit              H|player|X|Y
+    Hit              H|player|targetPlayer|xy
     Left game        L|player|reason
     Text message     M|sender|text|group
     Skip player      K|player|reason
