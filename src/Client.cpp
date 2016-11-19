@@ -15,6 +15,7 @@
 #include "Server.h"
 
 // bots
+#include "Skipper.h"
 #include "RandomRufus.h"
 #include "Hal9000.h"
 #include "Sal9000.h"
@@ -140,6 +141,7 @@ void Client::showHelp() {
 
 //-----------------------------------------------------------------------------
 void Client::showBots() {
+  Skipper skipper;
   RandomRufus rufus;
   Hal9000 hal;
   Sal9000 sal;
@@ -151,6 +153,7 @@ void Client::showBots() {
       << EL
       << "Available bot AIs:" << EL
       << EL
+      << "  " << skipper.getName() << " (" << skipper.getVersion() << ")" << EL
       << "  " << rufus.getName() << " (" << rufus.getVersion() << ")" << EL
       << "  " << hal.getName() << " (" << hal.getVersion() << ")" << EL
       << "  " << sal.getName() << " (" << sal.getVersion() << ")" << EL
@@ -162,6 +165,7 @@ void Client::showBots() {
 
 //-----------------------------------------------------------------------------
 TargetingComputer* loadBot(const std::string& name) {
+  Skipper skipper;
   RandomRufus rufus;
   Hal9000 hal;
   Sal9000 sal;
@@ -170,7 +174,9 @@ TargetingComputer* loadBot(const std::string& name) {
   Jane jane;
 
   if (!name.empty()) {
-    if (strcasecmp(name.c_str(), rufus.getName().c_str()) == 0) {
+    if (strcasecmp(name.c_str(), skipper.getName().c_str()) == 0) {
+      return new Skipper();
+    } else if (strcasecmp(name.c_str(), rufus.getName().c_str()) == 0) {
       return new RandomRufus();
     } else if (strcasecmp(name.c_str(), hal.getName().c_str()) == 0) {
       return new Hal9000();
@@ -1338,8 +1344,7 @@ bool Client::nextTurn() {
     ScoredCoordinate coord;
     Board* target = bot->getTargetBoard(name, boardList, coord);
     if (!target) {
-      Logger::printError() << "failed to select target board";
-      return false;
+      return sendLine("K"); // skip turn
     } else if (!target->getBoatArea().contains(coord)) {
       Logger::printError() << "invalid target coordinate: " << coord;
       return false;

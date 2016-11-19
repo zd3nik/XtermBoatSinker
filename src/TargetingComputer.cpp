@@ -77,7 +77,9 @@ Board* TargetingComputer::getTargetBoard(const std::string& me,
       Board* board = boards[i];
       if (board->getPlayerName() != me) {
         ScoredCoordinate coord = getTargetCoordinate(*board);
-        if (!bestBoard || (coord.getScore() > bestCoord.getScore())) {
+        if (coord.isValid() &&
+            (!bestBoard || (coord.getScore() > bestCoord.getScore())))
+        {
           bestBoard = board;
           bestCoord = coord;
         }
