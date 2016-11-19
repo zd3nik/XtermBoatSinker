@@ -30,7 +30,7 @@ std::string Board::toString(const std::string& desc, const unsigned width) {
   }
 
   for (unsigned sqr = 0; sqr < desc.size(); sqr += width) {
-    snprintf(out, 5, "\n% 3u", ((sqr / width) + 1));
+    snprintf(out, 5, "\n%3u", ((sqr / width) + 1));
     out += strlen(out);
     for (unsigned x = 0; x < width; ++x) {
       *out++ = ' ';
@@ -641,7 +641,7 @@ bool Board::print(const bool masked, const Configuration* config) const {
 
   // print boat area one row at a time
   for (unsigned y = 0; y < boatAreaHeight; ++y) {
-    snprintf(sbuf, sizeof(sbuf), "% 2u", (y + 1));
+    snprintf(sbuf, sizeof(sbuf), "%2u", (y + 1));
     Screen::print() << coord.south() << sbuf;
     for (unsigned x = 0; x < boatAreaWidth; ++x) {
       char ch = descriptor[x + (y * boatAreaWidth)];

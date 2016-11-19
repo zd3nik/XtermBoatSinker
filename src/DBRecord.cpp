@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include "DBRecord.h"
 
 namespace xbs
@@ -171,14 +172,14 @@ uint64_t DBRecord::incUInt64(const std::string& fld, const uint64_t inc) {
 //-----------------------------------------------------------------------------
 bool DBRecord::setUInt64(const std::string& fld, const uint64_t val) {
   char sbuf[32];
-  snprintf(sbuf, sizeof(sbuf), "%llu", val);
+  snprintf(sbuf, sizeof(sbuf), "%" PRIu64, val);
   return setString(fld, sbuf);
 }
 
 //-----------------------------------------------------------------------------
 int DBRecord::addUInt64(const std::string& fld, const uint64_t val) {
   char sbuf[32];
-  snprintf(sbuf, sizeof(sbuf), "%llu", val);
+  snprintf(sbuf, sizeof(sbuf), "%" PRIu64, val);
   return addString(fld, sbuf);
 }
 
@@ -190,7 +191,7 @@ int DBRecord::addUInt64s(const std::string& fld,
   std::vector<std::string> strValues;
   strValues.reserve(values.size());
   for (unsigned i = 0; i < values.size(); ++i) {
-    snprintf(sbuf, sizeof(sbuf), "%llu", values[i]);
+    snprintf(sbuf, sizeof(sbuf), "%" PRIu64, values[i]);
     strValues.push_back(sbuf);
   }
   return addStrings(fld, strValues);
