@@ -112,6 +112,7 @@ protected:
   std::string host;
   std::string userName;
   std::string testDir;
+  std::string staticBoard;
   std::vector<Message> messages;
   std::vector<std::string> msgBuffer;
   std::map<std::string, Board> boardMap;

@@ -30,7 +30,9 @@ public:
   virtual Version getVersion() const = 0;
 
   virtual void setConfig(const Configuration& configuration);
-  virtual void test(std::string testDB, unsigned positions, bool watch);
+  virtual void test(std::string testDB, std::string staticBoard,
+                    unsigned positions, bool watch);
+
   virtual ScoredCoordinate getTargetCoordinate(const Board&);
   virtual Board* getTargetBoard(const std::string& playerToMove,
                                 const std::vector<Board*>& boardList,

@@ -129,8 +129,8 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::test(std::string testDB, unsigned positions,
-                             bool watch)
+void TargetingComputer::test(std::string testDB, std::string staticBoard,
+                             unsigned positions, bool watch)
 {
   if (!config.isValid()) {
     throw std::runtime_error("Invalid board configuration");
@@ -151,7 +151,7 @@ void TargetingComputer::test(std::string testDB, unsigned positions,
   Screen::print() << "Testing " << getName() << " version "
                   << getVersion() << " using " << positions
                   << " test positions" << EL
-                  << "Results will be stored in " << testDB << '/'
+                  << "Results stored at " << testDB << '/'
                   << recordID << EL << Flush;
 
   FileSysDatabase db;
@@ -180,7 +180,11 @@ void TargetingComputer::test(std::string testDB, unsigned positions,
   std::set<std::string> unique;
 
   for (unsigned i = 0; i < positions; ++i) {
-    if (!board.addRandomBoats(config)) {
+    if (staticBoard.size()) {
+      if (!board.updateBoatArea(staticBoard)) {
+        throw std::runtime_error("Invalid static board descriptor");
+      }
+    } else if (!board.addRandomBoats(config)) {
       throw std::runtime_error("Failed random boat placement");
     }
 

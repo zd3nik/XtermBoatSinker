@@ -115,20 +115,22 @@ void Client::showHelp() {
       << "Options:" << EL
       << EL
       << "  --help                 Show help and exit" << EL
-      << "  -h <addr>," << EL
       << "  --host <addr>          Connect to game server at given address" << EL
-      << "  -p <port>," << EL
+      << "   -h <addr>" << EL
       << "  --port <port>          Connect to game server at given port" << EL
-      << "  -u <name>," << EL
+      << "   -p <port>" << EL
       << "  --user <name>          Join using given user/player name" << EL
-      << "  -t <file>," << EL
+      << "   -u <name>" << EL
       << "  --taunt-file <file>    Load taunts from given file" << EL
-      << "  -l <level>," << EL
+      << "   -t <file>" << EL
       << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
-      << "  -f <file>," << EL
+      << "   -l <level>" << EL
       << "  --log-file <file>      Log messages to given file" << EL
-      << "  -b <name>," << EL
+      << "   -f <file>" << EL
       << "  --bot <name>           Make this client use the given bot" << EL
+      << "   -b <name>" << EL
+      << "  --static-board <brd>   Use this board instead of random generation" << EL
+      << "   -s <brd>" << EL
       << "  --list-bots            Show available bot names and exit" << EL
       << "  --test                 Test bot and exit" << EL
       << "  --width <count>        Set board width for use with --test" << EL
@@ -237,6 +239,11 @@ bool Client::init() {
     testDir = Input::trim(testDB);
   }
 
+  const char* brd = args.getValueOf("-s", "--static-board");
+  if (brd) {
+    staticBoard = Input::trim(brd);
+  }
+
   testBot = (args.indexOf("--test") > 0);
   watchTestShots = (args.indexOf("--watch") > 0);
 
@@ -275,7 +282,7 @@ bool Client::test() {
     }
 
     bot->setConfig(config);
-    bot->test(testDir, testPositions, watchTestShots);
+    bot->test(testDir, staticBoard, testPositions, watchTestShots);
     return true;
   }
   return false;
@@ -558,7 +565,12 @@ bool Client::setupBoard() {
                       config.getBoardSize().getWidth(),
                       config.getBoardSize().getHeight());
 
-    if (!yourBoard.addRandomBoats(config)) {
+    if (staticBoard.size()) {
+      if (!yourBoard.updateBoatArea(staticBoard)) {
+        Logger::printError() << "Invalid static board descriptor";
+        return false;
+      }
+    } else if (!yourBoard.addRandomBoats(config)) {
       Logger::printError() << "Failed to add boats to board";
       return false;
     }
