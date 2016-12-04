@@ -102,6 +102,10 @@ public:
     return (isValid() ? (getMaxY() - getMinY() + 1) : 0);
   }
 
+  unsigned getAreaSize() const {
+    return (getHeight() * getWidth());
+  }
+
   virtual std::string toString() const;
   bool shift(const Direction, const unsigned count = 1);
   bool arrangeChildren(std::vector<Container*>& children) const;

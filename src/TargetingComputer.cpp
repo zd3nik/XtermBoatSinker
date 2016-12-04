@@ -130,7 +130,8 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
 
 //-----------------------------------------------------------------------------
 void TargetingComputer::test(std::string testDB, std::string staticBoard,
-                             unsigned positions, bool watch)
+                             unsigned positions, bool watch,
+                             double minSurfaceArea)
 {
   if (!config.isValid()) {
     throw std::runtime_error("Invalid board configuration");
@@ -141,6 +142,8 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
   if (testDB.empty()) {
     testDB = "testDB";
   }
+  const unsigned msa =
+      static_cast<unsigned>(minSurfaceArea * config.getMaxSurfaceArea() / 100);
 
   char recordID[1024];
   snprintf(recordID, sizeof(recordID), "test.%ux%u.%s-%s",
@@ -150,7 +153,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
 
   Screen::print() << "Testing " << getName() << " version "
                   << getVersion() << " using " << positions
-                  << " test positions" << EL
+                  << " test positions, msa " << minSurfaceArea << EL
                   << "Results stored at " << testDB << '/'
                   << recordID << EL << Flush;
 
@@ -184,7 +187,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
       if (!board.updateBoatArea(staticBoard)) {
         throw std::runtime_error("Invalid static board descriptor");
       }
-    } else if (!board.addRandomBoats(config)) {
+    } else if (!board.addRandomBoats(config, minSurfaceArea)) {
       throw std::runtime_error("Failed random boat placement");
     }
 
@@ -278,6 +281,8 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
     rec->setUInt("board.height", config.getBoardSize().getHeight());
     rec->incUInt("total.positionCount", positions);
     rec->setUInt("last.positionCount", positions);
+    rec->setUInt("total.minSurfaceArea", msa);
+    rec->setUInt("last.minSurfaceArea", msa);
     rec->incUInt("total.uniquePositionCount", unique.size());
     rec->setUInt("last.uniquePositionCount", unique.size());
     rec->incUInt64("total.shotCount", totalShots);

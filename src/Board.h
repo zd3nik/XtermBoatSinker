@@ -114,7 +114,7 @@ public:
   char getSquare(const Coordinate&) const;
   char setSquare(const Coordinate&, const char newValue);
   bool addHitsAndMisses(const std::string& descriptor);
-  bool addRandomBoats(const Configuration&);
+  bool addRandomBoats(const Configuration&, const double minSurfaceArea);
   bool hasHitTaunts() const;
   bool hasMissTaunts() const;
   bool isDead() const;

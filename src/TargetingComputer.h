@@ -31,7 +31,7 @@ public:
 
   virtual void setConfig(const Configuration& configuration);
   virtual void test(std::string testDB, std::string staticBoard,
-                    unsigned positions, bool watch);
+                    unsigned positions, bool watch, double minSurfaceArea);
 
   virtual ScoredCoordinate getTargetCoordinate(const Board&);
   virtual Board* getTargetBoard(const std::string& playerToMove,

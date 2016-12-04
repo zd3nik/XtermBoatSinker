@@ -57,6 +57,10 @@ public:
     return pointGoal;
   }
 
+  unsigned getMaxSurfaceArea() const {
+    return maxSurfaceArea;
+  }
+
   const Container& getBoardSize() const {
     return boardSize;
   }
@@ -78,6 +82,7 @@ private:
   unsigned minPlayers;
   unsigned maxPlayers;
   unsigned pointGoal;
+  unsigned maxSurfaceArea;
   Container boardSize;
   std::vector<Boat> boats;
 };

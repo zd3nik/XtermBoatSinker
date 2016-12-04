@@ -106,6 +106,7 @@ protected:
   bool testBot;
   unsigned msgEnd;
   unsigned testPositions;
+  double minSurfaceArea;
   FileSysDBRecord* taunts;
   TargetingComputer* bot;
 

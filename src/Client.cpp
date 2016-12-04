@@ -27,7 +27,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version CLIENT_VERSION("1.1");
+const Version CLIENT_VERSION("1.2");
 const Version MIN_VERSION("1.1");
 const Version MAX_VERSION(~0U, ~0U, ~0U);
 
@@ -55,6 +55,7 @@ Client::Client()
     testBot(false),
     msgEnd(~0U),
     testPositions(0),
+    minSurfaceArea(0),
     taunts(NULL),
     bot(NULL)
 {
@@ -138,6 +139,7 @@ void Client::showHelp() {
       << "  --watch                Watch every shot during test" << EL
       << "  --test-db <dir>        Store bot test results in given dir" << EL
       << "  --positions <count>    Test with given number of positions" << EL
+      << "  --msa <ratio>          generate boards with this min-surface-area" << EL
       << EL << Flush;
 }
 
@@ -229,9 +231,21 @@ bool Client::init() {
   if (itCount) {
     std::string positions = Input::trim(itCount);
     if (!isdigit(*positions.c_str())) {
-      throw std::runtime_error("Invalid posision count value: " + positions);
+      throw std::runtime_error("Invalid position count value: " + positions);
     }
     testPositions = (unsigned)atoi(positions.c_str());
+  }
+
+  const char* minArea = args.getValueOf("--msa");
+  if (minArea) {
+    std::string ratio = Input::trim(minArea);
+    if (!isdigit(*ratio.c_str())) {
+      throw std::runtime_error("Invalid min-surface-area ratio: " + ratio);
+    }
+    minSurfaceArea = atof(ratio.c_str());
+    if ((minSurfaceArea < 0) || (minSurfaceArea > 100)) {
+      throw std::runtime_error("Invalid min-surface-area ratio: " + ratio);
+    }
   }
 
   const char* testDB = args.getValueOf("--test-db");
@@ -282,7 +296,8 @@ bool Client::test() {
     }
 
     bot->setConfig(config);
-    bot->test(testDir, staticBoard, testPositions, watchTestShots);
+    bot->test(testDir, staticBoard, testPositions, watchTestShots,
+              minSurfaceArea);
     return true;
   }
   return false;
@@ -570,7 +585,7 @@ bool Client::setupBoard() {
         Logger::printError() << "Invalid static board descriptor";
         return false;
       }
-    } else if (!yourBoard.addRandomBoats(config)) {
+    } else if (!yourBoard.addRandomBoats(config, minSurfaceArea)) {
       Logger::printError() << "Failed to add boats to board";
       return false;
     }
@@ -592,7 +607,7 @@ bool Client::setupBoard() {
                 config.getBoardSize().getWidth(),
                 config.getBoardSize().getHeight());
 
-    if ((i > 0) && !board.addRandomBoats(config)) {
+    if ((i > 0) && !board.addRandomBoats(config, minSurfaceArea)) {
       return false;
     }
 
@@ -643,7 +658,7 @@ bool Client::setupBoard() {
       }
     } else if (ch == 'R') {
       for (unsigned i = 1; i < boards.size(); ++i) {
-        if (!boards[i].addRandomBoats(config)) {
+        if (!boards[i].addRandomBoats(config, minSurfaceArea)) {
           return false;
         }
       }

@@ -28,7 +28,8 @@ Configuration Configuration::getDefaultConfiguration() {
 Configuration::Configuration()
   : minPlayers(0),
     maxPlayers(0),
-    pointGoal(0)
+    pointGoal(0),
+    maxSurfaceArea(0)
 { }
 
 //-----------------------------------------------------------------------------
@@ -37,6 +38,7 @@ Configuration::Configuration(const Configuration& other)
     minPlayers(other.minPlayers),
     maxPlayers(other.maxPlayers),
     pointGoal(other.pointGoal),
+    maxSurfaceArea(other.maxSurfaceArea),
     boardSize(other.boardSize),
     boats(other.boats.begin(), other.boats.end())
 { }
@@ -47,6 +49,7 @@ Configuration& Configuration::operator=(const Configuration& other) {
   minPlayers = other.minPlayers;
   maxPlayers = other.maxPlayers;
   pointGoal = other.pointGoal;
+  maxSurfaceArea = other.maxSurfaceArea;
   boardSize = other.boardSize;
   boats.clear();
   boats.assign(other.boats.begin(), other.boats.end());
@@ -98,8 +101,11 @@ Configuration& Configuration::addBoat(const Boat& boat) {
   if (boat.isValid()) {
     boats.push_back(boat);
     pointGoal = 0;
+    maxSurfaceArea = 0;
     for (unsigned i = 0; i < boats.size(); ++i) {
-      pointGoal += boats[i].getLength();
+      const Boat& boat = boats[i];
+      pointGoal += boat.getLength();
+      maxSurfaceArea += ((2 * boat.getLength()) + 2);
     }
   }
   return (*this);
@@ -111,6 +117,7 @@ void Configuration::clear() {
   minPlayers = 0;
   maxPlayers = 0;
   pointGoal = 0;
+  maxSurfaceArea = 0;
   boardSize.set(Coordinate(), Coordinate());
   boats.clear();
 }
@@ -120,7 +127,8 @@ bool Configuration::isValid() const {
   return (name.size() && boats.size() && boardSize.isValid() &&
           (minPlayers > 1) && (maxPlayers >= minPlayers) &&
           (boardSize.getWidth() <= (unsigned)(Boat::MAX_ID - Boat::MIN_ID)) &&
-          (boardSize.getHeight() <= (unsigned)(Boat::MAX_ID - Boat::MIN_ID)));
+          (boardSize.getHeight() <= (unsigned)(Boat::MAX_ID - Boat::MIN_ID)) &&
+          ((pointGoal + maxSurfaceArea) <= boardSize.getAreaSize()));
 }
 
 //-----------------------------------------------------------------------------
