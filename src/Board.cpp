@@ -571,25 +571,29 @@ unsigned random(const unsigned bound) {
 bool Board::addRandomBoats(const Configuration& config,
                            const double minSurfaceArea)
 {
-  unsigned maxTries = (10 * boatAreaWidth * boatAreaHeight);
+  if (!config.isValid()) {
+    Logger::printError() << "can't place boats due to invalid board config";
+    return false;
+  }
+
   std::vector<Direction> dirs;
   dirs.push_back(North);
   dirs.push_back(South);
   dirs.push_back(East);
   dirs.push_back(West);
 
-  unsigned boatCount;
   const unsigned msa =
       static_cast<unsigned>(minSurfaceArea * config.getMaxSurfaceArea() / 100);
-  for (unsigned msaTries = 0; msaTries < maxTries; ++msaTries) {
-    boatCount = 0;
+  while (true) {
+    unsigned boatCount = 0;
     clearBoatArea();
     for (unsigned i = 0; i < config.getBoatCount(); ++i) {
       const Boat& boat = config.getBoat(i);
       if (!boat.isValid()) {
+        Logger::printError() << "invalid board " << i;
         return false;
       }
-      for (unsigned tries = 0;; ++tries) {
+      while (true) {
         unsigned x = random(boatAreaWidth);
         unsigned y = random(boatAreaWidth);
         Coordinate coord((x + 1), (y + 1));
@@ -601,11 +605,12 @@ bool Board::addRandomBoats(const Configuration& config,
         {
           boatCount++;
           break;
-        } else if (tries >= maxTries) {
-          Logger::printError() << "failed random boat placement";
-          return false;
         }
       }
+    }
+    if (boatCount != config.getBoatCount()) {
+      Logger::printError() << "a problem occurred in random boat placement";
+      return false;
     }
     if (!msa) {
       break;
@@ -619,12 +624,9 @@ bool Board::addRandomBoats(const Configuration& config,
     }
     if (surfaceArea >= msa) {
       break;
-    } else if ((msaTries + 1) >= maxTries) {
-      Logger::printError() << "can't satisfy min-surface-area requirement";
-      return false;
     }
   }
-  return (boatCount == config.getBoatCount());
+  return true;
 }
 
 //-----------------------------------------------------------------------------
