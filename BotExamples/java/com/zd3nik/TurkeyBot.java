@@ -290,7 +290,7 @@ public class TurkeyBot {
                 message.startsWith("L|") ||  // player left game
                 message.startsWith("H|") ||  // player got a hit
                 message.startsWith("M|") ||  // player sent a text message
-                message.startsWith("K"));    // a player skipped their turn
+                message.startsWith("K|"));   // a player skipped their turn
     }
 
     private void handleBoardMessage(BoardInfoMessage message) {
