@@ -21,14 +21,14 @@ Bots!
 
 The client can be configured to connect as a "bot" (e.g. a robot, computer AI, etc).  There are multiple bot algorithms to choose from.  Run `xbs-client --list-bots` to see which bots are available.
 
-Bots can be tested with the `--test` command-line option.  This gives you a general idea of the strength and speed of the bot.  The test generates a number of boards with random boat placement and lets the bot take shots at each board until it has sunk all the boats.  Bots that consistently sink all the boats with fewer shots are generally stronger.  The number of boards to use for testing can be set with the `--iterations` command-line-parameter.
+Bots can be tested with the `--test` command-line option.  This gives you a general idea of the strength and speed of the bot.  The test generates a number of boards with random boat placement and lets the bot take shots at each board until it has sunk all the boats.  Bots that consistently sink all the boats with fewer shots are generally stronger.  The number of test iterations can be set with the `--postitions` command-line-parameter.
 
 There are 2 primary aspects of a player's skill that determine their playing strength:
 
-* Search method: How they hunt for boats when no boat locations are known (no *open* hits on the board)
+* Search method: How they search for hits when there are no *open* hits on any opponent board.
 * Destroy method: How they target around *open* hits.
 
-An *open* hit is a group of any number of contiguous hits that have not been surrounded on all sides by misses or the edge of the board.
+An *open* hit is any hit that has at least one adjacant square that has not already been shot at.  In other words an *open* hit is any hit that is not surrounded on all sides by misses, the edge of the board, or other hits.
 
 In `--test` mode the standard number and size of boats is always used, regardless of board size.  So you can increase the board size to better judge a bot's search method.  The size of the board has little or no effect on a bot's destroy method in most cases.
 
