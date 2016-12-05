@@ -80,7 +80,7 @@ More info:
                      - See "Board Value" below for details about board value.
     S|player|X|Y     Fire a shot at specified player's board at specified X,Y coordinates.
                      - Use numbers for X and Y values.
-                     - Corrdinate values start at 1 (not 0).
+                     - Coordinate values start at 1 (not 0).
                      - So coordinate (A1) = (1,1), (C7) = (3,7), etc
     K|reason         Skip your turn.  Ignored if it's not your turn.  Reason is optional.
     M|player|text    Send a text message to the specified player.
