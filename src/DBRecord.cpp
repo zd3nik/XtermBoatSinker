@@ -2,11 +2,12 @@
 // DBRecord.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
+#define __STDC_FORMAT_MACROS 1
+#include <inttypes.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <inttypes.h>
 #include "DBRecord.h"
 
 namespace xbs
