@@ -1244,7 +1244,7 @@ bool Client::removePlayer() {
     return false;
   }
 
-  std::map<std::string, Board>::iterator it = boardMap.find(name);
+  auto it = boardMap.find(name);
   if (it == boardMap.end()) {
     Logger::printError() << "Unknown player name (" << name
                          << ") in removePlayer message from server";
@@ -1855,8 +1855,7 @@ Board* Client::getBoard(const std::string& str) {
     } else if (boardMap.count(str)) {
       board = &(boardMap[str]);
     } else {
-      std::map<std::string, Board>::iterator it;
-      for (it = boardMap.begin(); it != boardMap.end(); ++it) {
+      for (auto it = boardMap.begin(); it != boardMap.end(); ++it) {
         std::string name = it->second.getPlayerName();
         if (strncasecmp(str.c_str(), name.c_str(), str.size()) == 0) {
           if (board) {

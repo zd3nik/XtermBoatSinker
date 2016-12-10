@@ -7,6 +7,23 @@ Once a game has started players take turns shooting at each other's boards (you 
 
 The game does **not** end when all of a player's boats are sunk.  Nor does having all of your boats sunk eliminate you from the game.  The objective of the game is to get the most hits, not to avoid getting sunk - although arranging your boats so they are less likely to get hit helps reduce the amount of points your opponents can get, so place you boats wisely.
 
+How to build
+------------
+
+This project is setup to use the cmake build system.  It requires at least version 2.8 and a version of the C++ compiler that support the C++11 specification (--std=c++11 command line option for many compilers).
+
+If you have the minimum requirements simply create a directory somewhere to build the project, run cmake (path-to-CMakeLists.txt-dir), and run make.
+
+For example, if you're in the XtermBoatSInker directory:
+
+    mkdir build
+    cd build
+    cmake ..
+    make
+
+This will create an empty `build` directory under the XTermBoatSinker directory.  Then after changing into that build directory you run `cmake ..` which tells cmake that CMakeLists.txt is in the parent directory of your current directory (the build directory).  This generates a Makefile (and some other files).  Then you can use `make` to build the project.
+
+    
 How to start a game
 -------------------
 

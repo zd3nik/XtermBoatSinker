@@ -226,7 +226,7 @@ bool Configuration::isValidBoatDescriptor(const std::string& descriptor) const {
 
   for (unsigned i = 0; i < boats.size(); ++i) {
     const Boat& boat = boats[i];
-    std::map<char, Boat>::iterator it = boatMap.find(boat.getID());
+    auto it = boatMap.find(boat.getID());
     if ((it == boatMap.end()) || (it->second.getLength() != boat.getLength())) {
       return false;
     } else {

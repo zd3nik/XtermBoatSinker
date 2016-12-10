@@ -144,8 +144,7 @@ void Game::disconnectBoard(const int handle, const std::string& msg) {
 //-----------------------------------------------------------------------------
 void Game::removeBoard(const int handle) {
   if ((handle >= 0) && !started) {
-    std::vector<Board>::iterator it;
-    for (it = boards.begin(); it != boards.end(); ++it) {
+    for (auto it = boards.begin(); it != boards.end(); ++it) {
       if (it->getHandle() == handle) {
         boards.erase(it);
         break;

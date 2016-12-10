@@ -243,7 +243,7 @@ std::string Board::getDescriptor() const {
 std::string Board::getHitTaunt() {
   if (hitTaunts.size()) {
     srand(clock());
-    std::vector<std::string>::iterator it = hitTaunts.begin();
+    auto it = hitTaunts.begin();
     std::advance(it, (((unsigned)rand()) % hitTaunts.size()));
     return (*it);
   }
@@ -254,7 +254,7 @@ std::string Board::getHitTaunt() {
 std::string Board::getMissTaunt() {
   if (missTaunts.size()) {
     srand(clock());
-    std::vector<std::string>::iterator it = missTaunts.begin();
+    auto it = missTaunts.begin();
     std::advance(it, (((unsigned)rand()) % missTaunts.size()));
     return (*it);
   }
@@ -504,7 +504,7 @@ bool Board::isValid(const Configuration& config) const {
     return false;
   }
   std::map<char, unsigned> boats;
-  std::map<char, unsigned>::iterator it;
+  auto it = boats.begin();
   for (unsigned i = 0; i < descriptorLength; ++i) {
     char id = descriptor[i];
     if (id != Boat::NONE) {

@@ -16,10 +16,7 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 typedef std::vector<std::string> StringVector;
-typedef StringVector::iterator StringIterator;
 typedef std::map<std::string, StringVector> FieldMap;
-typedef FieldMap::const_iterator FieldConstIterator;
-typedef FieldMap::iterator FieldIterator;
 
 //-----------------------------------------------------------------------------
 FileSysDBRecord::FileSysDBRecord(const std::string& recordID,
@@ -81,7 +78,7 @@ void FileSysDBRecord::load() {
       }
 
       std::string val(Input::trim(equal + 1));
-      FieldIterator it = fieldCache.find(fld);
+      auto it = fieldCache.find(fld);
       if (it == fieldCache.end()) {
         it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
       }
@@ -108,7 +105,7 @@ void FileSysDBRecord::store(const bool force) {
       throw std::runtime_error(strerror(errno));
     }
 
-    for (FieldIterator it = fieldCache.begin(); it != fieldCache.end(); ++it) {
+    for (auto it = fieldCache.begin(); it != fieldCache.end(); ++it) {
       const std::string& fld = it->first;
       const StringVector& values = it->second;
       if (fld.size()) {
@@ -149,7 +146,7 @@ std::string FileSysDBRecord::getFilePath() const {
 
 //-----------------------------------------------------------------------------
 void FileSysDBRecord::clear(const std::string& fld) {
-  FieldIterator it = fieldCache.find(fld);
+  auto it = fieldCache.find(fld);
   if (it != fieldCache.end()) {
     fieldCache.erase(it);
     dirty = true;
@@ -159,7 +156,7 @@ void FileSysDBRecord::clear(const std::string& fld) {
 //-----------------------------------------------------------------------------
 std::vector<std::string> FileSysDBRecord::getStrings(const std::string& fld)
 const {
-  FieldConstIterator it = fieldCache.find(fld);
+  auto it = fieldCache.find(fld);
   if (it != fieldCache.end()) {
     return it->second;
   }
@@ -168,7 +165,7 @@ const {
 
 //-----------------------------------------------------------------------------
 std::string FileSysDBRecord::getString(const std::string& fld) const {
-  FieldConstIterator it = fieldCache.find(fld);
+  auto it = fieldCache.find(fld);
   if ((it != fieldCache.end()) && (it->second.size())) {
     return it->second.front();
   }
@@ -182,7 +179,7 @@ bool FileSysDBRecord::setString(const std::string& fld,
   if (strchr(val.c_str(), '\n')) {
     Logger::error() << "Newline characters not supported";
   } else if (fld.size()) {
-    FieldIterator it = fieldCache.find(fld);
+    auto it = fieldCache.find(fld);
     if (it != fieldCache.end()) {
       it->second.clear();
     } else {
@@ -203,7 +200,7 @@ int FileSysDBRecord::addString(const std::string& fld,
   if (strchr(val.c_str(), '\n')) {
     Logger::error() << "Newline characters not supported";
   } else if (fld.size()) {
-    FieldIterator it = fieldCache.find(fld);
+    auto it = fieldCache.find(fld);
     if (it == fieldCache.end()) {
       it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
     }
@@ -219,7 +216,7 @@ int FileSysDBRecord::addStrings(const std::string& fld,
                                 const std::vector<std::string>& values)
 {
   if (fld.size()) {
-    FieldIterator it = fieldCache.find(fld);
+    auto it = fieldCache.find(fld);
     if (it == fieldCache.end()) {
       it = fieldCache.insert(it, std::make_pair(fld, values));
     } else {

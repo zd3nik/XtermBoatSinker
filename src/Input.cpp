@@ -67,8 +67,7 @@ Input::Input()
 Input::~Input() {
   restoreTerminal();
 
-  std::map<int, char*>::iterator it;
-  for (it = buffer.begin(); it != buffer.end(); ++it) {
+  for (auto it = buffer.begin(); it != buffer.end(); ++it) {
     delete[] it->second;
     it->second = NULL;
   }
@@ -257,7 +256,7 @@ void Input::addHandle(const int handle, const std::string& label) {
 void Input::removeHandle(const int handle) {
   Logger::debug() << "Removing channel " << handle << " "
                   << getHandleLabel(handle);
-  std::map<int, std::string>::iterator it = handles.find(handle);
+  auto it = handles.find(handle);
   if (it != handles.end()) {
     handles.erase(it);
   }
