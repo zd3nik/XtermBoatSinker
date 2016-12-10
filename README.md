@@ -10,7 +10,7 @@ The game does **not** end when all of a player's boats are sunk.  Nor does havin
 How to build
 ------------
 
-This project is setup to use the cmake build system.  It requires at least version 2.8 of cmake and a version of the C++ compiler that support the C++11 specification (--std=c++11 command line option for many compilers).
+This project is setup to use the cmake build system.  It requires at least version 2.8 of cmake and a version of the C++ compiler that supports the C++11 specification (--std=c++11 command line option for many compilers).
 
 If you have the minimum requirements simply create a directory somewhere to build the project, run `cmake <path-to-CMakeLists.txt-dir>`, and run `make`.
 
