@@ -33,28 +33,71 @@ Run `xbs-server --help` to see a list of command-line options for the server.
 
 Run `xbs-client --help` to see a list of command-line options for the client.
 
+Custom Clients
+--------------
+
+The `xbs-client` provided in this project is only one example of a client application for the `xbs-server`.  See the **Communication Protocol** section below for detailed information about how client and server communicate.  If you don't like using a text based client like `xbs-client` you can write your own graphical client!  Just make sure it talks to the `xbs-server` according to the rules defined in the Communication Protocol section and you can display the game state and collect user input in whatever form/medium you like!
+
 Bots!
 -----
 
-The client can be configured to connect as a "bot" (e.g. a robot, computer AI, etc).  There are multiple bot algorithms to choose from.  Run `xbs-client --list-bots` to see which bots are available.
+The `xbs-client` provided in this project can be configured to connect as a "bot" (e.g. a robot, computer AI, etc).  And it provides multiple bot algorithms to choose from.  Run `xbs-client --list-bots` to see which bots are available.  NOTE: The bot named `Skipper` doesn't do anything but skip its turn, every time.  See the section about testing your own bot below if you're curious about why Skipper even exists.
 
-Bots can be tested with the `--test` command-line option.  This gives you a general idea of the strength and speed of the bot.  The test generates a number of boards with random boat placement and lets the bot take shots at each board until it has sunk all the boats.  Bots that consistently sink all the boats with fewer shots are generally stronger.  The number of test iterations can be set with the `--postitions` command-line-parameter.
+Bots built in to `xbs-client` can be tested with the `--test` command-line option.  This gives you a general idea of the strength and speed of the bot.  The test generates a number of boards with random boat placement and lets the bot take shots at each board until it has sunk all the boats.  Bots that consistently sink all the boats with fewer shots are generally stronger.  The number of test iterations can be set with the `--postitions` command-line parameter.
 
 There are 2 primary aspects of a player's skill that determine their playing strength:
 
 * Search method: How they search for hits when there are no *open* hits on any opponent board.
 * Destroy method: How they target around *open* hits.
 
-An *open* hit is any hit that has at least one adjacant square that has not already been shot at.  In other words an *open* hit is any hit that is not surrounded on all sides by misses, the edge of the board, or other hits.
+An *open* hit is any hit that has at least one adjacent square that has not already been shot at.  In other words an *open* hit is any hit that is not surrounded on all sides by misses, the edge of the board, or other hits.
 
 In `--test` mode the standard number and size of boats is always used, regardless of board size.  So you can increase the board size to better judge a bot's search method.  The size of the board has little or no effect on a bot's destroy method in most cases.
 
 Use the `--width` and `--height` command-line options of `xbs-client` to change the `--test` board size.
 
+### Writing Your Own Bot
+
+As mentioned in the section above the `xbs-client` program provided as part of this project has some built-in bots.
+
+**But you can also write your own bot!**  All your bot needs to do is connect via tcp socket to a game hosted by `xbs-server` and speak a minimal subset of the **Communication Protocol** defined below.  This essentially involves connecting and reading the `G` (game info) message the server sends immediately after you connect.  Once you have the game info you can then login by sending a `J` (join game) message that provides the server with your username and board layout.  Then you simply wait for `B` (board) messages to keep track of opponent board states and `N` (next turn) messages that indicate it's your turn to shoot.  When it's your turn to shoot you decide which opponent board/coordinate you want to shoot at and send an `S` (shoot) message with that decision to the server.  You can write a functional XtermBoatSinker bot using only those messages.  Your bot may optionally handle all the other messages that the server may send.  See the Communication Protocol section below for more details.
+
+See the `BotExamples` directory of this project for some example stand-alone bots.  [TurkeyBot.java](/BotExamples/java/TurkeyBot/TurkeyBot.java) and [TurkeyBotMinimal.java](/BotExamples/java/TurkeyBot/TurkeyBotMinimal.java) are provided as part of this project.  There are also some sub-modules in the BotExamples directory that link to external github projects graciously provided by some friends.  Use the `--recursive` option when cloning this project to pull down those external bot projects.  If you've already cloned XtermBoatSinker without the `--recursive` option you can pull down the external bot projects by running
+
+    git submodule update --init --recursive
+
+in the XtermBoatSinker directory.
+
+### Testing Your Own Bot
+
+The `cbs-client` program provided in this project has a `--test` mode that provides a very good method for evaluating the strength and speed of the built-in bots.  Unfortunately you cannot use this to test your own bot (perhaps a future version of xbs-client or xbs-server will provide the ability, but currently they do not).
+
+Don't despair!  A method to test your own bot in a similar fashion is provided.  The built-in `xbs-client` bot named `Skipper` does nothing but skip its turn, every time.  You can setup a match between your bot and Skipper to see how many shots your bot needs to sink all of Skipper's boats.  This is essentially the same thing that `xbs-client --test` does: it determines the average number of shots a bot needs to sink all boats on randomly generated boards.
+
+To run multiple matches between your bot and Skipper you can do the following (assuming the terminal shell you're using is `bash` or something similar):
+
+ * Run xbs-server in repeat mode in one terminal (you can replace *Game Title* with whatever title you prefer):
+
+    `xbs-server --max 2 --auto-start --repeat --title "Game Title"`
+
+ * Run Skipper in another terminal:
+
+    `while xbs-client --host localhost --port 7948 --bot Skipper --user Skipper; do sleep 0.1; done`
+
+ * Run your bot in another terminal.  To run your bot 200 times in succession you can use:
+
+    `for i in {1..200}; do (command to run your bot); sleep 0.1; done`
+
+ * When done check the `db/game.Game Title.ini` file for stats (replace *Game Title* with the actual game title used).  Use the *total turns taken by your bot* divided by *game count* to calculate the average number of turns your bot needed to sink all of Skipper's boats per game.  The lower the average the stronger your bot is!
+
+This testing approach will run much slower than `xbs-client --test` because there isn't a headless mode for xbs-client so Skipper will spend a lot of time drawing the game on the terminal - which isn't terribly fast.
+
+You can of course build your own testing routine for your bot if this method proves too cumbersome.
+
 Communication Protocol
 ----------------------
 
-The server and client application communicate with one-line text messages over a TCP socket.  Each line is terminated by a single new-line character.  Trailing whitespace characters (spaces, tabs, form-feeds, carriage returns, new-lines) are stripped from the messages before they're processed.
+The server and game participants (a.k.a. clients) communicate with one-line ASCII text messages over a TCP socket.  Each line is terminated by a single new-line character.  Trailing whitespace characters (spaces, tabs, form-feeds, carriage returns, new-lines) are stripped from the messages before they're processed.
 
 All messages (except error messages) use the following form:
 
@@ -64,11 +107,11 @@ All messages (except error messages) use the following form:
 
 If a message does not follow this format is is to be treated as an `ERROR MESSAGE`.
 
-Only some messages elicit a direct response.  For the most part message handling should be completely asynchronous.  In most cases if the server has a reaction to a client message the reaction is sent as a text message (type `M`) which should be displayed to the user the same as any other text message.  **Text messages should never be expected or parsed as a response to another message.**
+Only `G` (get game info), `P` (ping), and `J` (join game) messages elicit a direct response from the server.  Other than those three, all messages are "fire and forget" which means you send the message and don't wait for a response.
 
 NOTE: The message type can have different values depending on context.  For example a type `M` message sent from a client has the form `M|recipient|text` but a type `M` message from the server has the form `M|sender|text|group`
 
-NOTE: No form of character escaping is supported in the messaging protocol.  So individual message values/parameters may *not* contain pipe `|` characters.
+NOTE: No form of character escaping is supported in the messaging protocol.  So message values may not contain pipe `|` or new-line `\n` characters.
 
 ### Protocol Reference
 
