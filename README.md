@@ -10,18 +10,18 @@ The game does **not** end when all of a player's boats are sunk.  Nor does havin
 How to build
 ------------
 
-This project is setup to use the cmake build system.  It requires at least version 2.8 and a version of the C++ compiler that support the C++11 specification (--std=c++11 command line option for many compilers).
+This project is setup to use the cmake build system.  It requires at least version 2.8 of cmake and a version of the C++ compiler that support the C++11 specification (--std=c++11 command line option for many compilers).
 
-If you have the minimum requirements simply create a directory somewhere to build the project, run cmake (path-to-CMakeLists.txt-dir), and run make.
+If you have the minimum requirements simply create a directory somewhere to build the project, run `cmake <path-to-CMakeLists.txt-dir>`, and run `make`.
 
-For example, if you're in the XtermBoatSInker directory:
+For example, if you're in the XtermBoatSinker directory:
 
     mkdir build
     cd build
     cmake ..
     make
 
-This will create an empty `build` directory under the XTermBoatSinker directory.  Then after changing into that build directory you run `cmake ..` which tells cmake that CMakeLists.txt is in the parent directory of your current directory (the build directory).  This generates a Makefile (and some other files).  Then you can use `make` to build the project.
+This will create an empty `build` directory under the XTermBoatSinker directory.  Then after changing into that build directory you run `cmake ..` which tells cmake that CMakeLists.txt is in the parent directory of your current directory.  This generates a Makefile (and some other files).  Then you can use `make` to build the project.
 
     
 How to start a game
