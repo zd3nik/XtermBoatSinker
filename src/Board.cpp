@@ -387,88 +387,45 @@ unsigned Board::adjacentHits(const Coordinate& coord) const {
 
 //-----------------------------------------------------------------------------
 unsigned Board::maxInlineHits(const Coordinate& coord) const {
-  unsigned north = hitsNorthOf(coord);
-  unsigned south = hitsSouthOf(coord);
-  unsigned east  = hitsEastOf(coord);
-  unsigned west  = hitsWestOf(coord);
+  unsigned north = hitCount(coord, Direction::North);
+  unsigned south = hitCount(coord, Direction::South);
+  unsigned east  = hitCount(coord, Direction::East);
+  unsigned west  = hitCount(coord, Direction::West);
   return std::max(north, std::max(south, std::max(east, west)));
 }
 
 //-----------------------------------------------------------------------------
 unsigned Board::horizontalHits(const Coordinate& coord) const {
-  unsigned count = 0;
-  if (getSquare(coord) == Boat::HIT) {
-    count++;
-    for (Coordinate c(coord); getSquare(c.west()) == Boat::HIT; ++count) { }
-    for (Coordinate c(coord); getSquare(c.east()) == Boat::HIT; ++count) { }
-  }
-  return count;
+  return (getSquare(coord) == Boat::HIT)
+    ? (1 + hitCount(coord,Direction::East) + hitCount(coord,Direction::West))
+    : 0;
 }
 
 //-----------------------------------------------------------------------------
 unsigned Board::verticalHits(const Coordinate& coord) const {
+  return (getSquare(coord) == Boat::HIT)
+    ? (1 + hitCount(coord,Direction::North) + hitCount(coord,Direction::South))
+    : 0;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::freeCount(Coordinate coord, const Direction dir) const {
   unsigned count = 0;
-  if (getSquare(coord) == Boat::HIT) {
-    count++;
-    for (Coordinate c(coord); getSquare(c.north()) == Boat::HIT; ++count) { }
-    for (Coordinate c(coord); getSquare(c.south()) == Boat::HIT; ++count) { }
-  }
+  while (getSquare(coord.shift(dir)) == Boat::NONE) ++count;
   return count;
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::freeNorthOf(Coordinate coord) const {
+unsigned Board::hitCount(Coordinate coord, const Direction dir) const {
   unsigned count = 0;
-  while (getSquare(coord.north()) == Boat::NONE) ++count;
+  while (Boat::isHit(getSquare(coord.shift(dir)))) ++count;
   return count;
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::freeSouthOf(Coordinate coord) const {
+unsigned Board::distToEdge(Coordinate coord, const Direction dir) const {
   unsigned count = 0;
-  while (getSquare(coord.south()) == Boat::NONE) ++count;
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::freeEastOf(Coordinate coord) const {
-  unsigned count = 0;
-  while (getSquare(coord.east()) == Boat::NONE) ++count;
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::freeWestOf(Coordinate coord) const {
-  unsigned count = 0;
-  while (getSquare(coord.west()) == Boat::NONE) ++count;
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::hitsNorthOf(Coordinate coord) const {
-  unsigned count = 0;
-  while (Boat::isHit(getSquare(coord.north()))) ++count;
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::hitsSouthOf(Coordinate coord) const {
-  unsigned count = 0;
-  while (Boat::isHit(getSquare(coord.south()))) ++count;
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::hitsEastOf(Coordinate coord) const {
-  unsigned count = 0;
-  while (Boat::isHit(getSquare(coord.east()))) ++count;
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::hitsWestOf(Coordinate coord) const {
-  unsigned count = 0;
-  while (Boat::isHit(getSquare(coord.west()))) ++count;
+  while (getSquare(coord.shift(dir))) ++count;
   return count;
 }
 

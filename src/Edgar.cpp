@@ -50,11 +50,11 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
     unsigned wp = board.verticalHits(coord + West);
     if ((np + sp + ep + wp) == 1) {
       // adjacent to a lone hit
-      if (board.hitsNorthOf(coord)) {
+      if (board.hitCount(coord, Direction::North)) {
         len = board.adjacentFree(coord + North);
-      } else if (board.hitsSouthOf(coord)) {
+      } else if (board.hitCount(coord, Direction::South)) {
         len = board.adjacentFree(coord + South);
-      } else if (board.hitsEastOf(coord)) {
+      } else if (board.hitCount(coord, Direction::East)) {
         len = board.adjacentFree(coord + East);
       } else {
         len = board.adjacentFree(coord + West);

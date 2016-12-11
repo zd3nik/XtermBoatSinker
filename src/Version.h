@@ -67,6 +67,7 @@ private:
   unsigned minor_;
   unsigned build_;
   std::string other_;
+  std::string str_;
 };
 
 } // namespace xbs

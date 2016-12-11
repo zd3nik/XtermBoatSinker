@@ -35,7 +35,8 @@ Version::Version(const Version& other)
   : major_(other.major_),
     minor_(other.minor_),
     build_(other.build_),
-    other_(other.other_)
+    other_(other.other_),
+    str_(other.str_)
 { }
 
 //-----------------------------------------------------------------------------
@@ -44,6 +45,7 @@ Version& Version::operator=(const Version& other) {
   minor_ = other.minor_;
   build_ = other.build_;
   other_ = other.other_;
+  str_ = other.str_;
   return (*this);
 }
 
@@ -56,6 +58,7 @@ Version& Version::operator=(const std::string& str) {
 Version& Version::set(const std::string& str) {
   major_ = minor_ = build_ = 0;
   other_.clear();
+  str_ = str;
 
   const char* p = str.c_str();
   if ((p = nextValue(p, major_, other_))) {
@@ -95,12 +98,16 @@ Version& Version::setOther(const std::string& value) {
 //-----------------------------------------------------------------------------
 Version& Version::clear() {
   major_ = minor_ = build_ = 0;
+  other_.clear();
+  str_.clear();
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
 std::string Version::toString() const {
-  if (isEmpty()) {
+  if (str_.size()) {
+    return str_;
+  } else if (isEmpty()) {
     return std::string();
   }
   char sbuf[1024];
@@ -115,12 +122,12 @@ std::string Version::toString() const {
 
 //-----------------------------------------------------------------------------
 bool Version::isEmpty() const {
-  return (!(major_ | minor_ | build_) && other_.empty());
+  return (!(major_ | minor_ | build_) && other_.empty() && str_.empty());
 }
 
 //-----------------------------------------------------------------------------
 bool Version::isValid() const {
-  return ((major_ | minor_ | build_) || other_.size());
+  return ((major_ | minor_ | build_) || other_.size() || str_.size());
 }
 
 //-----------------------------------------------------------------------------
@@ -142,36 +149,39 @@ bool Version::operator==(const Version& v) const {
   return ((major_ == v.major_) &&
           (minor_ == v.minor_) &&
           (build_ == v.build_) &&
-          (other_ == v.other_));
+          (other_ == v.other_) &&
+          (str_ == v.str_));
 }
 
 //-----------------------------------------------------------------------------
 const char* Version::nextValue(const char* str, unsigned& value,
                                std::string& other)
 {
-  if (str) {
-    const char* p = str;
-    while ((*p) && isspace(*p)) ++p;
-    if (((*p) >= 0) && ((*p) <= '9')) {
-      for (value = 0; ((*p) >= '0') && ((*p) <= '9'); ++p) {
-        unsigned inc = ((*p) - '0');
-        unsigned tmp = ((10 * value) + inc);
-        if (tmp >= value) {
-          value = tmp;
-        } else {
-          Logger::error() << "integer overflow in '" << str << "'";
-          return NULL;
-        }
-      }
-      if (*p == '.') {
-        return (p + 1);
+  if (!str || !*str) {
+    return NULL;
+  }
+
+  const char* p = str;
+  while ((*p) && isspace(*p)) ++p;
+  if (((*p) >= '0') && ((*p) <= '9')) {
+    for (value = 0; ((*p) >= '0') && ((*p) <= '9'); ++p) {
+      unsigned inc = ((*p) - '0');
+      unsigned tmp = ((10 * value) + inc);
+      if (tmp >= value) {
+        value = tmp;
+      } else {
+        Logger::error() << "integer overflow in '" << str << "'";
+        return NULL;
       }
     }
-    if (*p) {
-      other = p;
+    if (*p == '.') {
+      return (p + 1);
     }
   }
-  return NULL;
+  if (*p) {
+    other = p;
+  }
+  return p;
 }
 
 } // namespace xbs

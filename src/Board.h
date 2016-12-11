@@ -103,14 +103,9 @@ public:
   unsigned maxInlineHits(const Coordinate&) const;
   unsigned horizontalHits(const Coordinate&) const;
   unsigned verticalHits(const Coordinate&) const;
-  unsigned freeNorthOf(Coordinate) const;
-  unsigned freeSouthOf(Coordinate) const;
-  unsigned freeEastOf(Coordinate) const;
-  unsigned freeWestOf(Coordinate) const;
-  unsigned hitsNorthOf(Coordinate) const;
-  unsigned hitsSouthOf(Coordinate) const;
-  unsigned hitsEastOf(Coordinate) const;
-  unsigned hitsWestOf(Coordinate) const;
+  unsigned freeCount(Coordinate, const Direction) const;
+  unsigned hitCount(Coordinate, const Direction) const;
+  unsigned distToEdge(Coordinate, const Direction) const;
   char getSquare(const Coordinate&) const;
   char setSquare(const Coordinate&, const char newValue);
   bool addHitsAndMisses(const std::string& descriptor);
