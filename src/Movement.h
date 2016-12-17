@@ -2,8 +2,10 @@
 // Movement.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef MOVEMENT_H
-#define MOVEMENT_H
+#ifndef XBS_MOVEMENT_H
+#define XBS_MOVEMENT_H
+
+#include "Platform.h"
 
 namespace xbs
 {
@@ -53,4 +55,4 @@ private:
 
 } // namespace xbs
 
-#endif // MOVEMENT_H
+#endif // XBS_MOVEMENT_H

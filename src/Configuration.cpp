@@ -2,7 +2,6 @@
 // Configuration.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <stdexcept>
 #include "Configuration.h"
 #include "Screen.h"
 #include "DBRecord.h"

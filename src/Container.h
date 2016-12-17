@@ -2,10 +2,10 @@
 // Container.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef CONTAINER_H
-#define CONTAINER_H
+#ifndef XBS_CONTAINER_H
+#define XBS_CONTAINER_H
 
-#include <vector>
+#include "Platform.h"
 #include "Coordinate.h"
 #include "Movement.h"
 #include "Printable.h"
@@ -121,4 +121,4 @@ private:
 
 } // namespace xbs
 
-#endif // CONTAINER_H
+#endif // XBS_CONTAINER_H

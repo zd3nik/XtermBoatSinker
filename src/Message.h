@@ -2,11 +2,10 @@
 // Message.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef MESSAGE_H
-#define MESSAGE_H
+#ifndef XBS_MESSAGE_H
+#define XBS_MESSAGE_H
 
-#include <string>
-#include <vector>
+#include "Platform.h"
 
 namespace xbs
 {
@@ -63,4 +62,4 @@ private:
 
 } // namespace xbs
 
-#endif // MESSAGE_H
+#endif // XBS_MESSAGE_H

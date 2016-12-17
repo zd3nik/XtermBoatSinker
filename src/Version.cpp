@@ -2,8 +2,6 @@
 // Version.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <ctype.h>
-#include <stdio.h>
 #include "Version.h"
 #include "Logger.h"
 

@@ -2,10 +2,10 @@
 // Board.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef BOARD_H
-#define BOARD_H
+#ifndef XBS_BOARD_H
+#define XBS_BOARD_H
 
-#include <string>
+#include "Platform.h"
 #include "Boat.h"
 #include "Container.h"
 #include "Configuration.h"
@@ -151,4 +151,4 @@ private:
 
 } // namespace xbs
 
-#endif // BOARD_H
+#endif // XBS_BOARD_H

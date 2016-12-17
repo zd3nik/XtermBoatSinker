@@ -2,12 +2,9 @@
 // Input.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <unistd.h>
-#include <sys/select.h>
-#include <stdlib.h>
-#include <errno.h>
 #include "Input.h"
 #include "Logger.h"
+#include <sys/select.h>
 
 namespace xbs
 {

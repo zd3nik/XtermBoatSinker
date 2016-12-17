@@ -2,11 +2,10 @@
 // Logger.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef LOGGER_H
-#define LOGGER_H
+#ifndef XBS_LOGGER_H
+#define XBS_LOGGER_H
 
-#include <iostream>
-#include <fstream>
+#include "Platform.h"
 #include "LogStream.h"
 
 namespace xbs
@@ -81,4 +80,4 @@ private:
 
 } // namespace xbs
 
-#endif // LOGGER_H
+#endif // XBS_LOGGER_H

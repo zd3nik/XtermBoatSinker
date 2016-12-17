@@ -2,12 +2,10 @@
 // FileSysDBRecord.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef FILESYSDBRECORD_H
-#define FILESYSDBRECORD_H
+#ifndef XBS_FILESYSDBRECORD_H
+#define XBS_FILESYSDBRECORD_H
 
-#include <map>
-#include <vector>
-#include <string>
+#include "Platform.h"
 #include "DBRecord.h"
 
 namespace xbs
@@ -43,4 +41,4 @@ private:
 
 } // namespace xbs
 
-#endif // FILESYSDBRECORD_H
+#endif // XBS_FILESYSDBRECORD_H

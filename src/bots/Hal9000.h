@@ -2,9 +2,10 @@
 // Hal9000.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef HAL9000_H
-#define HAL9000_H
+#ifndef XBS_HAL9000_H
+#define XBS_HAL9000_H
 
+#include "Platform.h"
 #include "TargetingComputer.h"
 
 namespace xbs
@@ -27,4 +28,4 @@ protected:
 
 } // namespace xbs
 
-#endif // HAL9000_H
+#endif // XBS_HAL9000_H

@@ -2,7 +2,6 @@
 // RandomRufus.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <math.h>
 #include "RandomRufus.h"
 
 namespace xbs

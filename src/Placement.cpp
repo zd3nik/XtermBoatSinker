@@ -2,9 +2,6 @@
 // Placement.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <math.h>
-#include <ctype.h>
-#include <assert.h>
 #include "Placement.h"
 #include "Coordinate.h"
 
@@ -125,7 +122,7 @@ void Placement::setScore(const unsigned width, const unsigned height,
   unsigned adj = 0;
 
   for (unsigned i = 0; i < len; ++i) {
-    assert(sqr < desc.size());
+    ASSERT(sqr < desc.size());
     if (desc[sqr] == Boat::HIT) {
       hitCount++;
       score -= (tail * 0.50);
@@ -152,16 +149,16 @@ void Placement::setScore(const unsigned width, const unsigned height,
   }
 
   if (hitCount) {
-    assert(len >= hitCount);
+    ASSERT(len >= hitCount);
     score += hitCount;
     unsigned head = 0;
     sqr = start;
     for (unsigned i = 0; i < len; ++i) {
-      assert(sqr < desc.size());
+      ASSERT(sqr < desc.size());
       if (desc[sqr] == Boat::NONE) {
         head++;
       } else {
-        assert((desc[sqr] == Boat::HIT) ||
+        ASSERT((desc[sqr] == Boat::HIT) ||
                (toupper(desc[sqr]) == boat.getID()));
         break;
       }
@@ -186,17 +183,17 @@ void Placement::getSquares(std::set<unsigned>& squares) const {
 
 //-----------------------------------------------------------------------------
 void Placement::exec(std::string& desc, std::set<unsigned>& hits) const {
-  assert(isValid());
+  ASSERT(isValid());
   unsigned sqr = start;
   for (unsigned i = 0; i < boat.getLength(); ++i) {
-    assert(sqr < desc.size());
+    ASSERT(sqr < desc.size());
     if (desc[sqr] == Boat::HIT) {
-      assert(hits.count(sqr));
+      ASSERT(hits.count(sqr));
       hits.erase(sqr);
       desc[sqr] = tolower(boat.getID());
     } else {
-      assert(!hits.count(sqr));
-      assert(desc[sqr] == Boat::NONE);
+      ASSERT(!hits.count(sqr));
+      ASSERT(desc[sqr] == Boat::NONE);
       desc[sqr] = boat.getID();
     }
     sqr += inc;
@@ -205,15 +202,15 @@ void Placement::exec(std::string& desc, std::set<unsigned>& hits) const {
 
 //-----------------------------------------------------------------------------
 void Placement::undo(std::string& desc, std::set<unsigned>& hits) const {
-  assert(isValid());
+  ASSERT(isValid());
   unsigned sqr = start;
   for (unsigned i = 0; i < boat.getLength(); ++i) {
-    assert(sqr < desc.size());
-    assert(!hits.count(sqr));
+    ASSERT(sqr < desc.size());
+    ASSERT(!hits.count(sqr));
     if (desc[sqr] == boat.getID()) {
       desc[sqr] = Boat::NONE;
     } else {
-      assert(desc[sqr] == tolower(boat.getID()));
+      ASSERT(desc[sqr] == tolower(boat.getID()));
       desc[sqr] = Boat::HIT;
       hits.insert(sqr);
     }

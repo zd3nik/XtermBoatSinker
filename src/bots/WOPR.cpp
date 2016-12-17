@@ -2,9 +2,6 @@
 // WOPR.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <math.h>
-#include <assert.h>
-#include <algorithm>
 #include "WOPR.h"
 #include "Logger.h"
 #include "CommandArgs.h"
@@ -83,7 +80,7 @@ ScoredCoordinate WOPR::bestShotOn(const Board& board) {
         doFullSearch = (improbLimit > 0);
       }
     } else {
-      assert(false);
+      ASSERT(false);
     }
   }
 
@@ -141,7 +138,7 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
 {
   std::string desc = board.getDescriptor();
   const unsigned sqr = idx(coord);
-  assert(desc[sqr] == Boat::NONE);
+  ASSERT(desc[sqr] == Boat::NONE);
 
   if (debugBot) {
     Logger::info() << "verfiying " << coord
@@ -174,7 +171,7 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
   SearchResult result = isPossible(0, desc);
   finishSearch();
 
-  assert(desc[sqr] == Boat::HIT);
+  ASSERT(desc[sqr] == Boat::HIT);
   desc[sqr] = Boat::NONE;
   hits.erase(sqr);
   if (full) {
@@ -193,7 +190,7 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
       Logger::debug() << coord << " verified!";
     }
     if (impossible[boardKey].count(sqr)) {
-      assert(false); // should never happen
+      ASSERT(false); // should never happen
       impossible[boardKey].erase(sqr);
     }
     if (improbable[boardKey].count(sqr)) {
@@ -202,7 +199,7 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
     }
     break;
   case IMPROBABLE:
-    assert(!full);
+    ASSERT(!full);
     if (debugBot) {
       Logger::info() << "improbable " << coord << board.toString();
     }
@@ -250,12 +247,12 @@ WOPR::SearchResult WOPR::isPossible(const unsigned ply, std::string& desc) {
   // rearrange so we alternate between boat lengths
   for (unsigned i = 0; i < half; ++i) {
     const Placement& placement = candidates[i];
-    assert(placement.isValid());
+    ASSERT(placement.isValid());
     unsigned len = placement.getBoat().getLength();
     if (lengthCount[len] >= maxCount) {
       for (unsigned z = candidates.size(); z-- > half; ) {
         const Placement& next = candidates[z];
-        assert(next.isValid());
+        ASSERT(next.isValid());
         unsigned nextLen = next.getBoat().getLength();
         if ((nextLen != len) && (lengthCount[nextLen] < maxCount)) {
           len = next.getBoat().getLength();
@@ -277,7 +274,7 @@ WOPR::SearchResult WOPR::isPossible(const unsigned ply, std::string& desc) {
       break;
     }
     const Placement& placement = candidates[i];
-    assert(placement.isValid());
+    ASSERT(placement.isValid());
     examined.insert(placement.getBoatIndex());
     placements.insert(placement);
     SearchResult tmp = canPlace(ply, desc, placement);

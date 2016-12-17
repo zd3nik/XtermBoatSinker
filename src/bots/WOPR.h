@@ -2,11 +2,10 @@
 // WOPR.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef WOPR_H
-#define WOPR_H
+#ifndef XBS_WOPR_H
+#define XBS_WOPR_H
 
-#include <map>
-#include <set>
+#include "Platform.h"
 #include "Jane.h"
 
 namespace xbs
@@ -40,4 +39,4 @@ protected:
 
 } // namespace xbs
 
-#endif // WOPR_H
+#endif // XBS_WOPR_H

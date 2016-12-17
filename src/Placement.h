@@ -2,11 +2,10 @@
 // Placement.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef PLACEMENT_H
-#define PLACEMENT_H
+#ifndef XBS_PLACEMENT_H
+#define XBS_PLACEMENT_H
 
-#include <map>
-#include <set>
+#include "Platform.h"
 #include "Boat.h"
 
 namespace xbs
@@ -72,4 +71,4 @@ private:
 
 } // namespace xbs
 
-#endif // PLACEMENT_H
+#endif // XBS_PLACEMENT_H

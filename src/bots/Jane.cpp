@@ -2,9 +2,6 @@
 // Jane.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <math.h>
-#include <assert.h>
-#include <algorithm>
 #include "Jane.h"
 #include "Version.h"
 #include "Logger.h"
@@ -47,7 +44,7 @@ ScoredCoordinate Jane::bestShotOn(const Board& board) {
   }
 
   Logger::debug() << "hit count = " << hits.size();
-  assert(hits.size() == hitCount);
+  ASSERT(hits.size() == hitCount);
   if ((hits.size() > 1) && frenzySquares.size()) {
     Timer timer;
     if (debugBot) {
@@ -184,12 +181,12 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
     PlacementSet::const_iterator it;
     for (it = placementRef.begin(); it != placementRef.end(); ++it) {
       Placement placement = (*it);
-      assert(placement.isValid());
+      ASSERT(placement.isValid());
       if (placement.isValid(desc, hits) &&
           !examined.count(placement.getBoatIndex()) &&
           !unique.count(placement))
       {
-        assert(!placements.count(placement));
+        ASSERT(!placements.count(placement));
         placement.setScore(~0U);
         candidates.push_back(placement);
         unique.insert(placement);
@@ -214,12 +211,12 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
         unsigned south = forward(desc, sqr, boardLen, width);
         unsigned east  = forward(desc, sqr, ((width * y) + width), 1);
 
-        assert((north + south) < height);
-        assert((east + west) < width);
-        assert(toCoord(sqr - (north * width)).getX() == (x + 1));
-        assert(toCoord(sqr + (south * width)).getX() == (x + 1));
-        assert(toCoord(sqr - west).getY() == (y + 1));
-        assert(toCoord(sqr + east).getY() == (y + 1));
+        ASSERT((north + south) < height);
+        ASSERT((east + west) < width);
+        ASSERT(toCoord(sqr - (north * width)).getX() == (x + 1));
+        ASSERT(toCoord(sqr + (south * width)).getX() == (x + 1));
+        ASSERT(toCoord(sqr - west).getY() == (y + 1));
+        ASSERT(toCoord(sqr + east).getY() == (y + 1));
 
         north = std::min(north, (boat.getLength() - 1));
         south = std::min(south, (boat.getLength() - 1));
@@ -233,9 +230,9 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
             Placement placement(boat, i, start, width);
-            assert(placement.isValid());
+            ASSERT(placement.isValid());
             if (!unique.count(placement)) {
-              assert(!placements.count(placement));
+              ASSERT(!placements.count(placement));
               placement.setScore(width, height, desc);
               candidates.push_back(placement);
               unique.insert(placement);
@@ -251,9 +248,9 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
           unsigned slides = (windowLen - boat.getLength() + 1);
           for (unsigned slide = 0; slide < slides; ++slide) {
             Placement placement(boat, i, start, 1);
-            assert(placement.isValid());
+            ASSERT(placement.isValid());
             if (!unique.count(placement)) {
-              assert(!placements.count(placement));
+              ASSERT(!placements.count(placement));
               placement.setScore(width, height, desc);
               candidates.push_back(placement);
               unique.insert(placement);
@@ -265,7 +262,7 @@ bool Jane::getPlacements(std::vector<Placement>& candidates,
     }
   }
 
-  assert(unique.size() == candidates.size());
+  ASSERT(unique.size() == candidates.size());
   std::sort(candidates.begin(), candidates.end(), Placement::GreaterScore);
   return (candidates.size() > 0);
 }
@@ -293,7 +290,7 @@ Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
   SearchResult result = IMPOSSIBLE;
   for (unsigned i = 0; i < candidates.size(); ++i) {
     const Placement& placement = candidates[i];
-    assert(placement.isValid());
+    ASSERT(placement.isValid());
     examined.insert(placement.getBoatIndex());
     placements.insert(placement);
     if (canPlace(ply, desc, placement) == POSSIBLE) {
@@ -312,13 +309,13 @@ Jane::SearchResult Jane::doSearch(const unsigned ply, std::string& desc) {
 Jane::SearchResult Jane::canPlace(const unsigned ply, std::string& desc,
                                   const Placement& placement)
 {
-  assert(placement.isValid());
-  assert(examined.size() > 0);
-  assert(examined.size() <= config.getBoatCount());
-  assert(placements.size() == examined.size());
-  assert(unplacedPoints >= placement.getBoatLength());
-  assert(ply == (examined.size() - 1));
-  assert(ply < tryCount.size());
+  ASSERT(placement.isValid());
+  ASSERT(examined.size() > 0);
+  ASSERT(examined.size() <= config.getBoatCount());
+  ASSERT(placements.size() == examined.size());
+  ASSERT(unplacedPoints >= placement.getBoatLength());
+  ASSERT(ply == (examined.size() - 1));
+  ASSERT(ply < tryCount.size());
 
   maxPly = std::max(maxPly, ply);
   tryCount[ply]++;

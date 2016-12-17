@@ -2,9 +2,10 @@
 // RandomRufus.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef RANDOM_RUFUS_H
-#define RANDOM_RUFUS_H
+#ifndef XBS_RANDOM_RUFUS_H
+#define XBS_RANDOM_RUFUS_H
 
+#include "Platform.h"
 #include "TargetingComputer.h"
 
 namespace xbs
@@ -23,4 +24,4 @@ protected:
 
 } // namespace xbs
 
-#endif // RANDOM_RUFUS_H
+#endif // XBS_RANDOM_RUFUS_H

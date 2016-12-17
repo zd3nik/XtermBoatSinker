@@ -2,18 +2,13 @@
 // Server.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include <algorithm>
-#include <stdexcept>
-#include <cstdio>
 #include "Server.h"
 #include "CommandArgs.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "FileSysDatabase.h"
 #include "FileSysDBRecord.h"
+#include <arpa/inet.h>
 
 namespace xbs
 {

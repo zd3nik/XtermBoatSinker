@@ -2,13 +2,10 @@
 // Coordinate.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef COORDINATE_H
-#define COORDINATE_H
+#ifndef XBS_COORDINATE_H
+#define XBS_COORDINATE_H
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <string>
+#include "Platform.h"
 #include "Movement.h"
 #include "Printable.h"
 
@@ -175,4 +172,4 @@ private:
 
 } // namespace xbs
 
-#endif // COORDINATE_H
+#endif // XBS_COORDINATE_H

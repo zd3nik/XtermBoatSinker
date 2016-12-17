@@ -2,11 +2,6 @@
 // FileSysDBRecord.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <ctype.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <stdexcept>
 #include "FileSysDBRecord.h"
 #include "Logger.h"
 #include "Input.h"

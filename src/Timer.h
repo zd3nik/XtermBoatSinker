@@ -2,10 +2,10 @@
 // Timestamp.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef XBS_TIMER_H
+#define XBS_TIMER_H
 
-#include <string>
+#include "Platform.h"
 #include "Printable.h"
 
 namespace xbs
@@ -106,4 +106,4 @@ private:
 
 } // namespace xbs
 
-#endif // TIMER_H
+#endif // XBS_TIMER_H

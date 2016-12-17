@@ -2,12 +2,10 @@
 // TargetingComputer.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef TARGETINGCOMPUTER_H
-#define TARGETINGCOMPUTER_H
+#ifndef XBS_TARGETINGCOMPUTER_H
+#define XBS_TARGETINGCOMPUTER_H
 
-#include <string>
-#include <vector>
-#include <set>
+#include "Platform.h"
 #include "Board.h"
 #include "Configuration.h"
 #include "ScoredCoordinate.h"
@@ -77,4 +75,4 @@ protected:
 
 } // namespace xbs
 
-#endif // TARGETINGCOMPUTER_H
+#endif // XBS_TARGETINGCOMPUTER_H

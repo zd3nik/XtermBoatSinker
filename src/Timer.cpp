@@ -2,9 +2,8 @@
 // Timer.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <stdio.h>
-#include "sys/time.h"
 #include "Timer.h"
+#include "sys/time.h"
 
 namespace xbs
 {

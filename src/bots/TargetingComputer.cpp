@@ -2,10 +2,6 @@
 // TargetingComputer.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <unistd.h>
-#include <stdlib.h>
-#include <algorithm>
-#include <stdexcept>
 #include "TargetingComputer.h"
 #include "Configuration.h"
 #include "CommandArgs.h"

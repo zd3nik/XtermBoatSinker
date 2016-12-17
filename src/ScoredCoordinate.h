@@ -2,9 +2,10 @@
 // ScoredCoordinate.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef SCOREDCOORDINATE_H
-#define SCOREDCOORDINATE_H
+#ifndef XBS_SCOREDCOORDINATE_H
+#define XBS_SCOREDCOORDINATE_H
 
+#include "Platform.h"
 #include "Coordinate.h"
 
 namespace xbs
@@ -64,4 +65,4 @@ private:
 
 } // namespace xbs
 
-#endif // SCOREDCOORDINATE_H
+#endif // XBS_SCOREDCOORDINATE_H

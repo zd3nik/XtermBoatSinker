@@ -2,10 +2,10 @@
 // Edgar.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef EDGAR_H
-#define EDGAR_H
+#ifndef XBS_EDGAR_H
+#define XBS_EDGAR_H
 
-#include <vector>
+#include "Platform.h"
 #include "ScoredCoordinate.h"
 #include "Sal9000.h"
 
@@ -25,4 +25,4 @@ protected:
 
 } // namespace xbs
 
-#endif // EDGAR_H
+#endif // XBS_EDGAR_H

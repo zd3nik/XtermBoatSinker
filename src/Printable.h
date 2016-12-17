@@ -2,10 +2,10 @@
 // Printable.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef PRINTABLE_H
-#define PRINTABLE_H
+#ifndef XBS_PRINTABLE_H
+#define XBS_PRINTABLE_H
 
-#include <string>
+#include "Platform.h"
 
 namespace xbs
 {
@@ -19,4 +19,4 @@ public:
 
 } // namespace xbs
 
-#endif // PRINTABLE_H
+#endif // XBS_PRINTABLE_H

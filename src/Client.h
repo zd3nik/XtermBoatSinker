@@ -2,10 +2,10 @@
 // Client.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef XBS_CLIENT_H
+#define XBS_CLIENT_H
 
-#include <map>
+#include "Platform.h"
 #include "Input.h"
 #include "Board.h"
 #include "Configuration.h"
@@ -125,4 +125,4 @@ protected:
 
 } // namespace xbs
 
-#endif // CLIENT_H
+#endif // XBS_CLIENT_H

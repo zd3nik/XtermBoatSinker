@@ -2,8 +2,6 @@
 // Edgar.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <math.h>
-#include <assert.h>
 #include "Edgar.h"
 
 namespace xbs {
@@ -65,7 +63,7 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
       case 3: score = 1.8; break;
       case 4: score = 1.5; break;
       default:
-        assert(false);
+        ASSERT(false);
       }
     } else {
       bool a, b, c, d;
@@ -80,7 +78,7 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
         return;
       case 2:
         if (np && sp) {
-          assert(!(ep | wp));
+          ASSERT(!(ep | wp));
           a = (board.getSquare((coord + North) + East) == Boat::HIT);
           b = (board.getSquare((coord + North) + West) == Boat::HIT);
           c = (board.getSquare((coord + South) + East) == Boat::HIT);
@@ -94,7 +92,7 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
             score = 1.5;
           }
         } else if (ep && wp) {
-          assert(!(np | sp));
+          ASSERT(!(np | sp));
           a = (board.getSquare((coord + North) + East) == Boat::HIT);
           b = (board.getSquare((coord + North) + West) == Boat::HIT);
           c = (board.getSquare((coord + South) + East) == Boat::HIT);
@@ -115,35 +113,35 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
       case 3:
         // adjacent to 1 perpendicular line
         if (np) {
-          assert(!(sp | ep | wp));
+          ASSERT(!(sp | ep | wp));
           a = (board.getSquare((coord + North) + East) == Boat::HIT);
           b = (board.getSquare((coord + North) + West) == Boat::HIT);
         } else if (sp) {
-          assert(!(np | ep | wp));
+          ASSERT(!(np | ep | wp));
           a = (board.getSquare((coord + South) + East) == Boat::HIT);
           b = (board.getSquare((coord + South) + West) == Boat::HIT);
         } else if (ep) {
-          assert(!(np | sp | wp));
+          ASSERT(!(np | sp | wp));
           a = (board.getSquare((coord + East) + North) == Boat::HIT);
           b = (board.getSquare((coord + East) + South) == Boat::HIT);
         } else if (wp) {
-          assert(!(np | sp | ep));
+          ASSERT(!(np | sp | ep));
           a = (board.getSquare((coord + West) + North) == Boat::HIT);
           b = (board.getSquare((coord + West) + South) == Boat::HIT);
         } else {
-          assert(false);
+          ASSERT(false);
         }
         if (a & b) {
           // probably side of a boat
           searchScore(board, coord, (w * 1.1));
         } else {
           // adjacent to end of a perpendicular line (possible elbow pattern)
-          assert(a | b);
+          ASSERT(a | b);
           searchScore(board, coord, (w * 1.8));
         }
         return;
       default:
-        assert(false);
+        ASSERT(false);
       }
     }
   }

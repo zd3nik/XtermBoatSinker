@@ -2,13 +2,10 @@
 // Boat.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef BOAT_H
-#define BOAT_H
+#ifndef XBS_BOAT_H
+#define XBS_BOAT_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <string>
+#include "Platform.h"
 
 //-----------------------------------------------------------------------------
 class Boat
@@ -123,4 +120,4 @@ private:
   unsigned length;
 };
 
-#endif // BOAT_H
+#endif // XBS_BOAT_H

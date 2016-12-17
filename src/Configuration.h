@@ -2,12 +2,10 @@
 // Configuration.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef CONFIGURATION_H
-#define CONFIGURATION_H
+#ifndef XBS_CONFIGURATION_H
+#define XBS_CONFIGURATION_H
 
-#include <string>
-#include <vector>
-#include <map>
+#include "Platform.h"
 #include "Boat.h"
 #include "Container.h"
 #include "DBRecord.h"
@@ -89,4 +87,4 @@ private:
 
 } // namespace xbs
 
-#endif // CONFIGURATION_H
+#endif // XBS_CONFIGURATION_H

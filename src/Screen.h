@@ -2,10 +2,10 @@
 // Screen.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef SCREEN_H
-#define SCREEN_H
+#ifndef XBS_SCREEN_H
+#define XBS_SCREEN_H
 
-#include <string>
+#include "Platform.h"
 #include "Container.h"
 #include "Coordinate.h"
 #include "Printable.h"
@@ -162,4 +162,4 @@ private:
 
 } // namespace xbs
 
-#endif // SCREEN_H
+#endif // XBS_SCREEN_H

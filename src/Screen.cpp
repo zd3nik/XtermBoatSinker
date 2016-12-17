@@ -2,13 +2,9 @@
 // Screen.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <sys/ioctl.h>
-#include <errno.h>
-#include <cstdio>
-#include <iostream>
-#include <stdexcept>
 #include "Screen.h"
 #include "Logger.h"
+#include <sys/ioctl.h>
 
 namespace xbs
 {

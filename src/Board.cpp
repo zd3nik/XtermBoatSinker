@@ -5,7 +5,6 @@
 #include "Board.h"
 #include "Screen.h"
 #include "Logger.h"
-#include <algorithm>
 
 namespace xbs
 {

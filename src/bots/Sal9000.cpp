@@ -2,10 +2,6 @@
 // Sal9000.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <math.h>
-#include <assert.h>
-#include <vector>
-#include <algorithm>
 #include "Sal9000.h"
 #include "Logger.h"
 

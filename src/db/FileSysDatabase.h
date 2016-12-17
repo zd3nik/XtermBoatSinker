@@ -2,14 +2,13 @@
 // FileSysDatabase.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef FILE_SYS_DATABASE_H
-#define FILE_SYS_DATABASE_H
+#ifndef XBS_FILE_SYS_DATABASE_H
+#define XBS_FILE_SYS_DATABASE_H
 
-#include <string>
-#include <dirent.h>
-#include <map>
+#include "Platform.h"
 #include "Database.h"
 #include "FileSysDBRecord.h"
+#include <dirent.h>
 
 namespace xbs
 {
@@ -43,4 +42,4 @@ private:
 
 } // namespace xbs
 
-#endif // FILE_SYS_DATABASE_H
+#endif // XBS_FILE_SYS_DATABASE_H

@@ -2,16 +2,15 @@
 // Server.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef XBS_SERVER_H
+#define XBS_SERVER_H
 
-#include <netdb.h>
-#include <string>
-#include <set>
+#include "Platform.h"
 #include "Configuration.h"
 #include "Input.h"
 #include "Game.h"
 #include "Version.h"
+#include <netdb.h>
 
 namespace xbs
 {
@@ -99,4 +98,4 @@ private:
 
 } // namespace xbs
 
-#endif // SERVER_H
+#endif // XBS_SERVER_H

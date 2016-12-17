@@ -2,15 +2,10 @@
 // FileSysDatabase.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#include <sys/stat.h>
-#include <stdexcept>
 #include "FileSysDatabase.h"
 #include "FileSysDBRecord.h"
 #include "Logger.h"
+#include <sys/stat.h>
 
 namespace xbs
 {

@@ -1,14 +1,13 @@
 //-----------------------------------------------------------------------------
-// Client.cpp
+// ServerMain.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
+#include "Platform.h"
 #include "CommandArgs.h"
-#include "Client.h"
+#include "Server.h"
 #include "Logger.h"
 #include "Screen.h"
+#include <csignal>
 
 using namespace xbs;
 
@@ -22,20 +21,21 @@ int main(const int argc, const char* argv[]) {
   try {
     srand((unsigned)time(NULL) * (unsigned)getpid());
     CommandArgs::initialize(argc, argv);
-    Client client;
+    Server server;
 
     signal(SIGWINCH, termSizeChanged);
     signal(SIGPIPE, SIG_IGN);
 
-    if (!client.init()) {
+    if (!server.init()) {
       return 1;
     }
 
-    if (client.test()) {
-      return 0;
+    while (server.run()) {
+      if (!server.isRepeatOn()) {
+        break;
+      }
     }
-
-    return (client.join() && client.run()) ? 0 : 1;
+    return 0;
   }
   catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;

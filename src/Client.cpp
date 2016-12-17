@@ -2,17 +2,13 @@
 // Client.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <unistd.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdexcept>
 #include "Client.h"
 #include "CommandArgs.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "Server.h"
+#include <netdb.h>
+#include <arpa/inet.h>
 
 // bots
 #include "Skipper.h"

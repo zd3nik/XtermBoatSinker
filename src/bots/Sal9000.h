@@ -2,10 +2,10 @@
 // Sal9000.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef SAL9000_H
-#define SAL9000_H
+#ifndef XBS_SAL9000_H
+#define XBS_SAL9000_H
 
-#include <vector>
+#include "Platform.h"
 #include "Configuration.h"
 #include "ScoredCoordinate.h"
 #include "Hal9000.h"
@@ -26,4 +26,4 @@ protected:
 
 } // namespace xbs
 
-#endif // SAL9000_H
+#endif // XBS_SAL9000_H

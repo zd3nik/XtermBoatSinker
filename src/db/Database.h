@@ -2,11 +2,10 @@
 // Database.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef DATABASE_H
-#define DATABASE_H
+#ifndef XBS_DATABASE_H
+#define XBS_DATABASE_H
 
-#include <string>
-#include <vector>
+#include "Platform.h"
 #include "DBRecord.h"
 
 namespace xbs
@@ -26,4 +25,4 @@ public:
 
 } // namespace xbs
 
-#endif // DATABASE_H
+#endif // XBS_DATABASE_H

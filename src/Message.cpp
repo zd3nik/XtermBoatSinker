@@ -2,7 +2,6 @@
 // Message.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <stdio.h>
 #include "Message.h"
 #include "Screen.h"
 #include "Logger.h"

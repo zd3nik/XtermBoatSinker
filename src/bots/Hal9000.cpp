@@ -2,9 +2,6 @@
 // Hal9000.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include <math.h>
-#include <assert.h>
-#include <algorithm>
 #include "Hal9000.h"
 #include "Logger.h"
 
@@ -63,7 +60,7 @@ void Hal9000::scoreFrenzyShots(const Board& board, const double weight) {
   for (unsigned i = 0; i < coords.size(); ++i) {
     ScoredCoordinate& coord = coords[i];
     unsigned sqr = idx(coord);
-    assert(!frenzySquares.count(sqr) == !adjacentHits[sqr]);
+    ASSERT(!frenzySquares.count(sqr) == !adjacentHits[sqr]);
     if (adjacentHits[sqr]) {
       frenzyScore(board, coord, weight);
     }
@@ -75,7 +72,7 @@ void Hal9000::scoreSearchShots(const Board& board, const double weight) {
   for (unsigned i = 0; i < coords.size(); ++i) {
     ScoredCoordinate& coord = coords[i];
     unsigned sqr = idx(coord);
-    assert(!frenzySquares.count(sqr) == !adjacentHits[sqr]);
+    ASSERT(!frenzySquares.count(sqr) == !adjacentHits[sqr]);
     if (!adjacentHits[sqr]) {
       searchScore(board, coord, weight);
     }

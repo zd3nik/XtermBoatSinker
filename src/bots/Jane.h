@@ -2,11 +2,10 @@
 // Jane.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef JANE_H
-#define JANE_H
+#ifndef XBS_JANE_H
+#define XBS_JANE_H
 
-#include <map>
-#include <set>
+#include "Platform.h"
 #include "Edgar.h"
 #include "Placement.h"
 
@@ -54,4 +53,4 @@ protected:
 
 } // namespace xbs
 
-#endif // JANE_H
+#endif // XBS_JANE_H

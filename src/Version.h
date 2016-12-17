@@ -2,10 +2,10 @@
 // Version.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef XBS_VERSION_H
+#define XBS_VERSION_H
 
-#include <string>
+#include "Platform.h"
 #include "Printable.h"
 
 namespace xbs
@@ -72,4 +72,4 @@ private:
 
 } // namespace xbs
 
-#endif // VERSION_H
+#endif // XBS_VERSION_H

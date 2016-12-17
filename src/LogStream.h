@@ -2,10 +2,10 @@
 // LogStream.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef LOGSTREAM_H
-#define LOGSTREAM_H
+#ifndef XBS_LOGSTREAM_H
+#define XBS_LOGSTREAM_H
 
-#include <ostream>
+#include "Platform.h"
 #include "Screen.h"
 #include "Version.h"
 #include "Coordinate.h"
@@ -80,4 +80,4 @@ private:
 
 } // namespace xbs
 
-#endif // LOGSTREAM_H
+#endif // XBS_LOGSTREAM_H

@@ -2,15 +2,11 @@
 // Input.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef INPUT_H
-#define INPUT_H
+#ifndef XBS_INPUT_H
+#define XBS_INPUT_H
 
+#include "Platform.h"
 #include <termios.h>
-#include <string.h>
-#include <string>
-#include <vector>
-#include <map>
-#include <set>
 
 namespace xbs
 {
@@ -112,4 +108,4 @@ private:
 
 } // namespace xbs
 
-#endif // INPUT_H
+#endif // XBS_INPUT_H

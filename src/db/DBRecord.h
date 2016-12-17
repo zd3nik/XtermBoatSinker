@@ -2,12 +2,10 @@
 // DBRecord.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef DB_RECORD_H
-#define DB_RECORD_H
+#ifndef XBS_DB_RECORD_H
+#define XBS_DB_RECORD_H
 
-#include <string>
-#include <vector>
-#include <stdint.h>
+#include "Platform.h"
 
 namespace xbs
 {
@@ -65,5 +63,5 @@ public:
 
 } // namespace xbs
 
-#endif // DB_RECORD_H
+#endif // XBS_DB_RECORD_H
 

@@ -2,12 +2,10 @@
 // CommandArgs.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef COMMANDARGS_H
-#define COMMANDARGS_H
+#ifndef XBS_COMMANDARGS_H
+#define XBS_COMMANDARGS_H
 
-#include <ctype.h>
-#include <string.h>
-#include <string>
+#include "Platform.h"
 
 namespace xbs
 {
@@ -45,4 +43,4 @@ private:
 
 } // namespace xbs
 
-#endif // COMMANDARGS_H
+#endif // XBS_COMMANDARGS_H

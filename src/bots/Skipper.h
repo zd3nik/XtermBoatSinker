@@ -2,9 +2,10 @@
 // Skipper.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef SKIPPER_H
-#define SKIPPER_H
+#ifndef XBS_SKIPPER_H
+#define XBS_SKIPPER_H
 
+#include "Platform.h"
 #include "TargetingComputer.h"
 
 namespace xbs
@@ -21,4 +22,4 @@ protected:
 
 } // namespace xbs
 
-#endif // SKIPPER_H
+#endif // XBS_SKIPPER_H

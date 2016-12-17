@@ -2,10 +2,10 @@
 // Player.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef PLAYER_H
-#define PLAYER_H
+#ifndef XBS_PLAYER_H
+#define XBS_PLAYER_H
 
-#include <string>
+#include "Platform.h"
 #include "DBObject.h"
 
 //-----------------------------------------------------------------------------
@@ -53,4 +53,4 @@ private:
   unsigned gamesWon;
 };
 
-#endif // PLAYER_H
+#endif // XBS_PLAYER_H

@@ -2,9 +2,10 @@
 // Game.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef GAME_H
-#define GAME_H
+#ifndef XBS_GAME_H
+#define XBS_GAME_H
 
+#include "Platform.h"
 #include "Board.h"
 #include "Configuration.h"
 #include "Database.h"
@@ -76,4 +77,4 @@ private:
 
 } // namespace xbs
 
-#endif // GAME_H
+#endif // XBS_GAME_H
