@@ -7,14 +7,14 @@
 #include <algorithm>
 #include <stdexcept>
 #include "TargetingComputer.h"
-#include "FileSysDatabase.h"
 #include "Configuration.h"
 #include "CommandArgs.h"
-#include "DBRecord.h"
 #include "Screen.h"
 #include "Timer.h"
 #include "Logger.h"
 #include "Input.h"
+#include "DBRecord.h"
+#include "FileSysDatabase.h"
 
 namespace xbs
 {

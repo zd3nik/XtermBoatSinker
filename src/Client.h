@@ -11,8 +11,8 @@
 #include "Configuration.h"
 #include "Message.h"
 #include "Version.h"
-#include "FileSysDBRecord.h"
 #include "ScoredCoordinate.h"
+#include "FileSysDBRecord.h"
 #include "TargetingComputer.h"
 
 namespace xbs

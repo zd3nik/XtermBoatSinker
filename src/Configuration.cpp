@@ -4,8 +4,8 @@
 //-----------------------------------------------------------------------------
 #include <stdexcept>
 #include "Configuration.h"
-#include "DBRecord.h"
 #include "Screen.h"
+#include "DBRecord.h"
 
 namespace xbs
 {

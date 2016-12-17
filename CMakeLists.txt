@@ -7,8 +7,10 @@ else ()
   set (CMAKE_CXX_STANDARD 11)
 endif ()
 
-include_directories(src)
+include_directories(src src/db src/bots)
 aux_source_directory(src SRC_LIST)
+aux_source_directory(src/db SRC_LIST)
+aux_source_directory(src/bots SRC_LIST)
 
 add_executable(xbs-server ${SRC_LIST} "main/ServerMain.cpp")
 add_executable(xbs-client ${SRC_LIST} "main/UserClient.cpp")
