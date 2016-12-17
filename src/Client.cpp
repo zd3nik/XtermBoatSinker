@@ -27,7 +27,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version CLIENT_VERSION("1.2.1");
+const Version CLIENT_VERSION("2.0.x");
 const Version MIN_VERSION("1.1");
 const Version MAX_VERSION(~0U, ~0U, ~0U);
 

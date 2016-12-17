@@ -8,7 +8,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version SKIPPER_VERSION("1.0");
+const Version SKIPPER_VERSION("2.0.x");
 
 //-----------------------------------------------------------------------------
 std::string Skipper::getName() const {

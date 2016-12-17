@@ -9,7 +9,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-const Version RUFUS_VERSION("1.3");
+const Version RUFUS_VERSION("2.0.x");
 
 //-----------------------------------------------------------------------------
 std::string RandomRufus::getName() const {

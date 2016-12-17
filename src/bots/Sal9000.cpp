@@ -15,7 +15,7 @@ namespace xbs
 using namespace std;
 
 //-----------------------------------------------------------------------------
-const Version SAL_VERSION("1.3");
+const Version SAL_VERSION("2.0.x");
 
 //-----------------------------------------------------------------------------
 std::string Sal9000::getName() const {

@@ -9,7 +9,7 @@
 namespace xbs {
 
 //-----------------------------------------------------------------------------
-const Version EDGAR_VERSION("1.3");
+const Version EDGAR_VERSION("2.0.x");
 
 //-----------------------------------------------------------------------------
 std::string Edgar::getName() const {
