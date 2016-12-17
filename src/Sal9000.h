@@ -17,14 +17,11 @@ namespace xbs
 class Sal9000: public Hal9000
 {
 public:
-  Sal9000();
   virtual std::string getName() const;
   virtual Version getVersion() const;
 
 protected:
   virtual void searchScore(const Board&, ScoredCoordinate&, const double wght);
-
-  double edgeWeight;
 };
 
 } // namespace xbs
