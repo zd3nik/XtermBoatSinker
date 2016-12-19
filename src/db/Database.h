@@ -6,13 +6,14 @@
 #define XBS_DATABASE_H
 
 #include "Platform.h"
+#include "Printable.h"
 #include "DBRecord.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Database
+class Database : public Printable
 {
 public:
   virtual ~Database() { }

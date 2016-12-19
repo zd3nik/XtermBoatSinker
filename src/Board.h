@@ -6,7 +6,7 @@
 #define XBS_BOARD_H
 
 #include "Platform.h"
-#include "Boat.h"
+#include "Ship.h"
 #include "Container.h"
 #include "Configuration.h"
 #include "DBRecord.h"
@@ -16,8 +16,8 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 // The Board class is a Container which represents a printable rectangle
-// that shows the player name, boat area, coordinate names around the
-// boat area, and one blank line bellow the boat area.
+// that shows the player name, ship area, coordinate names around the
+// ship area, and one blank line bellow the ship area.
 //
 //     +-----------------------+
 //     | * PlayerName          | <- outer rectangle is Board container
@@ -27,7 +27,7 @@ namespace xbs
 //     | 3 |                 | |
 //     | 4 |                 | |
 //     | 5 | Inner Rectangle | |
-//     | 6 |  is Boat Area   | | <- inner rectangle is the boat area
+//     | 6 |  is Ship Area   | | <- inner rectangle is the ship area
 //     | 7 |                 | |    topLeft is always (1,1)
 //     | 8 |                 | |    used for aiming not for printing
 //     | 9 |                 | |
@@ -35,35 +35,49 @@ namespace xbs
 //     |                       |
 //     +-----------------------+
 //
-// A boat descriptor is used to transfer a the boat area across the network.
-// It is a single-line string containing the flattened boat area.
-// Example Boat Area: +------+
+// A ship area descriptor is used to transfer the ship area across the network.
+// It is a single-line string containing the flattened ship area.
+// Example ship area: +------+
 //                    |.X..X.| (row1)
 //                    |0X0..0| (row2)
 //                    |...0X.| (row3)
 //                    +------+
-// Boat descriptor: .X..X.0X0..0...0X. (row1row2row3)
+// Example ship area descriptor: .X..X.0X0..0...0X. (row1row2row3)
 //-----------------------------------------------------------------------------
 class Board : public Container
 {
+private:
+  int handle = -1;
+  bool toMove = false;
+  unsigned score = 0;
+  unsigned skips = 0;
+  unsigned turns = 0;
+  Container shipArea;
+  std::string playerName;
+  std::string descriptor;
+  std::string address;
+  std::string status;
+  std::vector<std::string> hitTaunts;
+  std::vector<std::string> missTaunts;
+
 public:
   static std::string toString(const std::string& desc, const unsigned width);
 
-  Board();
   Board(const int handle,
         const std::string& playerName,
         const std::string& address,
-        const unsigned boatAreaWidth,
-        const unsigned boatAreaHeight);
-  Board(const Board& other);
+        const unsigned shipAreaWidth,
+        const unsigned shipAreaHeight);
+
+  Board() = default;
+  Board(const Board&);
   Board& operator=(const Board& other);
   Board& setPlayerName(const std::string& value);
 
-  virtual ~Board();
   void addHitTaunt(const std::string& value);
   void addMissTaunt(const std::string& value);
   void addStatsTo(DBRecord&, const bool first, const bool last) const;
-  void clearBoatArea();
+  void clearDescriptor();
   void clearHitTaunts();
   void clearMissTaunts();
   void incScore(const unsigned value = 1);
@@ -78,6 +92,7 @@ public:
   void saveTo(DBRecord&, const unsigned opponents,
               const bool first, const bool last) const;
 
+  Container getShipArea() const;
   std::string getAddress() const;
   std::string getDescriptor() const;
   std::string getHitTaunt();
@@ -88,11 +103,13 @@ public:
   std::vector<std::string> getHitTaunts() const;
   std::vector<std::string> getMissTaunts() const;
   std::string toString(const unsigned number, const bool gameStarted) const;
+
   virtual std::string toString() const;
+  virtual Coordinate toCoord(const unsigned i) const;
+  virtual unsigned toIndex(const Coordinate&) const;
 
   int getHandle() const;
-  Container getBoatArea() const;
-  unsigned getBoatPoints() const;
+  unsigned getShipPointCount() const;
   unsigned getHitCount() const;
   unsigned getMissCount() const;
   unsigned getScore() const;
@@ -109,7 +126,7 @@ public:
   char getSquare(const Coordinate&) const;
   char setSquare(const Coordinate&, const char newValue);
   bool addHitsAndMisses(const std::string& descriptor);
-  bool addRandomBoats(const Configuration&, const double minSurfaceArea);
+  bool addRandomShips(const Configuration&, const double minSurfaceArea);
   bool hasHitTaunts() const;
   bool hasMissTaunts() const;
   bool isDead() const;
@@ -117,36 +134,17 @@ public:
   bool isValid() const;
   bool isValid(const Configuration&) const;
   bool print(const bool masked, const Configuration* = NULL) const;
-  bool removeBoat(const Boat& boat);
-  bool updateBoatArea(const std::string& newDescriptor);
-  bool addBoat(const Boat& boat, Coordinate boatCoordinate,
-               const Direction direction);
+  bool removeShip(const Ship&);
+  bool addShip(const Ship&, Coordinate, const Direction);
+  bool updateDescriptor(const std::string& newDescriptor);
 
   /**
-   * @brief Shoot at a coordinate within the boat area
-   * @param boatCoordinate The coordinate in the boat area being shot
-   * @param[out] previous Set to state of coordinate coordinate before shooting
-   * @return true if the shot is legal (in the boat area and not already shot)
+   * @brief Shoot at a coordinate within the ship area
+   * @param coordinate The coordinate in the ship area being shot
+   * @param[out] previous Set to state of coordinate before shooting
+   * @return true if the shot is legal (in the ship area and not already shot)
    */
-  bool shootAt(const Coordinate& boatCoordinate, char& previous);
-
-private:
-  unsigned getBoatIndex(const Coordinate& boatCoordinate) const;
-
-  int handle;
-  bool toMove;
-  std::string playerName;
-  std::string address;
-  std::string status;
-  std::vector<std::string> hitTaunts;
-  std::vector<std::string> missTaunts;
-  unsigned score;
-  unsigned skips;
-  unsigned turns;
-  unsigned boatAreaWidth;
-  unsigned boatAreaHeight;
-  unsigned descriptorLength;
-  char* descriptor;
+  bool shootAt(const Coordinate& coordinate, char& previous);
 };
 
 } // namespace xbs

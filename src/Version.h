@@ -34,14 +34,16 @@ public:
 
   virtual std::string toString() const;
   bool isEmpty() const;
-  bool isValid() const;
   bool operator<(const Version&) const;
   bool operator>(const Version&) const;
   bool operator==(const Version& v) const;
   bool operator!=(const Version& v) const { return !(operator==(v)); }
   bool operator<=(const Version& v) const { return !(operator>(v)); }
   bool operator>=(const Version& v) const { return !(operator<(v)); }
-  bool operator!() const { return isEmpty(); }
+
+  explicit operator bool() const {
+    return ((major_ | minor_ | build_) || other_.size() || str_.size());
+  }
 
   unsigned getMajor() const {
     return major_;

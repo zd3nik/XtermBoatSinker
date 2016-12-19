@@ -3,21 +3,15 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Client.h"
+#include "CanonicalMode.h"
 #include "CommandArgs.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "Server.h"
+#include "Throw.h"
+#include <cstring>
 #include <netdb.h>
 #include <arpa/inet.h>
-
-// bots
-#include "Skipper.h"
-#include "RandomRufus.h"
-#include "Hal9000.h"
-#include "Sal9000.h"
-#include "Edgar.h"
-#include "WOPR.h"
-#include "Jane.h"
 
 namespace xbs
 {
@@ -47,13 +41,9 @@ Client::Client()
     sock(-1),
     gameStarted(false),
     gameFinished(false),
-    watchTestShots(false),
-    testBot(false),
     msgEnd(~0U),
-    testPositions(0),
     minSurfaceArea(0),
-    taunts(NULL),
-    bot(NULL)
+    taunts(NULL)
 {
   input.addHandle(STDIN_FILENO);
 }
@@ -124,74 +114,10 @@ void Client::showHelp() {
       << "   -l <level>" << EL
       << "  --log-file <file>      Log messages to given file" << EL
       << "   -f <file>" << EL
-      << "  --bot <name>           Make this client use the given bot" << EL
-      << "   -b <name>" << EL
-      << "  --static-board <brd>   Use this board instead of random generation" << EL
+      << "  --static-board <brd>   Use this board setup" << EL
       << "   -s <brd>" << EL
-      << "  --list-bots            Show available bot names and exit" << EL
-      << "  --test                 Test bot and exit" << EL
-      << "  --width <count>        Set board width for use with --test" << EL
-      << "  --height <count>       Set board height for use with --test" << EL
-      << "  --watch                Watch every shot during test" << EL
-      << "  --test-db <dir>        Store bot test results in given dir" << EL
-      << "  --positions <count>    Test with given number of positions" << EL
       << "  --msa <ratio>          generate boards with this min-surface-area" << EL
       << EL << Flush;
-}
-
-//-----------------------------------------------------------------------------
-void Client::showBots() {
-  Skipper skipper;
-  RandomRufus rufus;
-  Hal9000 hal;
-  Sal9000 sal;
-  Edgar edgar;
-  WOPR wopr;
-  Jane jane;
-
-  Screen::print()
-      << EL
-      << "Available bot AIs:" << EL
-      << EL
-      << "  " << skipper.getName() << " (" << skipper.getVersion() << ")" << EL
-      << "  " << rufus.getName() << " (" << rufus.getVersion() << ")" << EL
-      << "  " << hal.getName() << " (" << hal.getVersion() << ")" << EL
-      << "  " << sal.getName() << " (" << sal.getVersion() << ")" << EL
-      << "  " << edgar.getName() << " (" << edgar.getVersion() << ")" << EL
-      << "  " << wopr.getName() << " (" << wopr.getVersion() << ")" << EL
-      << "  " << jane.getName() << " (" << jane.getVersion() << ")" << EL
-      << EL << Flush;
-}
-
-//-----------------------------------------------------------------------------
-TargetingComputer* loadBot(const std::string& name) {
-  Skipper skipper;
-  RandomRufus rufus;
-  Hal9000 hal;
-  Sal9000 sal;
-  Edgar edgar;
-  WOPR wopr;
-  Jane jane;
-
-  if (!name.empty()) {
-    if (strcasecmp(name.c_str(), skipper.getName().c_str()) == 0) {
-      return new Skipper();
-    } else if (strcasecmp(name.c_str(), rufus.getName().c_str()) == 0) {
-      return new RandomRufus();
-    } else if (strcasecmp(name.c_str(), hal.getName().c_str()) == 0) {
-      return new Hal9000();
-    } else if (strcasecmp(name.c_str(), sal.getName().c_str()) == 0) {
-      return new Sal9000();
-    } else if (strcasecmp(name.c_str(), edgar.getName().c_str()) == 0) {
-      return new Edgar();
-    } else if (strcasecmp(name.c_str(), wopr.getName().c_str()) == 0) {
-      return new WOPR();
-    } else if (strcasecmp(name.c_str(), jane.getName().c_str()) == 0) {
-      return new Jane();
-    }
-  }
-
-  return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -206,47 +132,21 @@ bool Client::init() {
     return false;
   }
 
-  if (args.indexOf("--list-bots") > 0) {
-    showBots();
-    return false;
-  }
-
   const char* tauntFile = args.getValueOf("-t", "--taunt-file");
   if (tauntFile) {
     taunts = new FileSysDBRecord("taunts", Input::trim(tauntFile));
-  }
-
-  const char* botName = args.getValueOf("-b", "--bot");
-  if (botName) {
-    if (!(bot = loadBot(Input::trim(botName)))) {
-      throw std::runtime_error("Unknown bot name: " + std::string(botName));
-    }
-  }
-
-  const char* itCount = args.getValueOf("--positions");
-  if (itCount) {
-    std::string positions = Input::trim(itCount);
-    if (!isdigit(*positions.c_str())) {
-      throw std::runtime_error("Invalid position count value: " + positions);
-    }
-    testPositions = (unsigned)atoi(positions.c_str());
   }
 
   const char* minArea = args.getValueOf("--msa");
   if (minArea) {
     std::string ratio = Input::trim(minArea);
     if (!isdigit(*ratio.c_str())) {
-      throw std::runtime_error("Invalid min-surface-area ratio: " + ratio);
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << ratio;
     }
     minSurfaceArea = atof(ratio.c_str());
     if ((minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      throw std::runtime_error("Invalid min-surface-area ratio: " + ratio);
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << ratio;
     }
-  }
-
-  const char* testDB = args.getValueOf("--test-db");
-  if (testDB) {
-    testDir = Input::trim(testDB);
   }
 
   const char* brd = args.getValueOf("-s", "--static-board");
@@ -254,49 +154,8 @@ bool Client::init() {
     staticBoard = Input::trim(brd);
   }
 
-  testBot = (args.indexOf("--test") > 0);
-  watchTestShots = (args.indexOf("--watch") > 0);
-
   closeSocket();
   return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::test() {
-  if (testBot) {
-    if (!bot) {
-      throw std::runtime_error("Missing parameter: --bot <name>");
-    }
-
-    Configuration config = Configuration::getDefaultConfiguration();
-    const CommandArgs& args = CommandArgs::getInstance();
-
-    const char* str = args.getValueOf("--width");
-    if (str) {
-      int val = atoi(Input::trim(str).c_str());
-      if (val < 8) {
-        throw std::runtime_error("Invalid --width value");
-      } else {
-        config.setBoardSize((unsigned)val, config.getBoardSize().getHeight());
-      }
-    }
-
-    str = args.getValueOf("--height");
-    if (str) {
-      int val = atoi(Input::trim(str).c_str());
-      if (val < 8) {
-        throw std::runtime_error("Invalid --height value");
-      } else {
-        config.setBoardSize(config.getBoardSize().getWidth(), (unsigned)val);
-      }
-    }
-
-    bot->setConfig(config);
-    bot->test(testDir, staticBoard, testPositions, watchTestShots,
-              minSurfaceArea);
-    return true;
-  }
-  return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -304,10 +163,7 @@ bool Client::join() {
   while (getHostAddress() && getHostPort()) {
     int playersJoined = 0;
     if (openSocket() && readGameInfo(playersJoined)) {
-      if (bot) {
-        bot->setConfig(config);
-      }
-      if (bot || joinPrompt(playersJoined)) {
+      if (joinPrompt(playersJoined)) {
         if (!gameStarted && !setupBoard()) {
           break;
         } else if (getUserName() && waitForGameStart()) {
@@ -462,7 +318,7 @@ bool Client::readGameInfo(int& playersJoined) {
   int pointGoal       = input.getInt(n++);
   int width           = input.getInt(n++);
   int height          = input.getInt(n++);
-  int boatCount       = input.getInt(n++);
+  int shipCount       = input.getInt(n++);
 
   Version serverVersion(version);
 
@@ -472,7 +328,7 @@ bool Client::readGameInfo(int& playersJoined) {
   } else if (version.empty()) {
     Logger::printError() << "Empty version in game info message from server";
     return false;
-  } else if (!serverVersion.isValid()) {
+  } else if (!serverVersion) {
     Logger::printError() << "Invalid version in game info message from server";
     return false;
   } else if (!isCompatibleWith(serverVersion)) {
@@ -502,33 +358,34 @@ bool Client::readGameInfo(int& playersJoined) {
   } else if (height < 1) {
     Logger::printError() << "Invalid board height: " << height;
     return false;
-  } else if (boatCount < 1) {
-    Logger::printError() << "Invalid boat count: " << boatCount;
+  } else if (shipCount < 1) {
+    Logger::printError() << "Invalid ship count: " << shipCount;
     return false;
   }
 
   config.setName(title)
-      .setMinPlayers((unsigned)minPlayers)
-      .setMaxPlayers((unsigned)maxPlayers)
-      .setBoardSize((unsigned)width, (unsigned)height);
+      .setMinPlayers(static_cast<unsigned>(minPlayers))
+      .setMaxPlayers(static_cast<unsigned>(maxPlayers))
+      .setBoardSize(static_cast<unsigned>(width),
+                    static_cast<unsigned>(height));
 
-  Boat boat;
-  for (int i = 0; i < boatCount; ++i) {
+  Ship ship;
+  for (int i = 0; i < shipCount; ++i) {
     str = Input::trim(input.getString((n + i),""));
-    if (!boat.fromString(Input::trim(input.getString((n + i),"")))) {
-      Logger::printError() << "Invalid boat[" << i << "] spec: '" << str << "'";
+    if (!ship.fromString(Input::trim(input.getString((n + i), "")))) {
+      Logger::printError() << "Invalid ship[" << i << "] spec: '" << str << "'";
       return false;
     }
-    config.addBoat(boat);
+    config.addShip(ship);
   }
 
-  if (config.getBoatCount() != (unsigned)boatCount) {
-    Logger::printError() << "Boat count mismatch in game config";
+  if (config.getShipCount() != static_cast<unsigned>(shipCount)) {
+    Logger::printError() << "Ship count mismatch in game config";
     return false;
-  } else if (config.getPointGoal() != (unsigned)pointGoal) {
+  } else if (config.getPointGoal() != static_cast<unsigned>(pointGoal)) {
     Logger::printError() << "Point goal mismatch in game config";
     return false;
-  } else if (!config.isValid()) {
+  } else if (!config) {
     Logger::printError() << "Invalid game config";
     return false;
   }
@@ -571,18 +428,15 @@ bool Client::setupBoard() {
   boardMap.clear();
   boardList.clear();
 
-  if (bot) {
-    yourBoard = Board(-1, bot->getName(), "local",
-                      config.getBoardSize().getWidth(),
-                      config.getBoardSize().getHeight());
+  if (staticBoard.size()) {
+    yourBoard = Board(-1, "", "local",
+                      config.getBoardWidth(),
+                      config.getBoardHeight());
 
-    if (staticBoard.size()) {
-      if (!yourBoard.updateBoatArea(staticBoard)) {
-        Logger::printError() << "Invalid static board descriptor";
-        return false;
-      }
-    } else if (!yourBoard.addRandomBoats(config, minSurfaceArea)) {
-      Logger::printError() << "Failed to add boats to board";
+    if (!yourBoard.updateDescriptor(staticBoard) ||
+        !yourBoard.isValid(config))
+    {
+      Logger::printError() << "invalid static board descriptor";
       return false;
     }
     return true;
@@ -592,18 +446,18 @@ bool Client::setupBoard() {
 
   int n;
   char ch;
-  char sbuf[32];
   std::vector<Container*> children;
   std::vector<Board> boards;
 
   boards.reserve(9);
   for (unsigned i = 0; i < 9; ++i) {
-    snprintf(sbuf, sizeof(sbuf), "Board #%u", (i + 1));
-    Board board(-1, sbuf, "local",
-                config.getBoardSize().getWidth(),
-                config.getBoardSize().getHeight());
+    std::stringstream ss;
+    ss << "Board #" << (i + 1);
+    Board board(-1, ss.str(), "local",
+                config.getBoardWidth(),
+                config.getBoardHeight());
 
-    if ((i > 0) && !board.addRandomBoats(config, minSurfaceArea)) {
+    if ((i > 0) && !board.addRandomShips(config, minSurfaceArea)) {
       return false;
     }
 
@@ -621,17 +475,12 @@ bool Client::setupBoard() {
     }
   }
 
-  std::vector<Boat> boats;
-  for (unsigned i = 0; i < config.getBoatCount(); ++i) {
-    boats.push_back(config.getBoat(i));
-  }
-
+  std::vector<Ship> ships(config.begin(), config.end());
   while (true) {
     Coordinate coord(1, 1);
     Screen::print() << coord << ClearToScreenEnd;
 
-    for (unsigned i = 0; i < boards.size(); ++i) {
-      Board& board = boards[i];
+    for (Board& board : boards) {
       if (!board.print(false)) {
         return false;
       }
@@ -654,19 +503,21 @@ bool Client::setupBoard() {
       }
     } else if (ch == 'R') {
       for (unsigned i = 1; i < boards.size(); ++i) {
-        if (!boards[i].addRandomBoats(config, minSurfaceArea)) {
+        if (!boards[i].addRandomShips(config, minSurfaceArea)) {
           return false;
         }
       }
     } else if (ch == '1') {
-      if (boats.size() && !manualSetup(boats, boards, coord)) {
+      if (ships.size() && !manualSetup(ships, boards, coord)) {
         return false;
       } else if (boards.front().isValid(config)) {
         yourBoard = boards.front().setPlayerName("");
         Screen::print() << coord << ClearToScreenEnd << Flush;
         break;
       }
-    } else if ((ch > '1') && ((n = (ch - '1')) <= boards.size())) {
+    } else if ((ch > '1') &&
+               (static_cast<unsigned>(n = (ch - '1')) <= boards.size()))
+    {
       if (boards[n].isValid(config)) {
         yourBoard = boards[n].setPlayerName("");
         Screen::print() << coord << ClearToScreenEnd << Flush;
@@ -679,16 +530,15 @@ bool Client::setupBoard() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::manualSetup(std::vector<Boat>& boats,
+bool Client::manualSetup(std::vector<Ship>& ships,
                          std::vector<Board>& boards,
                          const Coordinate& promptCoord)
 {
   Board& board = boards.front();
-  std::vector<Boat> history;
+  std::vector<Ship> history;
   Direction dir;
   Coordinate coord;
   std::string str;
-  char sbuf[64];
   char ch;
 
   while (true) {
@@ -703,10 +553,10 @@ bool Client::manualSetup(std::vector<Boat>& boats,
     if (history.size()) {
       Screen::print() << ", (U)ndo";
     }
-    if (boats.size()) {
-      const Boat& boat = boats.front();
-      Screen::print() << ", Place boat '" << boat.getID()
-                      << "', length " << boat.getLength()
+    if (ships.size()) {
+      const Ship& ship = ships.front();
+      Screen::print() << ", Place ship '" << ship.getID()
+                      << "', length " << ship.getLength()
                       << ", facing (S)outh or (E)ast? -> ";
     }
 
@@ -720,11 +570,11 @@ bool Client::manualSetup(std::vector<Boat>& boats,
       break;
     } else if (ch == 'U') {
       if (history.size()) {
-        boats.insert(boats.begin(), history.back());
-        board.removeBoat(history.back());
+        ships.insert(ships.begin(), history.back());
+        board.removeShip(history.back());
         history.pop_back();
       }
-    } else if (boats.size() && ((ch == 'S') || (ch == 'E'))) {
+    } else if (ships.size() && ((ch == 'S') || (ch == 'E'))) {
       Screen::print() << coord.south() << ClearToScreenEnd
                       << ((ch == 'S') ? "South" : "East")
                       << " from which coordinate? [example: e5] -> " << Flush;
@@ -735,10 +585,10 @@ bool Client::manualSetup(std::vector<Boat>& boats,
       str = Input::trim(input.getString(0, ""));
       if (coord.fromString(str) &&
           board.contains(coord) &&
-          board.addBoat(boats.front(), coord, dir))
+          board.addShip(ships.front(), coord, dir))
       {
-        history.push_back(boats.front());
-        boats.erase(boats.begin());
+        history.push_back(ships.front());
+        ships.erase(ships.begin());
       }
     }
   }
@@ -748,14 +598,8 @@ bool Client::manualSetup(std::vector<Boat>& boats,
 
 //-----------------------------------------------------------------------------
 char Client::getChar() {
-  char ch;
-  if (!input.setCanonical(false) ||
-      ((ch = input.readChar(STDIN_FILENO)) <= 0) ||
-      !input.setCanonical(true))
-  {
-    return false;
-  }
-  return ch;
+  CanonicalMode cMode(false);
+  return input.readChar(STDIN_FILENO);
 }
 
 //-----------------------------------------------------------------------------
@@ -797,8 +641,8 @@ bool Client::joinGame(bool& retry) {
     return false;
   } else if (gameStarted) {
     yourBoard = Board(-1, userName, "local",
-                      config.getBoardSize().getWidth(),
-                      config.getBoardSize().getHeight());
+                      config.getBoardWidth(),
+                      config.getBoardHeight());
   } else if (yourBoard.getDescriptor().empty()) {
     Logger::printError() << "Your board is not setup!";
     return false;
@@ -880,12 +724,9 @@ bool Client::waitForGameStart() {
   } else if (boardMap.find(userName) == boardMap.end()) {
     Logger::printError() << "No board selected!";
     return false;
-  } else if (!input.setCanonical(false)) {
-    Logger::printError() << "Failed to disable terminal canonical mode: "
-                         << strerror(errno);
-    return false;
   }
 
+  CanonicalMode cMode(false);
   char ch;
   char lastChar = 0;
   bool ok = true;
@@ -977,12 +818,10 @@ bool Client::printWaitOptions(Coordinate& coord) {
 bool Client::prompt(Coordinate& coord, const std::string& str,
                     std::string& field1, const char delim)
 {
+  CanonicalMode cMode(true);
   Screen::print() << coord << ClearToLineEnd << str << Flush;
 
-  if (!input.setCanonical(true) ||
-      (input.readln(STDIN_FILENO, delim) < 0) ||
-      !input.setCanonical(false))
-  {
+  if (input.readln(STDIN_FILENO, delim) < 0) {
     return false;
   }
 
@@ -1134,19 +973,20 @@ bool Client::sendLine(const std::string& msg) {
     Logger::printError() << "message contains newline (" << msg << ")";
     return false;
   }
-
-  char sbuf[Input::BUFFER_SIZE];
-  if (snprintf(sbuf, sizeof(sbuf), "%s\n", msg.c_str()) >= sizeof(sbuf)) {
-    Logger::warn() << "message exceeds buffer size (" << msg << ")";
-    sbuf[sizeof(sbuf) - 2] = '\n';
-    sbuf[sizeof(sbuf) - 1] = 0;
+  if (msg.size() >= Input::BUFFER_SIZE) {
+    Logger::printError() << "message exceeds buffer size (" << msg << ')';
+    return false;
   }
 
-  unsigned len = strlen(sbuf);
-  Logger::debug() << "Sending " << len << " bytes (" << sbuf << ") to server";
+  std::string s(msg);
+  s += '\n';
 
-  if (send(sock, sbuf, len, MSG_NOSIGNAL) != len) {
-    Logger::printError() << "Failed to write " << len << " bytes (" << sbuf
+  Logger::debug() << "Sending " << s.size() << " bytes (" << msg
+                  << ") to server";
+
+  size_t n = send(sock, s.c_str(), s.size(), MSG_NOSIGNAL);
+  if (n != s.size()) {
+    Logger::printError() << "Failed to write " << s.size() << " bytes (" << msg
                          << ") to server: " << strerror(errno);
     return false;
   }
@@ -1223,9 +1063,9 @@ bool Client::addPlayer() {
     return false;
   }
 
-  unsigned w = config.getBoardSize().getWidth();
-  unsigned h = config.getBoardSize().getHeight();
-  boardMap[name] = Board(-1, name, "remote", w, h);
+  boardMap[name] = Board(-1, name, "remote",
+                         config.getBoardWidth(),
+                         config.getBoardHeight());
   return true;
 }
 
@@ -1267,12 +1107,12 @@ bool Client::updateBoard() {
   Board& board = boardMap[name];
   board.setStatus(status);
   if (score >= 0) {
-    board.setScore((unsigned)score);
+    board.setScore(static_cast<unsigned>(score));
   }
   if (skips >= 0) {
-    board.setSkips((unsigned)skips);
+    board.setSkips(static_cast<unsigned>(skips));
   }
-  if (board.updateBoatArea(desc)) {
+  if (board.updateDescriptor(desc)) {
     if ((name == userName) && !yourBoard.addHitsAndMisses(desc)) {
       Logger::printError() << "Board descriptor mismatch";
       return false;
@@ -1290,7 +1130,7 @@ bool Client::updateYourBoard() {
     Logger::printError() << "Invalid updateYourBoard message from server";
     return false;
   }
-  return yourBoard.updateBoatArea(desc);
+  return yourBoard.updateDescriptor(desc);
 }
 
 //-----------------------------------------------------------------------------
@@ -1360,31 +1200,13 @@ bool Client::nextTurn() {
   if (!ok) {
     Logger::printError() << "Unknown player (" << name
                          << ") in nextTurn message received from server";
-    return false;
   }
-
-  if (bot && (name == userName)) {
-    ScoredCoordinate coord;
-    Board* target = bot->getTargetBoard(name, boardList, coord);
-    if (!target) {
-      return sendLine("K"); // skip turn
-    } else if (!target->getBoatArea().contains(coord)) {
-      Logger::printError() << "invalid target coordinate: " << coord;
-      return false;
-    }
-
-    char sbuf[Input::BUFFER_SIZE];
-    snprintf(sbuf, sizeof(sbuf), "S|%s|%u|%u", target->getPlayerName().c_str(),
-             coord.getX(), coord.getY());
-    return sendLine(sbuf);
-
-  }
-  return true;
+  return ok;
 }
 
 //-----------------------------------------------------------------------------
 unsigned Client::msgHeaderLen() const {
-  return (config.getBoardSize().getWidth() - 3);
+  return (config.getBoardWidth() - 3);
 }
 
 //-----------------------------------------------------------------------------
@@ -1844,7 +1666,7 @@ Board* Client::getBoard(const std::string& str) {
   Board* board = NULL;
   if (str.size()) {
     if (isdigit(str[0])) {
-      unsigned n = (unsigned)atoi(str.c_str());
+      unsigned n = static_cast<unsigned>(atoi(str.c_str()));
       if ((n > 0) && (n <= boardList.size())) {
         board = boardList[n - 1];
       }
@@ -1904,7 +1726,7 @@ bool Client::shoot(const Coordinate& promptCoord) {
     }
   }
 
-  Container boatArea = board->getBoatArea();
+  Container boatArea = board->getShipArea();
 
   Screen::print() << coord << ClearToScreenEnd;
   while (true) {

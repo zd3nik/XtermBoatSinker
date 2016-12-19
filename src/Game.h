@@ -36,6 +36,22 @@ public:
   Board* getBoardToMove();
   Board* getFirstBoardForAddress(const std::string& address);
 
+  std::vector<Board>::const_iterator begin() const {
+    return boards.begin();
+  }
+
+  std::vector<Board>::const_iterator end() const {
+    return boards.end();
+  }
+
+  std::vector<Board>::iterator begin() {
+    return boards.begin();
+  }
+
+  std::vector<Board>::iterator end() {
+    return boards.end();
+  }
+
   const Configuration& getConfiguration() const {
     return config;
   }

@@ -72,6 +72,10 @@ public:
     return cursor(x);
   }
 
+  Screen& operator<<(const Printable& x) {
+    return str(x.toString().c_str());
+  }
+
   Screen& operator<<(const std::string& x) {
     return str(x.c_str());
   }
@@ -148,10 +152,6 @@ public:
     char sbuf[32];
     snprintf(sbuf, sizeof(sbuf), "%.02lf", x);
     return str(sbuf);
-  }
-
-  Screen& operator<<(const Printable& x) {
-    return str(x.toString().c_str());
   }
 
 private:

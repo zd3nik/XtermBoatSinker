@@ -138,7 +138,7 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
 {
   std::string desc = board.getDescriptor();
   const unsigned sqr = idx(coord);
-  ASSERT(desc[sqr] == Boat::NONE);
+  ASSERT(desc[sqr] == Ship::NONE);
 
   if (debugBot) {
     Logger::info() << "verfiying " << coord
@@ -163,7 +163,7 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
   if (full) {
     improbLimit = 0;
   }
-  desc[sqr] = Boat::HIT;
+  desc[sqr] = Ship::HIT;
   hits.insert(sqr);
 
   Timer timer;
@@ -171,8 +171,8 @@ Jane::SearchResult WOPR::verify(const Board& board, ScoredCoordinate& coord,
   SearchResult result = isPossible(0, desc);
   finishSearch();
 
-  ASSERT(desc[sqr] == Boat::HIT);
-  desc[sqr] = Boat::NONE;
+  ASSERT(desc[sqr] == Ship::HIT);
+  desc[sqr] = Ship::NONE;
   hits.erase(sqr);
   if (full) {
     improbLimit = savedImprobLimit;

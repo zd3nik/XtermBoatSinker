@@ -6,6 +6,7 @@
 #include "Screen.h"
 #include "Logger.h"
 #include "Input.h"
+#include <iomanip>
 
 namespace xbs
 {
@@ -19,53 +20,51 @@ void Message::appendTo(std::vector<std::string>& messages,
   }
 
   const unsigned maxLen = Screen::get().getWidth();
-  char* sbuf = new char[maxLen + 1];
-  unsigned n;
+  std::string line;
+  line.reserve(maxLen);
 
-  const unsigned h = setHeader(sbuf, maxLen, nameLen);
-  if (!h) {
-    Logger::error() << "Error populating message buffer";
-  } else if (h >= maxLen) {
+  setHeader(line, nameLen);
+
+  if (line.size() > maxLen) {
     Logger::error() << "Screen width too small for message header";
     messages.push_back("<msg>");
-  } else {
-    for (unsigned p = 0; p < message.size(); ) {
-      n = append(messages, (sbuf + h), (maxLen - h), (message.c_str() + p));
-      if (n > 0) {
-        messages.push_back(sbuf);
-        p += n;
-      } else {
-        break;
-      }
+    return;
+  } else if (line.size() == maxLen) {
+    line = "  ";
+  }
+
+  for (unsigned p = 0; p < message.size(); ) {
+    const unsigned n = append(line, maxLen, (message.c_str() + p));
+    if (n > 0) {
+      messages.push_back(line);
+      line = "  ";
+      p += n;
+    } else {
+      break;
     }
   }
-
-  delete[] sbuf;
-  sbuf = NULL;
 }
 
 //-----------------------------------------------------------------------------
-unsigned Message::setHeader(char* sbuf, const unsigned len,
-                            const unsigned nameLen) const
+void Message::setHeader(std::string& line, const unsigned nameLen) const
 {
-  int n = 0;
-  char format[64];
-  if (to.empty()) {
-    snprintf(format, sizeof(format), " %% %us: ", nameLen);
-    n = snprintf(sbuf, len, format, from.c_str());
-  } else {
-    snprintf(format, sizeof(format), " %% %us:[%%s] ", nameLen);
-    n = snprintf(sbuf, len, format, from.c_str(), to.c_str());
+  std::stringstream ss;
+  ss << std::setw(nameLen + 1) << from;
+  if (to.size()) {
+    ss << '[' << to << "] ";
   }
-  return (n <= 0) ? 0 : (unsigned)n;
+  line = ss.str();
 }
 
 //-----------------------------------------------------------------------------
-unsigned Message::append(std::vector<std::string>& messages,
-                         char* sbuf, const unsigned len,
+unsigned Message::append(std::string& line, const unsigned maxLen,
                          const char* message) const
 {
-  if (!len) {
+  if (!message) {
+    return 0;
+  }
+  if (line.size() >= maxLen) {
+    Logger::error() << "not enough room to append to message [" << line << ']';
     return 0;
   }
 
@@ -75,8 +74,9 @@ unsigned Message::append(std::vector<std::string>& messages,
     return 0;
   }
 
+  const unsigned len = (maxLen - line.size());
   const char* lastPunct = NULL;
-  const char* end = NULL;
+  const char* end = begin;
   const char* p = begin;
 
   for (unsigned i = 0; (i < len); ++i, ++p) {
@@ -100,14 +100,8 @@ unsigned Message::append(std::vector<std::string>& messages,
     end = (lastPunct + 1);
   }
 
-  unsigned n = 0;
-  if (end) {
-    memcpy(sbuf, begin, (n = (end - begin)));
-  } else {
-    memcpy(sbuf, begin, (n = len));
-  }
-  sbuf[n] = 0;
-  return (n + (begin - message));
+  line.append(begin, end);
+  return (end - begin);
 }
 
 } // namespace xbs

@@ -5,6 +5,7 @@
 #include "Board.h"
 #include "Screen.h"
 #include "Logger.h"
+#include <iomanip>
 
 namespace xbs
 {
@@ -15,93 +16,61 @@ std::string Board::toString(const std::string& desc, const unsigned width) {
     return desc;
   }
 
-  char sbuf[4096];
-  const char* in = desc.c_str();
-
-  char* out = sbuf;
-  *out++ = '\n';
-  *out++ = ' ';
-  *out++ = ' ';
-  *out++ = ' ';
-
+  std::stringstream ss;
+  ss << "\n    ";
   for (unsigned x = 0; x < width; ++x) {
-    *out++ = ' ';
-    *out++ = ('a' + x);
+    ss << ' ' << static_cast<char>('a' + x);
   }
 
+  ss << std::setfill(' ') << std::setw(3);
+  const char* in = desc.c_str();
   for (unsigned sqr = 0; sqr < desc.size(); sqr += width) {
-    snprintf(out, 5, "\n%3u", ((sqr / width) + 1));
-    out += strlen(out);
+    ss << '\n' << ((sqr / width) + 1);
     for (unsigned x = 0; x < width; ++x) {
-      *out++ = ' ';
-      *out++ = *in++;
+      ss << ' ' << (*in++);
     }
   }
 
-  *out = 0;
-  return sbuf;
+  return ss.str();
 }
-
-//-----------------------------------------------------------------------------
-Board::Board()
-  : handle(-1),
-    toMove(false),
-    score(0),
-    skips(0),
-    turns(0),
-    boatAreaWidth(0),
-    boatAreaHeight(0),
-    descriptorLength(0),
-    descriptor(NULL)
-{ }
 
 //-----------------------------------------------------------------------------
 Board::Board(const int handle,
              const std::string& playerName,
              const std::string& address,
-             const unsigned boatAreaWidth,
-             const unsigned boatAreaHeight)
+             const unsigned shipAreaWidth,
+             const unsigned shipAreaHeight)
   : Container(Coordinate(1, 1),
-              Coordinate((4 + (2 * boatAreaWidth)), (3 + boatAreaHeight))),
+              Coordinate((4 + (2 * shipAreaWidth)), (3 + shipAreaHeight))),
     handle(handle),
     toMove(false),
-    playerName(playerName),
-    address(address),
     score(0),
     skips(0),
     turns(0),
-    boatAreaWidth(boatAreaWidth),
-    boatAreaHeight(boatAreaHeight),
-    descriptorLength(boatAreaWidth * boatAreaHeight),
-    descriptor(new char[descriptorLength + 1])
+    shipArea(Coordinate(1, 1), Coordinate(shipAreaWidth, shipAreaHeight)),
+    playerName(playerName),
+    address(address)
 {
-  clearBoatArea();
+  clearDescriptor();
 }
 
 //-----------------------------------------------------------------------------
 Board::Board(const Board& other)
-  : Container(other.getTopLeft(), other.getBottomRight()),
+  : Container(other),
     handle(other.handle),
     toMove(other.toMove),
-    playerName(other.playerName),
-    address(other.address),
-    status(other.status),
-    hitTaunts(other.hitTaunts.begin(), other.hitTaunts.end()),
-    missTaunts(other.missTaunts.begin(), other.missTaunts.end()),
     score(0),
     skips(0),
     turns(0),
-    boatAreaWidth(other.boatAreaWidth),
-    boatAreaHeight(other.boatAreaHeight),
-    descriptorLength(other.descriptorLength),
-    descriptor(new char[descriptorLength + 1])
+    shipArea(other.shipArea),
+    playerName(other.playerName),
+    descriptor(other.descriptor),
+    address(other.address),
+    status(other.status),
+    hitTaunts(other.hitTaunts.begin(), other.hitTaunts.end()),
+    missTaunts(other.missTaunts.begin(), other.missTaunts.end())
 {
-  if (other.descriptor) {
-    memcpy(descriptor, other.descriptor, descriptorLength);
-  } else {
-    memset(descriptor, Boat::NONE, descriptorLength);
-  }
-  descriptor[descriptorLength] = 0;
+  ASSERT(descriptor.size() == shipArea.getSize());
 }
 
 //-----------------------------------------------------------------------------
@@ -109,27 +78,17 @@ Board& Board::operator=(const Board& other) {
   set(other.getTopLeft(), other.getBottomRight());
   handle = other.handle;
   toMove = other.toMove;
+  score = other.score;
+  skips = other.skips;
+  turns = other.turns;
+  shipArea = other.shipArea;
   playerName = other.playerName;
+  descriptor = other.descriptor;
   address = other.address;
   status = other.status;
   hitTaunts.assign(other.hitTaunts.begin(), other.hitTaunts.end());
   missTaunts.assign(other.missTaunts.begin(), other.missTaunts.end());
-  score = other.score;
-  skips = other.skips;
-  turns = other.turns;
-  boatAreaWidth = other.boatAreaWidth;
-  boatAreaHeight = other.boatAreaHeight;
-  descriptorLength = other.descriptorLength;
-
-  delete[] descriptor;
-  descriptor = new char[descriptorLength + 1];
-  if (other.descriptor) {
-    memcpy(descriptor, other.descriptor, descriptorLength);
-  } else {
-    memset(descriptor, Boat::NONE, descriptorLength);
-  }
-  descriptor[descriptorLength] = 0;
-
+  ASSERT(descriptor.size() == shipArea.getSize());
   return (*this);
 }
 
@@ -137,12 +96,6 @@ Board& Board::operator=(const Board& other) {
 Board& Board::setPlayerName(const std::string& str) {
   playerName = str;
   return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board::~Board() {
-  delete[] descriptor;
-  descriptor = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -156,11 +109,8 @@ void Board::setToMove(const bool toMove) {
 }
 
 //-----------------------------------------------------------------------------
-void Board::clearBoatArea() {
-  if (descriptor) {
-    memset(descriptor, Boat::NONE, descriptorLength);
-    descriptor[descriptorLength] = 0;
-  }
+void Board::clearDescriptor() {
+  descriptor.resize(shipArea.getSize(), Ship::NONE);
 }
 
 //-----------------------------------------------------------------------------
@@ -235,15 +185,14 @@ std::string Board::getStatus() const {
 
 //-----------------------------------------------------------------------------
 std::string Board::getDescriptor() const {
-  return (descriptor ? descriptor : "");
+  return descriptor;
 }
 
 //-----------------------------------------------------------------------------
 std::string Board::getHitTaunt() {
   if (hitTaunts.size()) {
-    srand(clock());
     auto it = hitTaunts.begin();
-    std::advance(it, (((unsigned)rand()) % hitTaunts.size()));
+    std::advance(it, ((static_cast<unsigned>(rand())) % hitTaunts.size()));
     return (*it);
   }
   return std::string();
@@ -252,9 +201,8 @@ std::string Board::getHitTaunt() {
 //-----------------------------------------------------------------------------
 std::string Board::getMissTaunt() {
   if (missTaunts.size()) {
-    srand(clock());
     auto it = missTaunts.begin();
-    std::advance(it, (((unsigned)rand()) % missTaunts.size()));
+    std::advance(it, ((static_cast<unsigned>(rand())) % missTaunts.size()));
     return (*it);
   }
   return std::string();
@@ -274,30 +222,24 @@ std::vector<std::string> Board::getMissTaunts() const {
 std::string Board::toString(const unsigned number,
                             const bool gameStarted) const
 {
-  char sbuf[1024];
-  snprintf(sbuf, sizeof(sbuf), "%u: %c %s", number, (toMove ? '*' : ' '),
-           playerName.c_str());
-
-  unsigned len = strlen(sbuf);
+  std::stringstream ss;
+  ss << number << ": " << (toMove ? '*' : ' ') << playerName;
   if (status.size()) {
-    snprintf((sbuf + len), (sizeof(sbuf) - len), " (%s)", status.c_str());
-    len = strlen(sbuf);
+    ss << " (" << status << ')';
   }
-
   if (gameStarted) {
-    snprintf((sbuf + len), (sizeof(sbuf) - len),
-             ", Score = %u, Skips = %u, Turns = %u, Hit = %u of %u",
-             score, skips, turns, getHitCount(), getBoatPoints());
+    ss << ", Score = " << score << ", Skips = " << skips
+       << ", Turns = " << turns << ", Hit = " << getHitCount() << " of "
+       << getShipPointCount();
   }
-
-  return sbuf;
+  return ss.str();
 }
 
 //-----------------------------------------------------------------------------
 std::string Board::getMaskedDescriptor() const {
-  std::string desc = getDescriptor();
+  std::string desc(descriptor);
   for (size_t i = 0; i < desc.size(); ++i) {
-    desc[i] = Boat::mask(desc[i]);
+    desc[i] = Ship::mask(desc[i]);
   }
   return desc;
 }
@@ -308,10 +250,18 @@ int Board::getHandle() const {
 }
 
 //-----------------------------------------------------------------------------
-Container Board::getBoatArea() const {
-  Coordinate topLeft(1, 1);
-  Coordinate bottomRight(boatAreaWidth, boatAreaHeight);
-  return Container(topLeft, bottomRight);
+Coordinate Board::toCoord(const unsigned i) const {
+  return shipArea.toCoord(i);
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::toIndex(const Coordinate& coord) const {
+  return shipArea.toIndex(coord);
+}
+
+//-----------------------------------------------------------------------------
+Container Board::getShipArea() const {
+  return shipArea;
 }
 
 //-----------------------------------------------------------------------------
@@ -332,11 +282,9 @@ unsigned Board::getTurns() const {
 //-----------------------------------------------------------------------------
 unsigned Board::getHitCount() const {
   unsigned count = 0;
-  if (descriptor) {
-    for (unsigned i = 0; i < descriptorLength; ++i) {
-      if (Boat::isHit(descriptor[i])) {
-        count++;
-      }
+  for (char ch : descriptor) {
+    if (Ship::isHit(ch)) {
+      ++count;
     }
   }
   return count;
@@ -345,24 +293,20 @@ unsigned Board::getHitCount() const {
 //-----------------------------------------------------------------------------
 unsigned Board::getMissCount() const {
   unsigned count = 0;
-  if (descriptor) {
-    for (unsigned i = 0; i < descriptorLength; ++i) {
-      if (Boat::isMiss(descriptor[i])) {
-        count++;
-      }
+  for (char ch : descriptor) {
+    if (Ship::isMiss(ch)) {
+      ++count;
     }
   }
   return count;
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::getBoatPoints() const {
+unsigned Board::getShipPointCount() const {
   unsigned count = 0;
-  if (descriptor) {
-    for (unsigned i = 0; i < descriptorLength; ++i) {
-      if (Boat::isBoat(descriptor[i])) {
-        count++;
-      }
+  for (char ch : descriptor) {
+    if (Ship::isShip(ch)) {
+      ++count;
     }
   }
   return count;
@@ -370,18 +314,18 @@ unsigned Board::getBoatPoints() const {
 
 //-----------------------------------------------------------------------------
 unsigned Board::adjacentFree(const Coordinate& coord) const {
-  return ((getSquare(coord + North) == Boat::NONE) +
-          (getSquare(coord + South) == Boat::NONE) +
-          (getSquare(coord + East) == Boat::NONE) +
-          (getSquare(coord + West) == Boat::NONE));
+  return ((getSquare(coord + North) == Ship::NONE) +
+          (getSquare(coord + South) == Ship::NONE) +
+          (getSquare(coord + East) == Ship::NONE) +
+          (getSquare(coord + West) == Ship::NONE));
 }
 
 //-----------------------------------------------------------------------------
 unsigned Board::adjacentHits(const Coordinate& coord) const {
-  return ((getSquare(coord + North) == Boat::HIT) +
-          (getSquare(coord + South) == Boat::HIT) +
-          (getSquare(coord + East) == Boat::HIT) +
-          (getSquare(coord + West) == Boat::HIT));
+  return ((getSquare(coord + North) == Ship::HIT) +
+          (getSquare(coord + South) == Ship::HIT) +
+          (getSquare(coord + East) == Ship::HIT) +
+          (getSquare(coord + West) == Ship::HIT));
 }
 
 //-----------------------------------------------------------------------------
@@ -395,14 +339,14 @@ unsigned Board::maxInlineHits(const Coordinate& coord) const {
 
 //-----------------------------------------------------------------------------
 unsigned Board::horizontalHits(const Coordinate& coord) const {
-  return (getSquare(coord) == Boat::HIT)
+  return (getSquare(coord) == Ship::HIT)
     ? (1 + hitCount(coord,Direction::East) + hitCount(coord,Direction::West))
     : 0;
 }
 
 //-----------------------------------------------------------------------------
 unsigned Board::verticalHits(const Coordinate& coord) const {
-  return (getSquare(coord) == Boat::HIT)
+  return (getSquare(coord) == Ship::HIT)
     ? (1 + hitCount(coord,Direction::North) + hitCount(coord,Direction::South))
     : 0;
 }
@@ -410,44 +354,41 @@ unsigned Board::verticalHits(const Coordinate& coord) const {
 //-----------------------------------------------------------------------------
 unsigned Board::freeCount(Coordinate coord, const Direction dir) const {
   unsigned count = 0;
-  while (getSquare(coord.shift(dir)) == Boat::NONE) ++count;
+  while (getSquare(coord.shift(dir)) == Ship::NONE) {
+    ++count;
+  }
   return count;
 }
 
 //-----------------------------------------------------------------------------
 unsigned Board::hitCount(Coordinate coord, const Direction dir) const {
   unsigned count = 0;
-  while (Boat::isHit(getSquare(coord.shift(dir)))) ++count;
+  while (Ship::isHit(getSquare(coord.shift(dir)))) {
+    ++count;
+  }
   return count;
 }
 
 //-----------------------------------------------------------------------------
 unsigned Board::distToEdge(Coordinate coord, const Direction dir) const {
   unsigned count = 0;
-  while (getSquare(coord.shift(dir))) ++count;
+  while (getSquare(coord.shift(dir))) {
+    ++count;
+  }
   return count;
 }
 
 //-----------------------------------------------------------------------------
 char Board::getSquare(const Coordinate& coord) const {
-  if ((descriptorLength > 0) && coord.isValid() &&
-      (coord.getX() <= boatAreaWidth) &&
-      (coord.getY() <= boatAreaHeight))
-  {
-    unsigned i = ((coord.getX() - 1) + (boatAreaWidth * (coord.getY() - 1)));
-    return descriptor[i];
-  }
-  return 0;
+  const unsigned i = shipArea.toIndex(coord);
+  return (i < descriptor.size()) ? descriptor[i] : '\0';
 }
 
 //-----------------------------------------------------------------------------
 char Board::setSquare(const Coordinate& coord, const char ch) {
-  if ((descriptorLength > 0) && coord.isValid() &&
-      (coord.getX() <= boatAreaWidth) &&
-      (coord.getY() <= boatAreaHeight))
-  {
-    unsigned i = ((coord.getX() - 1) + (boatAreaWidth * (coord.getY() - 1)));
-    char prev = descriptor[i];
+  const unsigned i = shipArea.toIndex(coord);
+  if (i < descriptor.size()) {
+    const char prev = descriptor[i];
     descriptor[i] = ch;
     return prev;
   }
@@ -459,50 +400,46 @@ bool Board::isValid(const Configuration& config) const {
   if (!isValid()) {
     return false;
   }
-  std::map<char, unsigned> boats;
-  auto it = boats.begin();
-  for (unsigned i = 0; i < descriptorLength; ++i) {
-    char id = descriptor[i];
-    if (id != Boat::NONE) {
-      if ((it = boats.find(id)) == boats.end()) {
-        boats[id] = 1;
+  std::map<char, unsigned> ships;
+  auto it = ships.begin();
+  for (const char id : descriptor) {
+    if (id != Ship::NONE) {
+      if ((it = ships.find(id)) == ships.end()) {
+        ships[id] = 1;
       } else {
         it->second++;
       }
     }
   }
-  if (boats.size() != config.getBoatCount()) {
+  if (ships.size() != config.getShipCount()) {
     return false;
   }
-  for (unsigned i = 0; i < config.getBoatCount(); ++i) {
-    const Boat& boat = config.getBoat(i);
-    if (((it = boats.find(boat.getID())) == boats.end()) ||
-        (it->second != boat.getLength()))
+  for (unsigned i = 0; i < config.getShipCount(); ++i) {
+    const Ship& ship = config.getShip(i);
+    if (((it = ships.find(ship.getID())) == ships.end()) ||
+        (it->second != ship.getLength()))
     {
       return false;
     } else {
-      boats.erase(it);
+      ships.erase(it);
     }
   }
-  return boats.empty();
+  return ships.empty();
 }
 
 //-----------------------------------------------------------------------------
 bool Board::isValid() const {
-  unsigned boatAreaSize = (boatAreaWidth * boatAreaHeight);
   return (Container::isValid() &&
-          (boatAreaSize > 0) &&
-          (descriptor != NULL) &&
           (playerName.size() > 0) &&
-          (descriptorLength == boatAreaSize) &&
-          (descriptor[descriptorLength] == 0) &&
-          (strlen(descriptor) == descriptorLength));
+          (shipArea.getSize() > 0) &&
+          (descriptor.size() == shipArea.getSize()));
 }
 
 //-----------------------------------------------------------------------------
 bool Board::isToMove() const {
   return toMove;
 }
+
 //-----------------------------------------------------------------------------
 bool Board::hasHitTaunts() const {
   return !hitTaunts.empty();
@@ -515,20 +452,20 @@ bool Board::hasMissTaunts() const {
 
 //-----------------------------------------------------------------------------
 bool Board::isDead() const {
-  return ((handle < 0) || (getHitCount() >= getBoatPoints()));
+  return ((handle < 0) || (getHitCount() >= getShipPointCount()));
 }
 
 //-----------------------------------------------------------------------------
 unsigned random(const unsigned bound) {
-  return ((((unsigned)(rand() >> 3)) & 0x7FFFU) % bound);
+  return (((static_cast<unsigned>(rand() >> 3)) & 0x7FFFU) % bound);
 }
 
 //-----------------------------------------------------------------------------
-bool Board::addRandomBoats(const Configuration& config,
+bool Board::addRandomShips(const Configuration& config,
                            const double minSurfaceArea)
 {
-  if (!config.isValid()) {
-    Logger::printError() << "can't place boats due to invalid board config";
+  if (!config) {
+    Logger::printError() << "can't place ships due to invalid board config";
     return false;
   }
 
@@ -541,41 +478,40 @@ bool Board::addRandomBoats(const Configuration& config,
   const unsigned msa =
       static_cast<unsigned>(minSurfaceArea * config.getMaxSurfaceArea() / 100);
   while (true) {
-    unsigned boatCount = 0;
-    clearBoatArea();
-    for (unsigned i = 0; i < config.getBoatCount(); ++i) {
-      const Boat& boat = config.getBoat(i);
-      if (!boat.isValid()) {
+    unsigned shipCount = 0;
+    clearDescriptor();
+    for (unsigned i = 0; i < config.getShipCount(); ++i) {
+      const Ship& ship = config.getShip(i);
+      if (!ship) {
         Logger::printError() << "invalid board " << i;
         return false;
       }
       while (true) {
-        unsigned x = random(boatAreaWidth);
-        unsigned y = random(boatAreaWidth);
+        unsigned x = random(shipArea.getWidth());
+        unsigned y = random(shipArea.getHeight());
         Coordinate coord((x + 1), (y + 1));
         std::random_shuffle(dirs.begin(), dirs.end());
-        if (addBoat(boat, coord, dirs[0]) ||
-            addBoat(boat, coord, dirs[1]) ||
-            addBoat(boat, coord, dirs[2]) ||
-            addBoat(boat, coord, dirs[3]))
+        if (addShip(ship, coord, dirs[0]) ||
+            addShip(ship, coord, dirs[1]) ||
+            addShip(ship, coord, dirs[2]) ||
+            addShip(ship, coord, dirs[3]))
         {
-          boatCount++;
+          shipCount++;
           break;
         }
       }
     }
-    if (boatCount != config.getBoatCount()) {
-      Logger::printError() << "a problem occurred in random boat placement";
+    if (shipCount != config.getShipCount()) {
+      Logger::printError() << "a problem occurred in random ship placement";
       return false;
     }
     if (!msa) {
       break;
     }
     unsigned surfaceArea = 0;
-    for (unsigned i = 0; i < descriptorLength; ++i) {
-      if (Boat::isBoat(descriptor[i])) {
-        Coordinate coord(((i % boatAreaWidth) + 1), ((i / boatAreaWidth) + 1));
-        surfaceArea += adjacentFree(coord);
+    for (unsigned i = 0; i < descriptor.size(); ++i) {
+      if (Ship::isShip(descriptor[i])) {
+        surfaceArea += adjacentFree(shipArea.toCoord(i));
       }
     }
     if (surfaceArea >= msa) {
@@ -615,18 +551,18 @@ bool Board::print(const bool masked, const Configuration* config) const {
 
   // print X coordinate header (row 2)
   Screen::print() << coord.south() << "  ";
-  for (unsigned x = 0; x < boatAreaWidth; ++x) {
+  for (unsigned x = 0; x < shipArea.getWidth(); ++x) {
     Screen::print() << ' ' << (char)('a' + x);
   }
 
-  // print boat area one row at a time
-  for (unsigned y = 0; y < boatAreaHeight; ++y) {
+  // print ship area one row at a time
+  for (unsigned y = 0; y < shipArea.getHeight(); ++y) {
     snprintf(sbuf, sizeof(sbuf), "%2u", (y + 1));
     Screen::print() << coord.south() << sbuf;
-    for (unsigned x = 0; x < boatAreaWidth; ++x) {
-      char ch = descriptor[x + (y * boatAreaWidth)];
+    for (unsigned x = 0; x < shipArea.getWidth(); ++x) {
+      char ch = descriptor[x + (y * shipArea.getWidth())];
       if (masked) {
-        Screen::print() << ' ' << Boat::mask(ch);
+        Screen::print() << ' ' << Ship::mask(ch);
       } else {
         Screen::print() << ' ' << ch;
       }
@@ -639,35 +575,35 @@ bool Board::print(const bool masked, const Configuration* config) const {
 
 //-----------------------------------------------------------------------------
 std::string Board::toString() const {
-  return toString(descriptor, boatAreaWidth);
+  return toString(descriptor, shipArea.getWidth());
 }
 
 //-----------------------------------------------------------------------------
-bool Board::updateBoatArea(const std::string& desc) {
-  if (desc.empty() || !isValid() || (desc.size() != descriptorLength)) {
+bool Board::updateDescriptor(const std::string& desc) {
+  if (desc.empty() || !isValid() || (desc.size() != descriptor.size())) {
     return false;
   }
-  memcpy(descriptor, desc.c_str(), descriptorLength);
+  descriptor = desc;
   return isValid();
 }
 
 //-----------------------------------------------------------------------------
 bool Board::addHitsAndMisses(const std::string& desc) {
-  if (desc.empty() || (desc.size() != descriptorLength)) {
+  if (desc.empty() || (desc.size() != descriptor.size())) {
     return false;
   }
   bool ok = true;
   for (unsigned i = 0; i < desc.size(); ++i) {
-    if (desc[i] == Boat::HIT) {
-      if (Boat::isValidID(descriptor[i])) {
-        descriptor[i] = Boat::HIT;
-      } else if (descriptor[i] != Boat::HIT) {
+    if (desc[i] == Ship::HIT) {
+      if (Ship::isValidID(descriptor[i])) {
+        descriptor[i] = Ship::HIT;
+      } else if (descriptor[i] != Ship::HIT) {
         ok = false;
       }
-    } else if (desc[i] == Boat::MISS) {
-      if (descriptor[i] == Boat::NONE) {
+    } else if (desc[i] == Ship::MISS) {
+      if (descriptor[i] == Ship::NONE) {
         descriptor[i] = desc[i];
-      } else if (descriptor[i] != Boat::MISS) {
+      } else if (descriptor[i] != Ship::MISS) {
         ok = false;
       }
     }
@@ -676,83 +612,61 @@ bool Board::addHitsAndMisses(const std::string& desc) {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::removeBoat(const Boat& boat) {
+bool Board::removeShip(const Ship& ship) {
   unsigned count = 0;
-  if (descriptor) {
-    for (unsigned i = 0; i < descriptorLength; ++i) {
-      if (descriptor[i] == boat.getID()) {
-        descriptor[i] = Boat::NONE;
-        count++;
-      }
+  for (unsigned i = 0; i < descriptor.size(); ++i) {
+    if (descriptor[i] == ship.getID()) {
+      descriptor[i] = Ship::NONE;
+      ++count;
     }
   }
   return (count > 0);
 }
 
 //-----------------------------------------------------------------------------
-bool Board::addBoat(const Boat& boat, Coordinate coord,
+bool Board::addShip(const Ship& ship, Coordinate coord,
                     const Direction direction)
 {
-  if (!boat.isValid() || !coord.isValid() || !isValid()) {
+  if (!ship || !coord || !isValid()) {
     return false;
   }
 
-  Container boatArea = getBoatArea();
-  std::vector<unsigned> boatIndex;
+  std::string desc(descriptor);
+  unsigned idx = shipArea.toIndex(coord);
+  if ((idx >= desc.size()) || (desc[idx] != Ship::NONE)) {
+    return false;
+  } else {
+    desc[idx] = ship.getID();
+  }
 
-  for (unsigned count = boat.getLength(); count > 0; --count) {
-    if (boatArea.contains(coord)) {
-      unsigned idx = getBoatIndex(coord);
-      if (idx >= descriptorLength) {
-        Logger::error() << "boat offset exceeds descriptor length";
-        return false;
-      } else if (descriptor[idx] == Boat::NONE) {
-        boatIndex.push_back(getBoatIndex(coord));
-      } else {
-        return false;
-      }
-    } else {
+  for (unsigned i = 1; i <= ship.getLength(); ++i) {
+    idx = shipArea.toIndex(coord.shift(direction));
+    if ((idx >= desc.size()) || (desc[idx] != Ship::NONE)) {
       return false;
-    }
-    if (!boatArea.moveCoordinate(coord, direction, 1)) {
-      coord.set(0, 0); // invalidate it
+    } else {
+      desc[idx] = ship.getID();
     }
   }
 
-  if (boatIndex.size() != boat.getLength()) {
-    Logger::error() << "boat index count doesn't match boat index";
-    return false;
-  }
-
-  for (unsigned i = 0; i < boatIndex.size(); ++i) {
-    descriptor[boatIndex[i]] = boat.getID();
-  }
+  descriptor = desc;
   return true;
 }
 
 //-----------------------------------------------------------------------------
 bool Board::shootAt(const Coordinate& coord, char& previous) {
-  if ((descriptorLength > 0) && coord.isValid() &&
-      (coord.getX() <= boatAreaWidth) &&
-      (coord.getY() <= boatAreaHeight))
-  {
-    unsigned i = ((coord.getX() - 1) + (boatAreaWidth * (coord.getY() - 1)));
-    if ((previous = descriptor[i]) == Boat::NONE) {
-      descriptor[i] = Boat::MISS;
+  unsigned idx = shipArea.toIndex(coord);
+  if (idx < descriptor.size()) {
+    if ((previous = descriptor[idx]) == Ship::NONE) {
+      descriptor[idx] = Ship::MISS;
       return true;
-    } else if (Boat::isValidID(previous)) {
-      descriptor[i] = Boat::hit(previous);
+    } else if (Ship::isValidID(previous)) {
+      descriptor[idx] = Ship::hit(previous);
       return true;
     }
   } else {
     previous = 0;
   }
   return false;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::getBoatIndex(const Coordinate& coord) const {
-  return (coord.getX() - 1 + (boatAreaWidth * (coord.getY() - 1)));
 }
 
 //-----------------------------------------------------------------------------

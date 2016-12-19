@@ -3,9 +3,11 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Game.h"
-#include "Screen.h"
-#include "Logger.h"
 #include "DBRecord.h"
+#include "Logger.h"
+#include "Screen.h"
+#include "StringUtils.h"
+#include "Throw.h"
 
 namespace xbs
 {
@@ -47,7 +49,7 @@ Game& Game::addBoard(const Board& board) {
 
 //-----------------------------------------------------------------------------
 bool Game::isValid() const {
-  return (config.isValid() &&
+  return (config &&
           (boards.size() >= config.getMinPlayers()) &&
           (boards.size() <= config.getMaxPlayers()));
 }
@@ -61,8 +63,7 @@ bool Game::isFinished() const {
     unsigned maxTurns = 0;
     unsigned maxScore = 0;
     unsigned dead = 0;
-    for (unsigned i = 0; i < boards.size(); ++i) {
-      const Board& board = boards[i];
+    for (const Board& board : boards) {
       minTurns = std::min<unsigned>(minTurns, board.getTurns());
       maxTurns = std::max<unsigned>(maxTurns, board.getTurns());
       maxScore = std::max<unsigned>(maxScore, board.getScore());
@@ -79,12 +80,11 @@ bool Game::isFinished() const {
 
 //-----------------------------------------------------------------------------
 bool Game::hasOpenBoard() const {
-  if (config.isValid() && !isFinished()) {
+  if (config && !isFinished()) {
     if (!started && (boards.size() < config.getMaxPlayers())) {
       return true;
     }
-    for (unsigned i = 0; i < boards.size(); ++i) {
-      const Board& board = boards[i];
+    for (const Board& board : boards) {
       if (board.getHandle() < 0) {
         return true;
       }
@@ -173,9 +173,9 @@ Board* Game::getBoardAtIndex(const unsigned index) {
 //-----------------------------------------------------------------------------
 Board* Game::getBoardForHandle(const int handle) {
   if (handle >= 0) {
-    for (unsigned i = 0; i < boards.size(); ++i) {
-      if (boards[i].getHandle() == handle) {
-        return &(boards[i]);
+    for (Board& board : boards) {
+      if (board.getHandle() == handle) {
+        return &board;
       }
     }
   }
@@ -184,40 +184,38 @@ Board* Game::getBoardForHandle(const int handle) {
 
 //-----------------------------------------------------------------------------
 Board* Game::getBoardForPlayer(const std::string& name, const bool exact) {
-  Board* board = NULL;
+  Board* match = NULL;
   if (name.size()) {
     if (isdigit(name[0])) {
-      unsigned n = (unsigned)atoi(name.c_str());
+      unsigned n = static_cast<unsigned>(atoi(name.c_str()));
       if ((n > 0) && (n <= boards.size())) {
-        board = getBoardAtIndex(n - 1);
+        match = getBoardAtIndex(n - 1);
       }
     } else {
-      for (unsigned i = 0; i < boards.size(); ++i) {
-        std::string playerName = boards[i].getPlayerName();
+      for (Board& board : boards) {
+        std::string playerName = board.getPlayerName();
         if (playerName == name) {
-          return &(boards[i]);
-        } else if (exact) {
-          continue;
+          return &board;
         }
-        if (strncasecmp(name.c_str(), playerName.c_str(), name.size()) == 0) {
-          if (board) {
+        if (!exact && iEqual(name, playerName, name.size())) {
+          if (match) {
             return NULL;
           } else {
-            board = &(boards[i]);
+            match = &board;
           }
         }
       }
     }
   }
-  return board;
+  return match;
 }
 
 //-----------------------------------------------------------------------------
 Board* Game::getFirstBoardForAddress(const std::string& address) {
   if (address.size()) {
-    for (unsigned i = 0; i < boards.size(); ++i) {
-      if (boards[i].getAddress() == address) {
-        return &(boards[i]);
+    for (Board& board : boards) {
+      if (board.getAddress() == address) {
+        return &board;
       }
     }
   }
@@ -235,38 +233,38 @@ Board* Game::getBoardToMove() {
 //-----------------------------------------------------------------------------
 void Game::saveResults(Database& db) {
   if (!isValid()) {
-    throw std::runtime_error("Cannot save invalid game");
+    Throw() << "Cannot save invalid game";
   }
 
   unsigned hits = 0;
   unsigned highScore = 0;
   unsigned lowScore = ~0U;
-  for (unsigned i = 0; i < boards.size(); ++i) {
-    const Board& board = boards[i];
+  for (const Board& board : boards) {
     hits += board.getScore();
     highScore = std::max<unsigned>(highScore, board.getScore());
     lowScore = std::min<unsigned>(lowScore, board.getScore());
   }
 
   unsigned ties = 0;
-  for (unsigned i = 0; i < boards.size(); ++i) {
-    const Board& board = boards[i];
+  for (const Board& board : boards) {
     ties += (board.getScore() == highScore);
   }
   if (ties > 0) {
     ties--;
   } else {
-    throw std::runtime_error("Error calculating ties");
+    Throw() << "Error calculating ties for game title '"
+            << config.getName() << "'";
   }
 
   DBRecord* stats = db.get(("game." + config.getName()), true);
   if (!stats) {
-    throw std::runtime_error("Failed to get game stats record");
+    Throw() << "Failed to get stats record for game title '"
+            << config.getName() << "' from " << db;
   }
 
   config.saveTo(*stats);
   if (!stats->incUInt("gameCount")) {
-    throw std::runtime_error("Failed to increment game count");
+    Throw() << "Failed to increment game count in " << (*stats);
   }
 
   stats->incUInt("total.aborted", (aborted ? 1 : 0));
@@ -281,15 +279,15 @@ void Game::saveResults(Database& db) {
   stats->setUInt("last.hits", hits);
   stats->setUInt("last.ties", ties);
 
-  for (unsigned i = 0; i < boards.size(); ++i) {
-    const Board& board = boards[i];
+  for (const Board& board : boards) {
     const bool first = (board.getScore() == highScore);
     const bool last = (board.getScore() == lowScore);
     board.addStatsTo(*stats, first, last);
 
     DBRecord* player = db.get(("player." + board.getPlayerName()), true);
     if (!player) {
-      throw std::runtime_error("Failed to get player record");
+      Throw() << "Failed to get record for player '" << board.getPlayerName()
+              << "' from " << db;
     }
     board.saveTo(*player, (boards.size() - 1), first, last);
   }

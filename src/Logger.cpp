@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "CommandArgs.h"
 #include "Input.h"
+#include "StringUtils.h"
 
 namespace xbs
 {
@@ -29,17 +30,7 @@ Logger::Logger()
 
   const char* level = args.getValueOf("-l", "--log-level");
   if (level) {
-    if (strcasecmp(level, "ERROR") == 0) {
-      setLogLevel(ERROR);
-    } else if (strcasecmp(level, "WARN") == 0) {
-      setLogLevel(WARN);
-    } else if (strcasecmp(level, "INFO") == 0) {
-      setLogLevel(INFO);
-    } else if (strcasecmp(level, "DEBUG") == 0) {
-      setLogLevel(DEBUG);
-    } else {
-      log() << "ERROR: unknown log level: '" << level << "'";
-    }
+    setLogLevel(level);
   }
 
   const char* file = args.getValueOf("-f", "--log-file");
@@ -73,6 +64,7 @@ Logger& Logger::appendToFile(const std::string& file) {
   } catch (const std::exception& e) {
     error() << "Cannot open " << file << ": " << e.what();
   }
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
@@ -83,13 +75,13 @@ Logger& Logger::setLogLevel(const LogLevel logLevel) {
 
 //-----------------------------------------------------------------------------
 Logger& Logger::setLogLevel(const std::string& level) {
-  if (strcasecmp(level.c_str(), "DEBUG") == 0) {
+  if (iEqual(level, "DEBUG")) {
     setLogLevel(DEBUG);
-  } else if (strcasecmp(level.c_str(), "INFO") == 0) {
+  } else if (iEqual(level, "INFO")) {
     setLogLevel(INFO);
-  } else if (strcasecmp(level.c_str(), "WARN") == 0) {
+  } else if (iEqual(level, "WARN")) {
     setLogLevel(INFO);
-  } else if (strcasecmp(level.c_str(), "ERROR") == 0) {
+  } else if (iEqual(level, "ERROR")) {
     setLogLevel(INFO);
   } else {
     Logger::error() << "Invalid log level: '" << level << "'";

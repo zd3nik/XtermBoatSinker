@@ -6,7 +6,6 @@
 #define XBS_INPUT_H
 
 #include "Platform.h"
-#include <termios.h>
 
 namespace xbs
 {
@@ -16,36 +15,13 @@ class Input
 {
 public:
   enum {
-    BUFFER_SIZE = 4096U
+    BUFFER_SIZE = 4096
   };
 
   static bool empty(const char* str, const bool checkWhitespace = true);
   static std::string trim(const std::string& str);
 
   Input();
-  virtual ~Input();
-
-  /**
-   * STDIN is in canonical mode by default in terminals, this means user input
-   * will not be flushed until the user presses enter.
-   * disable canonical mode to have the terminal flush every character
-   * @brief Set canonical mode on STDIN
-   * @param enabled canonical mode enabled if true, disabled if false
-   * @return false on error
-   */
-  bool setCanonical(const bool enabled) const;
-
-  /**
-   * @brief Get the current canonical mode of STDIN
-   * @return -1 on error, 1 if canonical mode enabled, 0 if disabled
-   */
-  int getCanonical() const;
-
-  /**
-   * @brief Restore canonical and echo modes to their original state
-   * @return false on error
-   */
-  bool restoreTerminal() const;
 
   /**
    * Wait for data to become available for reading on one or more of the
@@ -96,14 +72,12 @@ public:
 private:
   int bufferData(const int fd);
 
-  bool haveTermIO;
-  char* line;
-  std::map<int, char*> buffer;
+  std::vector<char> line;
+  std::map<int, std::vector<char>> buffer;
   std::map<int, unsigned> pos;
   std::map<int, unsigned> len;
   std::map<int, std::string> handles;
-  std::vector<const char*> fields;
-  struct termios savedTermIOs;
+  std::vector<std::string> fields;
 };
 
 } // namespace xbs

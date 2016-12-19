@@ -79,10 +79,10 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
       case 2:
         if (np && sp) {
           ASSERT(!(ep | wp));
-          a = (board.getSquare((coord + North) + East) == Boat::HIT);
-          b = (board.getSquare((coord + North) + West) == Boat::HIT);
-          c = (board.getSquare((coord + South) + East) == Boat::HIT);
-          d = (board.getSquare((coord + South) + West) == Boat::HIT);
+          a = (board.getSquare((coord + North) + East) == Ship::HIT);
+          b = (board.getSquare((coord + North) + West) == Ship::HIT);
+          c = (board.getSquare((coord + South) + East) == Ship::HIT);
+          d = (board.getSquare((coord + South) + West) == Ship::HIT);
           if (a & b & c & d) {
             // between parallel horizontal lines
             searchScore(board, coord, (w * 1.3));
@@ -93,10 +93,10 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
           }
         } else if (ep && wp) {
           ASSERT(!(np | sp));
-          a = (board.getSquare((coord + North) + East) == Boat::HIT);
-          b = (board.getSquare((coord + North) + West) == Boat::HIT);
-          c = (board.getSquare((coord + South) + East) == Boat::HIT);
-          d = (board.getSquare((coord + South) + West) == Boat::HIT);
+          a = (board.getSquare((coord + North) + East) == Ship::HIT);
+          b = (board.getSquare((coord + North) + West) == Ship::HIT);
+          c = (board.getSquare((coord + South) + East) == Ship::HIT);
+          d = (board.getSquare((coord + South) + West) == Ship::HIT);
           if (a & b & c & d) {
             // between parallel vertical lines
             searchScore(board, coord, (w * 1.3));
@@ -114,20 +114,20 @@ void Edgar::frenzyScore(const Board& board, ScoredCoordinate& coord,
         // adjacent to 1 perpendicular line
         if (np) {
           ASSERT(!(sp | ep | wp));
-          a = (board.getSquare((coord + North) + East) == Boat::HIT);
-          b = (board.getSquare((coord + North) + West) == Boat::HIT);
+          a = (board.getSquare((coord + North) + East) == Ship::HIT);
+          b = (board.getSquare((coord + North) + West) == Ship::HIT);
         } else if (sp) {
           ASSERT(!(np | ep | wp));
-          a = (board.getSquare((coord + South) + East) == Boat::HIT);
-          b = (board.getSquare((coord + South) + West) == Boat::HIT);
+          a = (board.getSquare((coord + South) + East) == Ship::HIT);
+          b = (board.getSquare((coord + South) + West) == Ship::HIT);
         } else if (ep) {
           ASSERT(!(np | sp | wp));
-          a = (board.getSquare((coord + East) + North) == Boat::HIT);
-          b = (board.getSquare((coord + East) + South) == Boat::HIT);
+          a = (board.getSquare((coord + East) + North) == Ship::HIT);
+          b = (board.getSquare((coord + East) + South) == Ship::HIT);
         } else if (wp) {
           ASSERT(!(np | sp | ep));
-          a = (board.getSquare((coord + West) + North) == Boat::HIT);
-          b = (board.getSquare((coord + West) + South) == Boat::HIT);
+          a = (board.getSquare((coord + West) + North) == Ship::HIT);
+          b = (board.getSquare((coord + West) + South) == Ship::HIT);
         } else {
           ASSERT(false);
         }

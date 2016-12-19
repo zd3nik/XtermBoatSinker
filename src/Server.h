@@ -31,8 +31,8 @@ public:
   Version getVersion() const;
   void showHelp();
   void closeSocket();
-  bool openSocket();
-  bool startListening(const int backlog = 10);
+  void openSocket();
+  void startListening(const int backlog = 10);
   bool init();
   bool run();
 
@@ -60,7 +60,7 @@ private:
   bool printPlayers(Game&, Coordinate&);
   bool quitGame(Game&, Coordinate&);
   bool saveResult(Game&);
-  bool sendBoard(Game&, const Board*);
+  bool sendBoard(Game&, const Board&);
   bool sendBoard(Game&, const int handle, const Board*);
   bool sendGameResults(Game&);
   bool sendLineAll(Game&, const std::string& msg);

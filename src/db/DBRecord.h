@@ -6,12 +6,13 @@
 #define XBS_DB_RECORD_H
 
 #include "Platform.h"
+#include "Printable.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class DBRecord {
+class DBRecord : public Printable {
 public:
   static unsigned strToUInt(const std::string& str);
   static uint64_t strToUInt64(const std::string& str);
@@ -19,6 +20,7 @@ public:
 
   virtual ~DBRecord() { }
 
+  virtual std::string toString() const { return getID(); }
   virtual std::string getID() const = 0;
   virtual void clear(const std::string& fld) = 0;
 

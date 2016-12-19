@@ -6,11 +6,9 @@
 #define XBS_LOGSTREAM_H
 
 #include "Platform.h"
+#include "Printable.h"
 #include "Screen.h"
-#include "Version.h"
-#include "Coordinate.h"
-#include "ScoredCoordinate.h"
-#include "Timer.h"
+#include <type_traits>
 
 namespace xbs
 {
@@ -18,15 +16,16 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class LogStream
 {
-public:
-  LogStream()
-    : stream(NULL),
-      print(false)
-  { }
+private:
+  const bool haveStream = false;
+  const bool print = false;
+  std::ostream& stream = std::cout;
 
+public:
   LogStream(std::ostream& stream, const char* hdr, const bool print = false)
-    : stream(&stream),
-      print(print && ((&stream) != (&std::cout)))
+    : haveStream(true),
+      print(print && ((&stream) != (&std::cout))),
+      stream(stream)
   {
     if (hdr) {
       stream << hdr;
@@ -36,46 +35,32 @@ public:
     }
   }
 
+  LogStream() = default;
+  LogStream(LogStream&&) = default;
+  LogStream(const LogStream&) = delete;
+  LogStream& operator=(LogStream&&) = default;
+  LogStream& operator=(const LogStream&) = delete;
+
   virtual ~LogStream()  {
-    if (stream) {
-      (*stream) << std::endl;
-      stream->flush();
+    if (haveStream) {
+      stream << std::endl;
+      stream.flush();
     }
     if (print) {
       Screen::print() << DefaultColor << EL << Flush;
     }
   }
 
-  template<typename T>
+  template<class T>
   LogStream& operator<<(const T& x) {
-    if (stream) {
-      (*stream) << x;
+    if (haveStream) {
+//      stream << x; TODO
     }
     if (print) {
       Screen::print() << x;
     }
     return (*this);
   }
-
-  LogStream& operator<<(const ScoredCoordinate& x) {
-    return operator<<(x.toString());
-  }
-
-  LogStream& operator<<(const Coordinate& x) {
-    return operator<<(x.toString());
-  }
-
-  LogStream& operator<<(const Version& x) {
-    return operator<<(x.toString());
-  }
-
-  LogStream& operator<<(const Timer& x) {
-    return operator<<(x.toString());
-  }
-
-private:
-  std::ostream* stream;
-  const bool print;
 };
 
 } // namespace xbs

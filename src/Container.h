@@ -16,44 +16,36 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Container : public Printable
 {
-public:
-  Container() { }
+private:
+  Coordinate begin;
+  Coordinate end;
+  unsigned width = 0;
+  unsigned heigth = 0;
 
+public:
   Container(const Coordinate& topLeft, const Coordinate& bottomRight)
     : begin(topLeft),
-      end(bottomRight)
+      end(bottomRight),
+      width((begin && end) ? (end.getX() - begin.getX() + 1) : 0),
+      heigth((begin && end) ? (end.getY() - begin.getY() + 1) : 0)
   { }
 
-  Container(const Container& other)
-    : begin(other.begin),
-      end(other.end)
-  { }
-
-  Container& operator=(const Container& other) {
-    begin = other.begin;
-    end = other.end;
-    return (*this);
-  }
+  Container() = default;
+  Container(Container&&) = default;
+  Container(const Container&) = default;
+  Container& operator=(Container&&) = default;
+  Container& operator=(const Container&) = default;
 
   Container& set(const Coordinate& topLeft, const Coordinate& bottomRight) {
     begin = topLeft;
     end = bottomRight;
+    width = (begin && end) ? (end.getX() - begin.getX() + 1) : 0;
+    heigth = (begin && end) ? (end.getY() - begin.getY() + 1) : 0;
     return (*this);
   }
 
-  Container& setTopLeft(const Coordinate& topLeft) {
-    begin = topLeft;
-    return (*this);
-  }
-
-  Container& setBottomRight(const Coordinate& bottomRight) {
-    end = bottomRight;
-    return (*this);
-  }
-
-  bool isValid() const {
-    return (begin.isValid() && end.isValid() &&
-            (getMinX() <= getMaxX()) && (getMinY() <= getMaxY()));
+  explicit operator bool() const {
+    return isValid();
   }
 
   bool contains(const unsigned x, const unsigned y) const {
@@ -63,18 +55,18 @@ public:
   }
 
   bool contains(const Coordinate& c) const {
-    return (c.isValid() && contains(c.getX(), c.getY()));
+    return (c && contains(c.getX(), c.getY()));
   }
 
   bool contains(const Container& other) const {
-    return (other.isValid() && contains(other.begin) && contains(other.end));
+    return (other && contains(other.begin) && contains(other.end));
   }
 
-  const Coordinate& getTopLeft() const {
+  Coordinate getTopLeft() const {
     return begin;
   }
 
-  const Coordinate& getBottomRight() const {
+  Coordinate getBottomRight() const {
     return end;
   }
 
@@ -95,18 +87,21 @@ public:
   }
 
   unsigned getWidth() const {
-    return (isValid() ? (getMaxX() - getMinX() + 1) : 0);
+    return width;
   }
 
   unsigned getHeight() const {
-    return (isValid() ? (getMaxY() - getMinY() + 1) : 0);
+    return heigth;
   }
 
-  unsigned getAreaSize() const {
-    return (getHeight() * getWidth());
+  unsigned getSize() const {
+    return (width * heigth);
   }
 
   virtual std::string toString() const;
+  virtual Coordinate toCoord(const unsigned i) const;
+  virtual unsigned toIndex(const Coordinate&) const;
+
   bool shift(const Direction, const unsigned count = 1);
   bool arrangeChildren(std::vector<Container*>& children) const;
   bool moveCoordinate(Coordinate& coordinate, const Movement& movement) const;
@@ -114,9 +109,11 @@ public:
                       const Direction direction,
                       const unsigned distance) const;
 
-private:
-  Coordinate begin;
-  Coordinate end;
+protected:
+  bool isValid() const {
+    return (begin && end &&
+            (getMinX() <= getMaxX()) && (getMinY() <= getMaxY()));
+  }
 };
 
 } // namespace xbs

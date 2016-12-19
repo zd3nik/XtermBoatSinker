@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "Input.h"
 #include "Logger.h"
+#include <cstring>
 #include <sys/select.h>
 
 namespace xbs
@@ -45,78 +46,11 @@ std::string Input::trim(const std::string& str) {
 
 //-----------------------------------------------------------------------------
 Input::Input()
-  : haveTermIO(false),
-    line(new char[BUFFER_SIZE])
+  : line(BUFFER_SIZE, 0)
 {
-  buffer[STDIN_FILENO] = new char[BUFFER_SIZE];
+  buffer[STDIN_FILENO].resize(BUFFER_SIZE, 0);
   pos[STDIN_FILENO] = 0;
   len[STDIN_FILENO] = 0;
-
-  memset(&savedTermIOs, 0, sizeof(savedTermIOs));
-  if (tcgetattr(STDIN_FILENO, &savedTermIOs) < 0) {
-    Logger::error() << "failed to get termios: " << strerror(errno);
-  } else {
-    haveTermIO = true;
-  }
-}
-
-//-----------------------------------------------------------------------------
-Input::~Input() {
-  restoreTerminal();
-
-  for (auto it = buffer.begin(); it != buffer.end(); ++it) {
-    delete[] it->second;
-    it->second = NULL;
-  }
-
-  buffer.clear();
-  pos.clear();
-  len.clear();
-
-  delete[] line;
-  line = NULL;
-}
-
-//-----------------------------------------------------------------------------
-bool Input::restoreTerminal() const {
-  if (haveTermIO) {
-    if (tcsetattr(STDIN_FILENO, TCSANOW, &savedTermIOs) < 0) {
-      Logger::error() << "failed to restore termios: " << strerror(errno);
-      return false;
-    }
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-int Input::getCanonical() const {
-  struct termios ios;
-  if (tcgetattr(STDIN_FILENO, &ios) < 0) {
-    Logger::error() << "getCanonical(): tcgetattr failed: " << strerror(errno);
-    return -1;
-  }
-  return (ios.c_lflag & ICANON) ? 1 : 0;
-}
-
-//-----------------------------------------------------------------------------
-bool Input::setCanonical(const bool enabled) const {
-  struct termios ios;
-  if (tcgetattr(STDIN_FILENO, &ios) < 0) {
-    Logger::error() << "setCanonical(): tcgetattr failed: " << strerror(errno);
-    return false;
-  }
-
-  if (enabled) {
-    ios.c_lflag |= (ICANON | ECHO);
-  } else {
-    ios.c_lflag &= ~(ICANON | ECHO);
-  }
-
-  if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
-    Logger::error() << "setCanonical(): tcsetattr failed: " << strerror(errno);
-    return false;
-  }
-  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -131,8 +65,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
   FD_ZERO(&set);
 
   int maxFd = 0;
-  std::map<int, std::string>::const_iterator it;
-  for (it = handles.begin(); it != handles.end(); ++it) {
+  for (auto it = handles.begin(); it != handles.end(); ++it) {
     const int fd = it->first;
     if (fd >= 0) {
       if (buffer.count(fd) && (pos[fd] < len[fd])) {
@@ -151,7 +84,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
   tv.tv_sec = (timeout_ms / 1000);
   tv.tv_usec = ((timeout_ms % 1000) * 10);
 
-  int ret;
+  int ret = 0;
   while (true) {
     ret = select((maxFd + 1), &set, NULL, NULL, (timeout_ms < 0) ? NULL : &tv);
     if (ret < 0) {
@@ -165,7 +98,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
     break;
   }
   if (ret) {
-    for (it = handles.begin(); it != handles.end(); ++it) {
+    for (auto it = handles.begin(); it != handles.end(); ++it) {
       const int fd = it->first;
       if (FD_ISSET(fd, &set)) {
         ready.insert(fd);
@@ -184,7 +117,7 @@ int Input::readln(const int fd, const char delimeter) {
   }
 
   if (buffer.find(fd) == buffer.end()) {
-    buffer[fd] = new char[BUFFER_SIZE];
+    buffer[fd].resize(BUFFER_SIZE, 0);
     pos[fd] = 0;
     len[fd] = 0;
   }
@@ -204,23 +137,24 @@ int Input::readln(const int fd, const char delimeter) {
   }
   line[n] = 0;
 
-  Logger::debug() << "Received '" << line << "' from channel " << fd
+  Logger::debug() << "Received '" << line.data() << "' from channel " << fd
                   << " " << getHandleLabel(fd);
 
-  char* begin = line;
-  char* end = line;
-  for (; (*end) && ((*end) != '\r') && ((*end) != '\n'); ++end) {
-    if ((*end) == delimeter) {
+  auto begin = line.begin();
+  auto end = begin;
+  while ((end != line.end()) && (*end) && (*end != '\r') && (*end != '\n')) {
+    if (*end == delimeter) {
       (*end) = 0;
-      fields.push_back(begin);
+      fields.push_back(std::string(begin, end));
       begin = (end + 1);
     }
+    ++end;
   }
-  if (end > begin) {
+  if (end != begin) {
     (*end) = 0;
-    fields.push_back(begin);
+    fields.push_back(std::string(begin, end));
   }
-  return (int)fields.size();
+  return static_cast<int>(fields.size());
 }
 
 //-----------------------------------------------------------------------------
@@ -267,7 +201,7 @@ bool Input::containsHandle(const int handle) const {
 //-----------------------------------------------------------------------------
 std::string Input::getHandleLabel(const int handle) const {
   if (handle >= 0) {
-    std::map<int, std::string>::const_iterator it = handles.find(handle);
+    auto it = handles.find(handle);
     if (it != handles.end()) {
       return it->second;
     }
@@ -287,7 +221,7 @@ unsigned Input::getFieldCount() const {
 
 //-----------------------------------------------------------------------------
 const char* Input::getString(const unsigned index, const char* def) const {
-  return (index >= fields.size()) ? def : fields.at(index);
+  return (index >= fields.size()) ? def : fields.at(index).c_str();
 }
 
 //-----------------------------------------------------------------------------
@@ -325,7 +259,7 @@ int Input::getUnsigned(const unsigned index, const unsigned def) const {
 int Input::bufferData(const int fd) {
   pos[fd] = len[fd] = 0;
   while (len[fd] < BUFFER_SIZE) {
-    ssize_t n = read(fd, buffer[fd], BUFFER_SIZE);
+    ssize_t n = read(fd, buffer[fd].data(), BUFFER_SIZE);
     if (n < 0) {
       if (errno == EINTR) {
         Logger::debug() << "Input read interrupted, retrying";

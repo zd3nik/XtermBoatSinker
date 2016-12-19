@@ -3,14 +3,15 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "TargetingComputer.h"
-#include "Configuration.h"
 #include "CommandArgs.h"
-#include "Screen.h"
-#include "Timer.h"
-#include "Logger.h"
-#include "Input.h"
+#include "Configuration.h"
 #include "DBRecord.h"
 #include "FileSysDatabase.h"
+#include "Input.h"
+#include "Logger.h"
+#include "Screen.h"
+#include "Throw.h"
+#include "Timer.h"
 
 namespace xbs
 {
@@ -32,11 +33,11 @@ TargetingComputer::~TargetingComputer() {
 //-----------------------------------------------------------------------------
 void TargetingComputer::setConfig(const Configuration& configuration) {
   config = configuration;
-  boatArea = config.getBoardSize();
-  shortBoat = config.getShortestBoat().getLength();
-  longBoat = config.getLongestBoat().getLength();
-  width = boatArea.getWidth();
-  height = boatArea.getHeight();
+  shipArea = config.getShipArea();
+  shortBoat = config.getShortestShip().getLength();
+  longBoat = config.getLongestShip().getLength();
+  width = shipArea.getWidth();
+  height = shipArea.getHeight();
   maxLen = std::max(width, height);
   boardLen = (width * height);
   parity = random(2);
@@ -73,7 +74,7 @@ Board* TargetingComputer::getTargetBoard(const std::string& me,
       Board* board = boards[i];
       if (board->getPlayerName() != me) {
         ScoredCoordinate coord = getTargetCoordinate(*board);
-        if (coord.isValid() &&
+        if (coord &&
             (!bestBoard || (coord.getScore() > bestCoord.getScore())))
         {
           bestBoard = board;
@@ -89,7 +90,7 @@ Board* TargetingComputer::getTargetBoard(const std::string& me,
 ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
   const std::string desc = board.getDescriptor();
   if (desc.empty() || (desc.size() != boardLen)) {
-    throw std::runtime_error("Incorrect board descriptor size");
+    Throw() << "Incorrect board descriptor size: " << desc.size();
   }
 
   hitCount = board.getHitCount();
@@ -103,10 +104,10 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
   frenzySquares.clear();
 
   for (unsigned i = 0; i < boardLen; ++i) {
-    const Coordinate coord(toCoord(i));
+    const Coordinate coord(shipArea.toCoord(i));
     adjacentHits[i] = board.adjacentHits(coord);
     adjacentFree[i] = board.adjacentFree(coord);
-    if (desc[i] == Boat::NONE) {
+    if (desc[i] == Ship::NONE) {
       const ScoredCoordinate coord(0, ((i % width) + 1), ((i / width) + 1));
       if (adjacentHits[i]) {
         frenzySquares.insert(i);
@@ -118,7 +119,7 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
   }
 
   if (coords.empty()) {
-    throw std::runtime_error("Failed to select target coordinate!");
+    Throw() << "Failed to select target coordinate!";
   }
 
   return bestShotOn(board);
@@ -129,8 +130,8 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
                              unsigned positions, bool watch,
                              double minSurfaceArea)
 {
-  if (!config.isValid()) {
-    throw std::runtime_error("Invalid board configuration");
+  if (!config) {
+    Throw() << "Invalid board configuration";
   }
   if (!positions) {
     positions = DEFAULT_POSITION_COUNT;
@@ -143,8 +144,8 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
 
   char recordID[1024];
   snprintf(recordID, sizeof(recordID), "test.%ux%u.%s-%s",
-           config.getBoardSize().getWidth(),
-           config.getBoardSize().getHeight(),
+           config.getBoardWidth(),
+           config.getBoardHeight(),
            getName().c_str(), getVersion().toString().c_str());
 
   Screen::print() << "Testing " << getName() << " version "
@@ -156,13 +157,13 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
   FileSysDatabase db;
   DBRecord* rec = db.open(testDB).get(recordID, true);
   if (!rec) {
-    throw std::runtime_error("Failed to get test DB record");
+    Throw() << "Failed to get " << recordID << " from " << db;
   }
 
   Coordinate statusLine(1, 5);
   Board board(-1, getName(), "local", width, height);
   if (!board.shift(South, (statusLine.getY() - 1))) {
-    throw std::runtime_error("Board does not fit in terminal");
+    Throw() << "Board does not fit in terminal";
   }
   Screen::print() << board.getTopLeft() << ClearToScreenEnd;
   board.print(true);
@@ -180,16 +181,16 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
 
   for (unsigned i = 0; i < positions; ++i) {
     if (staticBoard.size()) {
-      if (!board.updateBoatArea(staticBoard)) {
-        throw std::runtime_error("Invalid static board descriptor");
+      if (!board.updateDescriptor(staticBoard)) {
+        Throw() << "Invalid static board descriptor [" << staticBoard << ']';
       }
-    } else if (!board.addRandomBoats(config, minSurfaceArea)) {
-      throw std::runtime_error("Failed random boat placement");
+    } else if (!board.addRandomShips(config, minSurfaceArea)) {
+      Throw() << "Failed random boat placement";
     }
 
     Board targetBoard(board);
-    if (!targetBoard.updateBoatArea(board.getMaskedDescriptor())) {
-      throw std::runtime_error("Failed to mask boat area");
+    if (!targetBoard.updateDescriptor(board.getMaskedDescriptor())) {
+      Throw() << "Failed to mask boat area";
     }
 
     parity = random(2);
@@ -202,14 +203,14 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
       ScoredCoordinate coord = getTargetCoordinate(targetBoard);
       Logger::debug() << "best shot = " << coord;
       if (!board.shootAt(coord, prev)) {
-        throw std::runtime_error("Invalid target coord: " + coord.toString());
+        Throw() << "Invalid target coord: " << coord;
       } else if (++totalShots == 0) {
-        throw std::runtime_error("Shot count overflow");
-      } else if (Boat::isValidID(prev)) {
-        targetBoard.setSquare(coord, Boat::HIT);
+        Throw(OverflowError) << "Shot count overflow";
+      } else if (Ship::isValidID(prev)) {
+        targetBoard.setSquare(coord, Ship::HIT);
         hits++;
       } else {
-        targetBoard.setSquare(coord, Boat::MISS);
+        targetBoard.setSquare(coord, Ship::MISS);
       }
       shots++;
 
@@ -254,7 +255,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
                   << " positions complete! time = " << timer << EL << Flush;
 
   if (!totalShots) {
-    throw std::runtime_error("No shots taken");
+    Throw() << "No shots taken";
   }
 
   double avg = (double(totalShots) / positions);
@@ -273,8 +274,8 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
 
     // TODO add last test date
     rec->incUInt("testsRun");
-    rec->setUInt("board.width", config.getBoardSize().getWidth());
-    rec->setUInt("board.height", config.getBoardSize().getHeight());
+    rec->setUInt("board.width", config.getBoardWidth());
+    rec->setUInt("board.height", config.getBoardHeight());
     rec->incUInt("total.positionCount", positions);
     rec->setUInt("last.positionCount", positions);
     rec->setUInt("total.minSurfaceArea", msa);

@@ -27,14 +27,13 @@ public:
     return progName;
   }
 
+  CommandArgs(CommandArgs&&) = delete;
+  CommandArgs(const CommandArgs&) = delete;
+  CommandArgs& operator=(CommandArgs&&) = delete;
+  CommandArgs& operator=(const CommandArgs&) = delete;
+
 private:
-  CommandArgs(const int argc, const char** argv)
-    : argc(argc),
-      argv(argv)
-  {
-    const char* p = strrchr(argv[0], '/');
-    progName = (p ? (p + 1) : argv[0]);
-  }
+  CommandArgs(const int argc, const char** argv);
 
   std::string progName;
   const int argc;

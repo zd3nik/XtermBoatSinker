@@ -4,6 +4,8 @@
 //-----------------------------------------------------------------------------
 #include "Screen.h"
 #include "Logger.h"
+#include "Throw.h"
+#include <cstring>
 #include <sys/ioctl.h>
 
 namespace xbs
@@ -14,19 +16,15 @@ static Screen* instance = NULL;
 
 //-----------------------------------------------------------------------------
 static Container GetScreenDimensions() {
-  char sbuf[128];
   struct winsize max;
   if (ioctl(0, TIOCGWINSZ , &max) < 0) {
-    snprintf(sbuf, sizeof(sbuf), "Failed to get screen dimensions: %s",
-             strerror(errno));
-    throw std::runtime_error(sbuf);
+    Throw() << "Failed to get screen dimensions: " << strerror(errno);
   }
   Coordinate topLeft(1, 1);
   Coordinate bottomRight((unsigned)max.ws_col, (unsigned)max.ws_row);
-  if (!bottomRight.isValid()) {
-    snprintf(sbuf, sizeof(sbuf), "Invalid screen dimensions: %u x %u",
-             bottomRight.getX(), bottomRight.getY());
-    throw std::runtime_error(sbuf);
+  if (!bottomRight) {
+    Throw() << "Invalid screen dimensions: " << bottomRight.getX()
+            << 'x' << bottomRight.getY();
   }
   return Container(topLeft, bottomRight);
 }
@@ -134,32 +132,24 @@ Screen& Screen::flag(const ScreenFlag flag) {
 
 //-----------------------------------------------------------------------------
 Screen& Screen::flush() {
-  char sbuf[128];
   if (fflush(stdout)) {
-    snprintf(sbuf, sizeof(sbuf), "Screen flush failed: %s", strerror(errno));
-    throw std::runtime_error(sbuf);
+    Throw() << "Screen flush failed: " << strerror(errno);
   }
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
 Screen& Screen::str(const char* x) {
-  char sbuf[128];
   if (x && *x && (fprintf(stdout, "%s", x) <= 0)) {
-    snprintf(sbuf, sizeof(sbuf), "Failed to print to screen: %s",
-             strerror(errno));
-    throw std::runtime_error(sbuf);
+    Throw() << "Failed to print to screen: " << strerror(errno);
   }
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
 Screen& Screen::ch(const char x) {
-  char sbuf[128];
   if (x && (fputc(x, stdout) != x)) {
-    snprintf(sbuf, sizeof(sbuf), "Failed to print to screen: %s",
-             strerror(errno));
-    throw std::runtime_error(sbuf);
+    Throw() << "Failed to print to screen: " << strerror(errno);
   }
   return (*this);
 }

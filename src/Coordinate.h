@@ -8,6 +8,7 @@
 #include "Platform.h"
 #include "Movement.h"
 #include "Printable.h"
+#include "CSV.h"
 
 namespace xbs
 {
@@ -15,27 +16,21 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Coordinate : public Printable
 {
-public:
-  Coordinate()
-    : x(0),
-      y(0)
-  { }
+private:
+  unsigned x = 0;
+  unsigned y = 0;
 
+public:
   Coordinate(const unsigned x, const unsigned y)
     : x(x),
       y(y)
   { }
 
-  Coordinate(const Coordinate& other)
-    : x(other.x),
-      y(other.y)
-  { }
-
-  Coordinate& operator=(const Coordinate& other) {
-    x = other.x;
-    y = other.y;
-    return (*this);
-  }
+  Coordinate() = default;
+  Coordinate(Coordinate&&) = default;
+  Coordinate(const Coordinate&) = default;
+  Coordinate& operator=(Coordinate&&) = default;
+  Coordinate& operator=(const Coordinate&) = default;
 
   Coordinate& set(const Coordinate& other) {
     x = other.x;
@@ -60,33 +55,35 @@ public:
   }
 
   Coordinate& north(const unsigned count = 1) {
-    y = (y >= count) ? (y - count) : 0;
+    y = ((*this) && (y >= count)) ? (y - count) : 0;
     return (*this);
   }
 
   Coordinate& east(const unsigned count = 1) {
-    x += count;
+    x = ((*this) && ((x + count) >= x)) ? (x + count) : 0;
     return (*this);
   }
 
   Coordinate& south(const unsigned count = 1) {
-    y += count;
+    y = ((*this) && ((y + count) >= y)) ? (y + count) : 0;
     return (*this);
   }
 
   Coordinate& west(const unsigned count = 1) {
-    x = (x >= count) ? (x - count) : 0;
+    x = ((*this) && (x >= count)) ? (x - count) : 0;
     return (*this);
+  }
+
+  Coordinate& shift(const Movement& m) {
+    return shift(m.getDirection(), m.getDistance());
   }
 
   Coordinate& shift(const Direction dir, const unsigned count = 1) {
     switch (dir) {
-    case North: return north(count);
-    case East:  return east(count);
-    case South: return south(count);
-    case West:  return west(count);
-    default:
-      break;
+      case North: return north(count);
+      case East:  return east(count);
+      case South: return south(count);
+      case West:  return west(count);
     }
     return (*this);
   }
@@ -107,11 +104,7 @@ public:
     return ((y < other.y) || ((y == other.y) && (x < other.x)));
   }
 
-  bool operator!() const {
-    return !isValid();
-  }
-
-  bool isValid() const {
+  explicit operator bool() const {
     return (x && y);
   }
 
@@ -128,46 +121,37 @@ public:
   }
 
   virtual std::string toString() const {
-    char sbuf[32];
+    std::stringstream ss;
     if (x <= ('z' - 'a' + 1)) {
-      snprintf(sbuf, sizeof(sbuf), "%c%u", (char)('a' + x - 1), y);
+      ss << static_cast<char>('a' + x - 1) << y; // "a1" format
     } else {
-      snprintf(sbuf, sizeof(sbuf), "%u,%u", x, y);
+      ss << x << ',' << y;                       // "1,1" format
     }
-    return std::string(sbuf);
+    return ss.str();
   }
 
   bool fromString(const std::string& str) {
-    if (str.size()) {
-      if (isalpha(str[0]) && isdigit(str[1])) {
-        int newX = (tolower(str[0]) - 'a');
-        int newY = (unsigned)atoi(str.c_str() + 1);
-        if ((newX >= 0) && (newY >= 0)) {
-          x = (unsigned)(newX + 1);
-          y = (unsigned)newY;
-          return true;
+    CSV::Cell xCell;
+    CSV::Cell yCell;
+    CSV(str) >> xCell >> yCell;
+    if (xCell && yCell.isInt()) {
+      int newX = xCell.toInt();
+      int newY = yCell.toInt();
+      if (!xCell.isInt()) {
+        std::string str = xCell.toString();
+        if ((str.length() != 1) || !isalpha(str[0])) {
+          return false;
         }
-      } else if (isdigit(str[0]) && strchr(str.c_str(), ',')) {
-        unsigned newX = 0;
-        const char* p = str.c_str();
-        while (isdigit(*p)) {
-          newX = ((10 * newX) + (*p++ - '0'));
-        }
-        if (*p++ == ',') {
-          if (isdigit(*p)) {
-            x = newX;
-            y = (unsigned)atoi(p);
-            return true;
-          }
-        }
+        newX = (tolower(str[0]) - 'a' + 1);
+      }
+      if ((newX >= 0) && (newY >= 0)) {
+        x = static_cast<unsigned>(newX);
+        y = static_cast<unsigned>(newY);
+        return true;
       }
     }
     return false;
   }
-
-private:
-  unsigned x;
-  unsigned y;
 };
 
 } // namespace xbs

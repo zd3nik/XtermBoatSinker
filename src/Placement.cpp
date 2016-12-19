@@ -35,7 +35,7 @@ Placement::Placement(const Placement& other)
 { }
 
 //-----------------------------------------------------------------------------
-Placement::Placement(const Boat& boat, const unsigned boatIndex,
+Placement::Placement(const Ship& boat, const unsigned boatIndex,
                      const unsigned start, const unsigned inc)
 
   : boat(boat),
@@ -61,7 +61,7 @@ Placement& Placement::operator=(const Placement& other) {
 
 //-----------------------------------------------------------------------------
 bool Placement::isValid() const {
-  return (boat.isValid() && (boatIndex != ~0U) && (start != ~0U) && (inc != 0));
+  return (boat && (boatIndex != ~0U) && (start != ~0U) && (inc != 0));
 }
 
 //-----------------------------------------------------------------------------
@@ -74,7 +74,7 @@ bool Placement::isValid(const std::string& desc,
   unsigned sqrCount = 0;
   unsigned sqr = start;
   for (unsigned i = 0; i < boat.getLength(); ++i) {
-    if ((desc[sqr] != Boat::NONE) && (desc[sqr] != Boat::HIT)) {
+    if ((desc[sqr] != Ship::NONE) && (desc[sqr] != Ship::HIT)) {
       return false;
     } else if (squares.count(sqr)) {
       sqrCount++;
@@ -123,7 +123,7 @@ void Placement::setScore(const unsigned width, const unsigned height,
 
   for (unsigned i = 0; i < len; ++i) {
     ASSERT(sqr < desc.size());
-    if (desc[sqr] == Boat::HIT) {
+    if (desc[sqr] == Ship::HIT) {
       hitCount++;
       score -= (tail * 0.50);
       tail = 0;
@@ -132,16 +132,16 @@ void Placement::setScore(const unsigned width, const unsigned height,
     } else {
       unsigned x = (sqr % width);
       unsigned y = (sqr / width);
-      if ((x > 0) && Boat::isHit(desc[sqr - 1])) {
+      if ((x > 0) && Ship::isHit(desc[sqr - 1])) {
         adj += 1;
       }
-      if (((x + 1) < width) && Boat::isHit(desc[sqr + 1])) {
+      if (((x + 1) < width) && Ship::isHit(desc[sqr + 1])) {
         adj += 1;
       }
-      if ((y > 0) && Boat::isHit(desc[sqr - width])) {
+      if ((y > 0) && Ship::isHit(desc[sqr - width])) {
         adj += 1;
       }
-      if (((y + 1) < height) && Boat::isHit(desc[sqr + width])) {
+      if (((y + 1) < height) && Ship::isHit(desc[sqr + width])) {
         adj += 1;
       }
     }
@@ -155,10 +155,10 @@ void Placement::setScore(const unsigned width, const unsigned height,
     sqr = start;
     for (unsigned i = 0; i < len; ++i) {
       ASSERT(sqr < desc.size());
-      if (desc[sqr] == Boat::NONE) {
+      if (desc[sqr] == Ship::NONE) {
         head++;
       } else {
-        ASSERT((desc[sqr] == Boat::HIT) ||
+        ASSERT((desc[sqr] == Ship::HIT) ||
                (toupper(desc[sqr]) == boat.getID()));
         break;
       }
@@ -187,13 +187,13 @@ void Placement::exec(std::string& desc, std::set<unsigned>& hits) const {
   unsigned sqr = start;
   for (unsigned i = 0; i < boat.getLength(); ++i) {
     ASSERT(sqr < desc.size());
-    if (desc[sqr] == Boat::HIT) {
+    if (desc[sqr] == Ship::HIT) {
       ASSERT(hits.count(sqr));
       hits.erase(sqr);
       desc[sqr] = tolower(boat.getID());
     } else {
       ASSERT(!hits.count(sqr));
-      ASSERT(desc[sqr] == Boat::NONE);
+      ASSERT(desc[sqr] == Ship::NONE);
       desc[sqr] = boat.getID();
     }
     sqr += inc;
@@ -208,10 +208,10 @@ void Placement::undo(std::string& desc, std::set<unsigned>& hits) const {
     ASSERT(sqr < desc.size());
     ASSERT(!hits.count(sqr));
     if (desc[sqr] == boat.getID()) {
-      desc[sqr] = Boat::NONE;
+      desc[sqr] = Ship::NONE;
     } else {
       ASSERT(desc[sqr] == tolower(boat.getID()));
-      desc[sqr] = Boat::HIT;
+      desc[sqr] = Ship::HIT;
       hits.insert(sqr);
     }
     sqr += inc;

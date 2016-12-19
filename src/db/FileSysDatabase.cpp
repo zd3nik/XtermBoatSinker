@@ -5,6 +5,8 @@
 #include "FileSysDatabase.h"
 #include "FileSysDBRecord.h"
 #include "Logger.h"
+#include "Throw.h"
+#include <cstring>
 #include <sys/stat.h>
 
 namespace xbs
@@ -45,12 +47,12 @@ FileSysDatabase& FileSysDatabase::open(const std::string& dbURI) {
     if (!(dir = opendir(homeDir.c_str()))) {
       if (errno == ENOENT) {
         if (mkdir(homeDir.c_str(), 0750) != 0) {
-          throw std::runtime_error(strerror(errno));
+          Throw() << "mkdir(" << homeDir << ") failed: " << strerror(errno);
         } else if (!(dir = opendir(homeDir.c_str()))) {
-          throw std::runtime_error(strerror(errno));
+          Throw() << "opendir(" << homeDir << ") failed: " << strerror(errno);
         }
       } else {
-        throw std::runtime_error(strerror(errno));
+        Throw() << "opendir(" << homeDir << ") failed: " << strerror(errno);
       }
     }
     loadCache();
@@ -99,8 +101,9 @@ bool FileSysDatabase::loadRecord(const std::string& recordID) {
   FileSysDBRecord* rec = NULL;
   try {
     if (isalnum(*recordID.c_str())) {
+      // TODO use shared_ptr
       if (!(rec = new FileSysDBRecord(recordID, filePath))) {
-        throw std::runtime_error("Out of memory!");
+        Throw() << "Out of memory!";
       }
 
       RecordIterator it = recordCache.find(recordID);
@@ -150,17 +153,20 @@ void FileSysDatabase::sync() {
 
 //-----------------------------------------------------------------------------
 bool FileSysDatabase::remove(const std::string& recordID) {
+  bool ok = false;
   RecordIterator it = recordCache.find(recordID);
   if (it != recordCache.end()) {
     try {
       FileSysDBRecord* rec = it->second;
       if (!rec) {
-        throw std::runtime_error("Null DB record");
+        Throw() << "Null " << (*this) << " record";
       } else if (rec->getFilePath().empty()) {
-        throw std::runtime_error("Empty file path");
+        Throw() << "Empty " << (*rec) << " file path";
       } else if (unlink(rec->getFilePath().c_str()) != 0) {
-        throw std::runtime_error(strerror(errno));
+        Throw() << "unlink(" << rec->getFilePath() << ") failed: "
+                << strerror(errno);
       }
+      ok = true;
     }
     catch (const std::exception& e) {
       Logger::error() << "Failed to remove '" << homeDir << "/" << recordID
@@ -174,6 +180,7 @@ bool FileSysDatabase::remove(const std::string& recordID) {
     it->second = NULL;
     recordCache.erase(it);
   }
+  return ok;
 }
 
 //-----------------------------------------------------------------------------
@@ -185,7 +192,8 @@ DBRecord* FileSysDatabase::get(const std::string& recordID, const bool add) {
     std::string filePath = (homeDir + "/" + recordID + ".ini");
     FileSysDBRecord* rec = new FileSysDBRecord(recordID, filePath);
     if (!rec) {
-      throw std::runtime_error("Out of memory!");
+      // TODO use shared_ptr
+      Throw() << "Out of memory!";
     }
     recordCache[recordID] = rec;
     return rec;

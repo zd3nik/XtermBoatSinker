@@ -5,12 +5,24 @@
 #include "CommandArgs.h"
 #include "Logger.h"
 #include "Input.h"
+#include <cstring>
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
 static CommandArgs* instance = NULL;
+
+//-----------------------------------------------------------------------------
+CommandArgs::CommandArgs(const int argc, const char** argv)
+  : argc(argc),
+    argv(argv)
+{
+  ASSERT(argv);
+  ASSERT(argv[0]);
+  const char* p = strrchr(argv[0], '/');
+  progName = (p ? (p + 1) : argv[0]);
+}
 
 //-----------------------------------------------------------------------------
 void CommandArgs::initialize(const int argc, const char* argv[]) {

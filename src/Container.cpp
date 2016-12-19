@@ -10,9 +10,27 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 std::string Container::toString() const {
-  char sbuf[128];
-  snprintf(sbuf, sizeof(sbuf), "%ux%u container", getWidth(), getHeight());
-  return sbuf;
+  std::stringstream ss;
+  ss << getWidth() << 'x' << getHeight() << " container";
+  return ss.str();
+}
+
+//-----------------------------------------------------------------------------
+Coordinate Container::toCoord(const unsigned i) const {
+  if (isValid()) {
+    Coordinate coord(((i % getWidth()) + 1), ((i / getHeight()) + 1));
+    if (contains(coord)) {
+      return coord;
+    }
+  }
+  return Coordinate();
+}
+
+//-----------------------------------------------------------------------------
+unsigned Container::toIndex(const Coordinate& coord) const {
+  return contains(coord)
+      ? ((coord.getX() - 1) + (getWidth() * (coord.getY() - 1)))
+      : ~0U;
 }
 
 //-----------------------------------------------------------------------------
@@ -31,8 +49,7 @@ bool Container::arrangeChildren(std::vector<Container*>& children) const {
   unsigned height = 1;
   bool fits = true;
 
-  for (size_t i = 0; i < children.size(); ++i) {
-    Container* child = children[i];
+  for (Container* child : children) {
     if (!child) {
       continue;
     } else if (!child->isValid()) {
@@ -64,8 +81,8 @@ bool Container::arrangeChildren(std::vector<Container*>& children) const {
 }
 
 //-----------------------------------------------------------------------------
-bool Container::moveCoordinate(Coordinate& c, const Movement& m) const {
-  return moveCoordinate(c, m.getDirection(), m.getDistance());
+bool Container::moveCoordinate(Coordinate& coord, const Movement& m) const {
+  return (contains(coord) && contains(coord.shift(m)));
 }
 
 //-----------------------------------------------------------------------------
@@ -73,31 +90,7 @@ bool Container::moveCoordinate(Coordinate& coord,
                                const Direction direction,
                                const unsigned distance) const
 {
-  if (contains(coord)) {
-    switch (direction) {
-    case North:
-      if (coord.getY() >= (getMinY() + distance)) {
-        return contains(coord.setY(coord.getY() - distance));
-      }
-      break;
-    case East:
-      if ((coord.getX() + distance) <= getMaxX()) {
-        return contains(coord.setX(coord.getX() + distance));
-      }
-      break;
-    case South:
-      if ((coord.getY() + distance) <= getMaxY()) {
-        return contains(coord.setY(coord.getY() + distance));
-      }
-      break;
-    case West:
-      if (coord.getX() >= (getMinX() + distance)) {
-        return contains(coord.setX(coord.getX() - distance));
-      }
-      break;
-    }
-  }
-  return false;
+  return (contains(coord) && contains(coord.shift(direction, distance)));
 }
 
 } // namespace xbs

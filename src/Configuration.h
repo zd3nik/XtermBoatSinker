@@ -6,7 +6,7 @@
 #define XBS_CONFIGURATION_H
 
 #include "Platform.h"
-#include "Boat.h"
+#include "Ship.h"
 #include "Container.h"
 #include "DBRecord.h"
 
@@ -26,18 +26,20 @@ public:
   Configuration& setMinPlayers(const unsigned minPlayers);
   Configuration& setMaxPlayers(const unsigned maxPlayers);
   Configuration& setBoardSize(const unsigned width, const unsigned height);
-  Configuration& setBoardSize(const Container& boardSize);
-  Configuration& clearBoats();
-  Configuration& addBoat(const Boat& boat);
+  Configuration& clearShips();
+  Configuration& addShip(const Ship&);
 
   void clear();
   void saveTo(DBRecord&);
   void loadFrom(const DBRecord&);
   void print(Coordinate& coord) const;
-  bool isValidBoatDescriptor(const std::string& descriptor) const;
-  bool isValid() const;
-  Boat getLongestBoat() const;
-  Boat getShortestBoat() const;
+  bool isValidShipDescriptor(const std::string& descriptor) const;
+  Ship getLongestShip() const;
+  Ship getShortestShip() const;
+
+  explicit operator bool() const {
+    return isValid();
+  }
 
   std::string getName() const {
     return name;
@@ -59,30 +61,47 @@ public:
     return maxSurfaceArea;
   }
 
-  const Container& getBoardSize() const {
-    return boardSize;
+  unsigned getBoardWidth() const {
+    return shipArea.getWidth();
   }
 
-  unsigned getBoatCount() const {
-    return boats.size();
+  unsigned getBoardHeight() const {
+    return shipArea.getHeight();
   }
 
-  const Boat& getBoat(const unsigned index) const {
-    return boats.at(index);
+  Container getShipArea() const {
+    return shipArea;
+  }
+
+  unsigned getShipCount() const {
+    return ships.size();
+  }
+
+  Ship getShip(const unsigned index) const {
+    return ships.at(index);
+  }
+
+  std::vector<Ship>::const_iterator begin() const {
+    return ships.begin();
+  }
+
+  std::vector<Ship>::const_iterator end() const {
+    return ships.end();
   }
 
 private:
-  unsigned getBoatIndex(const Coordinate& coord) const;
-  bool getBoat(std::string& desc, const Coordinate& start,
-               std::map<char, Boat>& boatMap) const;
+  unsigned getShipIndex(const Coordinate& coord) const;
+  bool isValid() const;
+  bool getShip(std::string& desc, const Coordinate& start,
+               std::map<char, Ship>& shipMap) const;
 
   std::string name;
   unsigned minPlayers;
   unsigned maxPlayers;
   unsigned pointGoal;
   unsigned maxSurfaceArea;
-  Container boardSize;
-  std::vector<Boat> boats;
+  Container shipArea;
+  std::vector<Ship> ships;
 };
 
 } // namespace xbs

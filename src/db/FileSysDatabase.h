@@ -20,6 +20,7 @@ public:
 
   FileSysDatabase();
   virtual ~FileSysDatabase();
+  virtual std::string toString() const { return homeDir; }
 
   void close();
   FileSysDatabase& open(const std::string& dbHomeDir);

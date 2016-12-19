@@ -28,7 +28,6 @@ public:
   virtual Version getVersion() const;
   virtual bool isCompatibleWith(const Version& serverVersion) const;
   virtual bool init();
-  virtual bool test();
   virtual bool join();
   virtual bool run();
 
@@ -41,7 +40,6 @@ protected:
   char getChar();
   char waitForInput(const int timeout = -1);
   void showHelp();
-  void showBots();
   void closeSocket();
   void closeSocketHandle();
   void appendMessage(const Message&);
@@ -89,7 +87,7 @@ protected:
   bool updateYourBoard();
   bool viewBoard(const Coordinate& promptCoordinate);
   bool waitForGameStart();
-  bool manualSetup(std::vector<Boat>& boatsRemaining,
+  bool manualSetup(std::vector<Ship>& boatsRemaining,
                    std::vector<Board>& boards,
                    const Coordinate& promptCoordinate);
 
@@ -102,17 +100,12 @@ protected:
   int sock;
   bool gameStarted;
   bool gameFinished;
-  bool watchTestShots;
-  bool testBot;
   unsigned msgEnd;
-  unsigned testPositions;
   double minSurfaceArea;
   FileSysDBRecord* taunts;
-  TargetingComputer* bot;
 
   std::string host;
   std::string userName;
-  std::string testDir;
   std::string staticBoard;
   std::vector<Message> messages;
   std::vector<std::string> msgBuffer;

@@ -19,11 +19,11 @@ typedef Milliseconds Timestamp;
 class Timer : public Printable
 {
 public:
-  enum {
+  enum Interval : Milliseconds {
     ONE_SECOND = 1000,
     ONE_MINUTE = (60 * 1000),
     ONE_HOUR   = (60 * 60 * 1000),
-    BAD_TIME   = ~0ULL
+    BAD_TIME   = 0x7FFFFFFFFFFFFFFFULL
   };
 
   static Timestamp now();
@@ -67,12 +67,8 @@ public:
     return startTime;
   }
 
-  bool isValid() const {
+  explicit operator bool() const {
     return (startTime != BAD_TIME);
-  }
-
-  bool operator!() const {
-    return (startTime == BAD_TIME);
   }
 
   bool operator<(const Timer& other) const {

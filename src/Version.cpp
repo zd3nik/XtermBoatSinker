@@ -124,11 +124,6 @@ bool Version::isEmpty() const {
 }
 
 //-----------------------------------------------------------------------------
-bool Version::isValid() const {
-  return ((major_ | minor_ | build_) || other_.size() || str_.size());
-}
-
-//-----------------------------------------------------------------------------
 bool Version::operator<(const Version& v) const {
   return ((major_ < v.major_) ||
           ((major_ == v.major_) && (minor_ < v.minor_)) ||

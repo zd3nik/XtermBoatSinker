@@ -6,7 +6,7 @@
 #define XBS_PLACEMENT_H
 
 #include "Platform.h"
-#include "Boat.h"
+#include "Ship.h"
 
 namespace xbs
 {
@@ -19,7 +19,7 @@ public:
 
   Placement();
   Placement(const Placement&);
-  Placement(const Boat&, const unsigned boatIndex,
+  Placement(const Ship&, const unsigned boatIndex,
             const unsigned startSquare, const unsigned inc);
 
   Placement& operator=(const Placement&);
@@ -39,7 +39,7 @@ public:
     this->score = score;
   }
 
-  const Boat& getBoat() const {
+  const Ship& getBoat() const {
     return boat;
   }
 
@@ -60,7 +60,7 @@ public:
   }
 
 private:
-  Boat boat;
+  Ship boat;
   unsigned boatIndex;
   unsigned start;
   unsigned inc;

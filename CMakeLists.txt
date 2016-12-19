@@ -7,6 +7,8 @@ else()
   set(CMAKE_CXX_STANDARD 11)
 endif()
 
+set(CMAKE_CXX_FLAGS "-Wall ${CMAKE_CXX_FLAGS}")
+
 include_directories(src src/db src/bots)
 aux_source_directory(src SRC_LIST)
 aux_source_directory(src/db SRC_LIST)

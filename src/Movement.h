@@ -27,10 +27,10 @@ public:
       distance(distance)
   { }
 
-  Movement(const Movement& other)
-    : direction(other.direction),
-      distance(other.distance)
-  { }
+  Movement(Movement&&) = default;
+  Movement(const Movement&) = default;
+  Movement& operator=(Movement&&) = default;
+  Movement& operator=(const Movement&) = default;
 
   bool operator==(const Movement& other) const {
     return ((direction == other.direction) && (distance == other.distance));

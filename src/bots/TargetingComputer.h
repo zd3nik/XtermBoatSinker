@@ -47,16 +47,12 @@ protected:
     return ((coord.getX() - 1) + (width * (coord.getY() - 1)));
   }
 
-  Coordinate toCoord(const unsigned i) const {
-    return Coordinate(((i % width) + 1), ((i / width) + 1));
-  }
-
   typedef std::vector<ScoredCoordinate> ScoredCoordinateVector;
   typedef std::vector<unsigned> SquareVector;
   typedef std::set<unsigned> SquareSet;
 
   Configuration config;
-  Container boatArea;
+  Container shipArea;
   unsigned shortBoat;
   unsigned longBoat;
   unsigned width;

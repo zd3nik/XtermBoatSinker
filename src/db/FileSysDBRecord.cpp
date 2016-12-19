@@ -3,8 +3,10 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "FileSysDBRecord.h"
-#include "Logger.h"
 #include "Input.h"
+#include "Logger.h"
+#include "Throw.h"
+#include <cstring>
 
 namespace xbs
 {
@@ -32,27 +34,25 @@ void FileSysDBRecord::clear() {
 //-----------------------------------------------------------------------------
 void FileSysDBRecord::load() {
   if (recordID.empty()) {
-    throw std::runtime_error("Empty FileSysDBRecord record ID");
+    Throw() << "Empty " << (*this) << " record ID";
   } else if (filePath.empty()) {
-    throw std::runtime_error("Empty FileSysDBRecord file path");
+    Throw() << "Empty " << (*this) << " file path";
   }
 
   dirty = false;
   Logger::debug() << "Loading '" << filePath << "' as record ID '"
                   << recordID << "'";
 
-  char sbuf[BUFFER_SIZE];
   FILE* fp = fopen(filePath.c_str(), "r+");
   if (!fp) {
     if (errno != ENOENT) {
-      snprintf(sbuf, sizeof(sbuf), "Failed to open %s: %s", filePath.c_str(),
-               strerror(errno));
-      throw std::runtime_error(sbuf);
+      Throw() << "Failed to open " << filePath << ": " << strerror(errno);
     }
     return;
   }
 
   try {
+    char sbuf[BUFFER_SIZE];
     while (fgets(sbuf, sizeof(sbuf), fp)) {
       const char* begin = sbuf;
       while ((*begin) && isspace(*begin)) ++begin;
@@ -97,7 +97,7 @@ void FileSysDBRecord::store(const bool force) {
   if ((dirty | force) && recordID.size() && filePath.size()) {
     FILE* fp = fopen(filePath.c_str(), "w");
     if (!fp) {
-      throw std::runtime_error(strerror(errno));
+      Throw() << "Failed to open '" << filePath << "': " << strerror(errno);
     }
 
     for (auto it = fieldCache.begin(); it != fieldCache.end(); ++it) {
@@ -107,20 +107,18 @@ void FileSysDBRecord::store(const bool force) {
         for (unsigned i = 0; i < values.size(); ++i) {
           const std::string& value = values[i];
           if (fprintf(fp, "%s=%s\n", fld.c_str(), value.c_str()) <= 0) {
-            std::string err = strerror(errno);
+            Throw() << "fprintf failed: " << strerror(errno);
             fclose(fp);
             fp = NULL;
-            throw std::runtime_error(err);
           }
         }
       }
     }
 
     if (fflush(fp) != 0) {
-      std::string err = strerror(errno);
+      Throw() << "fflush(" << (*this) << ") failed: " << strerror(errno);
       fclose(fp);
       fp = NULL;
-      throw std::runtime_error(err);
     }
 
     fclose(fp);

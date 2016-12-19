@@ -3,6 +3,7 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "DBRecord.h"
+#include "StringUtils.h"
 
 namespace xbs
 {
@@ -194,9 +195,9 @@ int DBRecord::addUInt64s(const std::string& fld,
 
 //-----------------------------------------------------------------------------
 bool DBRecord::strToBool(const std::string& str) {
-  return ((strcasecmp("true", str.c_str()) == 0) ||
-          (strcasecmp("yes", str.c_str()) == 0) ||
-          (strcasecmp("y", str.c_str()) == 0) ||
+  return (iEqual(str, "true") ||
+          iEqual(str, "yes") ||
+          iEqual(str, "y") ||
           (strToUInt(str) != 0));
 }
 
