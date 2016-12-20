@@ -67,7 +67,7 @@ public:
   unsigned getFieldCount() const;
   int getInt(const unsigned index = 0, const int def = -1) const;
   int getUnsigned(const unsigned index = 0, const unsigned def = 0) const;
-  const char* getString(const unsigned index = 0, const char* def = NULL) const;
+  const char* getString(const unsigned index = 0, const char* def = nullptr) const;
 
 private:
   int bufferData(const int fd);

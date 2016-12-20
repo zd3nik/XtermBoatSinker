@@ -143,85 +143,76 @@ void Configuration::print(Coordinate& coord) const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Configuration::getShipIndex(const Coordinate& coord) const {
-  return shipArea.toIndex(coord);
-}
-
-//-----------------------------------------------------------------------------
-bool Configuration::getShip(std::string& desc, const Coordinate& start,
-                            std::map<char, Ship>& shipMap) const
+bool Configuration::getShip(std::string& desc, const unsigned startIndex,
+                            std::map<char, unsigned>& length) const
 {
-  unsigned i = getShipIndex(start);
-  if (i >= desc.size()) {
+  if (startIndex >= desc.size()) {
+    ASSERT(false);
     return false; // error!
   }
 
-  Coordinate coord;
-  unsigned count = 1;
-  const char id = desc[i];
-  desc[i] = '*';
+  const char id = desc[startIndex];
+  desc[startIndex] = '*';
 
-  if (!Ship::isValidID(id)) {
-    return true; // ignore squares with no ship id
-  } else if (shipMap.count(id)) {
-    return false; // duplicate ship id, invalid setup
+  if ((id == '*') || (id == Ship::NONE)) {
+    return true; // ignore previously visited squares and empty squares
+  } else if (!Ship::isValidID(id) || length.count(id)) {
+    return false; // invalid or duplicate ship id
   }
 
-  if (shipArea.contains(coord.set(start).east())) {
-    while (((i = getShipIndex(coord)) < desc.size()) && (desc[i] == id)) {
+  unsigned i;
+  length[id] = 1;
+  Coordinate coord(shipArea.toCoord(startIndex));
+  if (shipArea.contains(coord.east())) {
+    while (((i = shipArea.toIndex(coord)) < desc.size()) && (desc[i] == id)) {
       desc[i] = '*';
-      count++;
+      length[id]++;
       coord.east();
     }
   }
-  if ((count == 1) && shipArea.contains(coord.set(start).south())) {
-    while (((i = getShipIndex(coord)) < desc.size()) && (desc[i] == id)) {
-      desc[i] = '*';
-      count++;
-      coord.south();
+
+  if (length[id] == 1) {
+    coord.set(shipArea.toCoord(startIndex));
+    if (shipArea.contains(coord.south())) {
+      while (((i = shipArea.toIndex(coord)) < desc.size()) && (desc[i] == id)) {
+        desc[i] = '*';
+        length[id]++;
+        coord.south();
+      }
     }
   }
 
-  if (count > 1) {
-    shipMap[id] = Ship(id, count);
-    return true;
-  }
-
-  return false;
+  return (length[id] > 1);
 }
 
 //-----------------------------------------------------------------------------
 bool Configuration::isValidShipDescriptor(const std::string& descriptor) const {
-  if (!isValid() || descriptor.empty()) {
+  if (!isValid() || (descriptor.size() != shipArea.getSize())) {
     return false;
   }
 
   std::string desc(descriptor);
-  if (desc.size() != (shipArea.getSize())) {
-    return false;
-  }
-
-  std::map<char, Ship> shipMap;
+  std::map<char, unsigned> length;
   for (unsigned i = 0; i < desc.size(); ++i) {
-    if (!getShip(desc, shipArea.toCoord(i), shipMap)) {
+    if (!getShip(desc, i, length)) {
       return false;
     }
   }
 
-  if (shipMap.size() != ships.size()) {
+  if (length.size() != ships.size()) {
     return false;
   }
 
   for (const Ship& ship : ships) {
-    auto it = shipMap.find(ship.getID());
-    if ((it == shipMap.end()) || (it->second.getLength() != ship.getLength())) {
+    auto it = length.find(ship.getID());
+    if ((it == length.end()) || (it->second != ship.getLength())) {
       return false;
     } else {
-      shipMap.erase(it);
+      length.erase(it);
     }
   }
 
-  return shipMap.empty();
+  return length.empty();
 }
 
 //-----------------------------------------------------------------------------

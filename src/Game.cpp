@@ -167,7 +167,7 @@ Board* Game::getBoardAtIndex(const unsigned index) {
   if (index < boards.size()) {
     return &(boards[index]);
   }
-  return NULL;
+  return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -179,12 +179,12 @@ Board* Game::getBoardForHandle(const int handle) {
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 //-----------------------------------------------------------------------------
 Board* Game::getBoardForPlayer(const std::string& name, const bool exact) {
-  Board* match = NULL;
+  Board* match = nullptr;
   if (name.size()) {
     if (isdigit(name[0])) {
       unsigned n = static_cast<unsigned>(atoi(name.c_str()));
@@ -199,7 +199,7 @@ Board* Game::getBoardForPlayer(const std::string& name, const bool exact) {
         }
         if (!exact && iEqual(name, playerName, name.size())) {
           if (match) {
-            return NULL;
+            return nullptr;
           } else {
             match = &board;
           }
@@ -219,7 +219,7 @@ Board* Game::getFirstBoardForAddress(const std::string& address) {
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -227,7 +227,7 @@ Board* Game::getBoardToMove() {
   if (isStarted() && !isFinished()) {
     return getBoardAtIndex(boardToMove);
   }
-  return NULL;
+  return nullptr;
 }
 
 //-----------------------------------------------------------------------------

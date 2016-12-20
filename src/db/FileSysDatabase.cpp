@@ -21,7 +21,7 @@ const char* FileSysDatabase::DEFAULT_HOME_DIR = "./db";
 
 //-----------------------------------------------------------------------------
 FileSysDatabase::FileSysDatabase()
-  : dir(NULL)
+  : dir(nullptr)
 { }
 
 //-----------------------------------------------------------------------------
@@ -33,7 +33,7 @@ FileSysDatabase::~FileSysDatabase() {
 void FileSysDatabase::close() {
   if (dir) {
     closedir(dir);
-    dir = NULL;
+    dir = nullptr;
   }
   homeDir.clear();
   clearCache();
@@ -68,7 +68,7 @@ FileSysDatabase& FileSysDatabase::open(const std::string& dbURI) {
 void FileSysDatabase::clearCache() {
   for (RecordIterator it = recordCache.begin(); it != recordCache.end(); ++it) {
     delete it->second;
-    it->second = NULL;
+    it->second = nullptr;
   }
   recordCache.clear();
 }
@@ -98,7 +98,7 @@ bool FileSysDatabase::loadCache() {
 //-----------------------------------------------------------------------------
 bool FileSysDatabase::loadRecord(const std::string& recordID) {
   std::string filePath = (homeDir + "/" + recordID + ".ini");
-  FileSysDBRecord* rec = NULL;
+  FileSysDBRecord* rec = nullptr;
   try {
     if (isalnum(*recordID.c_str())) {
       // TODO use shared_ptr
@@ -124,7 +124,7 @@ bool FileSysDatabase::loadRecord(const std::string& recordID) {
   }
 
   delete rec;
-  rec = NULL;
+  rec = nullptr;
 
   return false;
 }
@@ -177,7 +177,7 @@ bool FileSysDatabase::remove(const std::string& recordID) {
                       << "'";
     }
     delete it->second;
-    it->second = NULL;
+    it->second = nullptr;
     recordCache.erase(it);
   }
   return ok;
@@ -198,7 +198,7 @@ DBRecord* FileSysDatabase::get(const std::string& recordID, const bool add) {
     recordCache[recordID] = rec;
     return rec;
   }
-  return NULL;
+  return nullptr;
 }
 
 //-----------------------------------------------------------------------------

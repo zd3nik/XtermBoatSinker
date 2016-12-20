@@ -3,7 +3,6 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Container.h"
-#include "Screen.h"
 
 namespace xbs
 {
@@ -16,9 +15,9 @@ std::string Container::toString() const {
 }
 
 //-----------------------------------------------------------------------------
-Coordinate Container::toCoord(const unsigned i) const {
+Coordinate Container::toCoord(const unsigned index) const {
   if (isValid()) {
-    Coordinate coord(((i % getWidth()) + 1), ((i / getHeight()) + 1));
+    Coordinate coord(((index % width) + 1), ((index / height) + 1));
     if (contains(coord)) {
       return coord;
     }
@@ -29,17 +28,8 @@ Coordinate Container::toCoord(const unsigned i) const {
 //-----------------------------------------------------------------------------
 unsigned Container::toIndex(const Coordinate& coord) const {
   return contains(coord)
-      ? ((coord.getX() - 1) + (getWidth() * (coord.getY() - 1)))
+      ? ((coord.getX() - 1) + (width * (coord.getY() - 1)))
       : ~0U;
-}
-
-//-----------------------------------------------------------------------------
-bool Container::shift(const Direction dir, const unsigned count) {
-  if (count) {
-    begin.shift(dir, count);
-    end.shift(dir, count);
-  }
-  return Screen::get().contains(*this);
 }
 
 //-----------------------------------------------------------------------------
@@ -47,7 +37,6 @@ bool Container::arrangeChildren(std::vector<Container*>& children) const {
   Coordinate topLeft(begin);
   Coordinate bottomRight;
   unsigned height = 1;
-  bool fits = true;
 
   for (Container* child : children) {
     if (!child) {
@@ -60,24 +49,24 @@ bool Container::arrangeChildren(std::vector<Container*>& children) const {
                     (topLeft.getY() + child->getHeight() - 1));
 
     if (contains(child->set(topLeft, bottomRight))) {
-      topLeft.setX(topLeft.getX() + child->getWidth());
+      topLeft.shift(East, child->getWidth());
       height = std::max<unsigned>(height, child->getHeight());
       continue;
     }
 
-    topLeft.set(getMinX(), (topLeft.getY() + height));
+    topLeft.shift(South, height).setX(getMinX());
     bottomRight.set((topLeft.getX() + child->getWidth() - 1),
                     (topLeft.getY() + child->getHeight() - 1));
 
     if (contains(child->set(topLeft, bottomRight))) {
-      topLeft.setX(topLeft.getX() + child->getWidth());
+      topLeft.shift(East, child->getWidth());
       height = child->getHeight();
     } else {
-      fits = false;
+      return false;
     }
   }
 
-  return fits;
+  return true;
 }
 
 //-----------------------------------------------------------------------------

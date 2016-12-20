@@ -262,7 +262,7 @@ bool Server::printPlayers(Game& game, Coordinate& coord) {
 
   int n = 0;
   for (Board& board : game) {
-    Screen::print() << coord.south() << board.toString(++n, game.isStarted());
+    Screen::print() << coord.south() << board.summary(++n, game.isStarted());
   }
 
   return Screen::print() << coord.south(2).setX(1);
@@ -362,7 +362,7 @@ bool Server::sendMessage(Game& game, Coordinate& coord) {
     return false;
   }
 
-  Board* board = NULL;
+  Board* board = nullptr;
   if (user.size()) {
     if (!(board = game.getBoardForPlayer(user))) {
       Logger::error() << "Unknown player: " << user;
@@ -461,7 +461,7 @@ bool Server::blacklistAddress(Game& game, Coordinate& coord) {
   if (str.size()) {
     blackList.insert(ADDRESS_PREFIX + str);
     Board* board;
-    while ((board = game.getFirstBoardForAddress(str)) != NULL) {
+    while ((board = game.getFirstBoardForAddress(str)) != nullptr) {
       removePlayer(game, board->getHandle(), BOOTED);
     }
   }
@@ -581,7 +581,7 @@ bool Server::sendBoard(Game& game, const int handle, const Board* board) {
     snprintf(sbuf, sizeof(sbuf), "B|%s|%s|%s|%u|%u",
              board->getPlayerName().c_str(),
              board->getStatus().c_str(),
-             board->getMaskedDescriptor().c_str(),
+             board->maskedDescriptor().c_str(),
              board->getScore(),
              board->getSkips());
     return sendLine(game, handle, sbuf);
@@ -1075,37 +1075,30 @@ void Server::shoot(Game& game, const int handle) {
     return;
   }
 
-  char id = 0;
   Coordinate coord(input.getInt(2, 0), input.getInt(3, 0));
-  if (target->shootAt(coord, id)) {
-    char sbuf[Input::BUFFER_SIZE];
-    sender->incTurns();
-    if (Ship::isValidID(id)) {
-      sender->incScore();
-      snprintf(sbuf, sizeof(sbuf), "H|%s|%s|%s",
-               sender->getPlayerName().c_str(),
-               target->getPlayerName().c_str(),
-               coord.toString().c_str());
-      sendLineAll(game, sbuf);
-      if (target->hasHitTaunts()) {
-        snprintf(sbuf, sizeof(sbuf), "M|%s|%s",
-                 target->getPlayerName().c_str(),
-                 target->getHitTaunt().c_str());
-        sendLine(game, handle, sbuf);
-      }
-      sendBoard(game, *sender);
-    } else if (target->hasMissTaunts()) {
-      snprintf(sbuf, sizeof(sbuf), "M|%s|%s",
-               target->getPlayerName().c_str(),
-               target->getMissTaunt().c_str());
-      sendLine(game, handle, sbuf);
-    }
-    sendBoard(game, *target);
-    nextTurn(game);
+  const char id = target->shootSquare(coord);
+  if (!id) {
+    sendLine(game, handle, "M||illegal coordinates");
   } else if (Ship::isHit(id) || Ship::isMiss(id)) {
     sendLine(game, handle, "M||that spot has already been shot");
   } else {
-    sendLine(game, handle, "M||illegal coordinates");
+    sender->incTurns();
+    if (Ship::isValidID(id)) {
+      sender->incScore();
+      sendLineAll(game, ("H|" + sender->getPlayerName() +
+                         '|' + target->getPlayerName() +
+                         '|' + coord.toString()));
+      if (target->hasHitTaunts()) {
+        sendLine(game, handle, ("M|" + target->getPlayerName() +
+                                '|' + target->nextHitTaunt()));
+      }
+      sendBoard(game, *sender);
+    } else if (target->hasMissTaunts()) {
+      sendLine(game, handle, ("M|" + target->getPlayerName() +
+                              '|' + target->nextMissTaunt()));
+    }
+    sendBoard(game, *target);
+    nextTurn(game);
   }
 }
 

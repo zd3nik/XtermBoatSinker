@@ -75,13 +75,13 @@ unsigned Message::append(std::string& line, const unsigned maxLen,
   }
 
   const unsigned len = (maxLen - line.size());
-  const char* lastPunct = NULL;
+  const char* lastPunct = nullptr;
   const char* end = begin;
   const char* p = begin;
 
   for (unsigned i = 0; (i < len); ++i, ++p) {
     if (!(*p) || isspace(*p)) {
-      lastPunct = NULL;
+      lastPunct = nullptr;
       end = p;
       if (!(*p)) {
         break;

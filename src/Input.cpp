@@ -86,7 +86,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
 
   int ret = 0;
   while (true) {
-    ret = select((maxFd + 1), &set, NULL, NULL, (timeout_ms < 0) ? NULL : &tv);
+    ret = select((maxFd + 1), &set, nullptr, nullptr, (timeout_ms < 0) ? nullptr : &tv);
     if (ret < 0) {
       if (errno == EINTR) {
         Logger::debug() << "Input select interrupted";
@@ -241,7 +241,7 @@ int Input::getInt(const unsigned index, const int def) const {
 
 //-----------------------------------------------------------------------------
 int Input::getUnsigned(const unsigned index, const unsigned def) const {
-  const char* value = getString(index, NULL);
+  const char* value = getString(index, nullptr);
   if (value) {
     const char* p = ((*value) == '+') ? (value + 1) : value;
     if (isdigit(*p)) {

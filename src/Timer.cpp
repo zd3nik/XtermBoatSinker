@@ -11,7 +11,7 @@ namespace xbs
 //-----------------------------------------------------------------------------
 Timestamp Timer::now() {
   struct timeval tv;
-  if (gettimeofday(&tv, NULL) < 0) {
+  if (gettimeofday(&tv, nullptr) < 0) {
     return BAD_TIME;
   }
   return static_cast<Timestamp>((tv.tv_sec * 1000) + (tv.tv_usec / 1000));

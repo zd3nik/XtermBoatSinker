@@ -69,7 +69,7 @@ public:
   }
 
   bool hasBoard(const int handle) {
-    return (getBoardForHandle(handle) != NULL);
+    return (getBoardForHandle(handle) != nullptr);
   }
 
   unsigned getTurnCount() const {

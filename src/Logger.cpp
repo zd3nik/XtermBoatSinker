@@ -11,19 +11,19 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-static Logger* instance = NULL;
+static std::unique_ptr<Logger> instance;
 
 //-----------------------------------------------------------------------------
 Logger& Logger::getInstance() {
   if (!instance) {
-    instance = new Logger();
+    instance.reset(new Logger());
   }
   return (*instance);
 }
 
 //-----------------------------------------------------------------------------
 Logger::Logger()
-  : logLevel(DEFAULT_LOG_LEVEL),
+  : logLevel(INFO),
     stream(&std::cout)
 {
   const CommandArgs& args = CommandArgs::getInstance();
@@ -76,16 +76,15 @@ Logger& Logger::setLogLevel(const LogLevel logLevel) {
 //-----------------------------------------------------------------------------
 Logger& Logger::setLogLevel(const std::string& level) {
   if (iEqual(level, "DEBUG")) {
-    setLogLevel(DEBUG);
+    return setLogLevel(DEBUG);
   } else if (iEqual(level, "INFO")) {
-    setLogLevel(INFO);
+    return setLogLevel(INFO);
   } else if (iEqual(level, "WARN")) {
-    setLogLevel(INFO);
+    return setLogLevel(INFO);
   } else if (iEqual(level, "ERROR")) {
-    setLogLevel(INFO);
-  } else {
-    Logger::error() << "Invalid log level: '" << level << "'";
+    return setLogLevel(INFO);
   }
+  Logger::error() << "Invalid log level: '" << level << "'";
   return (*this);
 }
 

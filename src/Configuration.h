@@ -90,10 +90,9 @@ public:
   }
 
 private:
-  unsigned getShipIndex(const Coordinate& coord) const;
   bool isValid() const;
-  bool getShip(std::string& desc, const Coordinate& start,
-               std::map<char, Ship>& shipMap) const;
+  bool getShip(std::string& desc, const unsigned startIndex,
+               std::map<char, unsigned>& shipLengthMap) const;
 
   std::string name;
   unsigned minPlayers;

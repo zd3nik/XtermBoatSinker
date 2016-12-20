@@ -22,8 +22,6 @@ public:
     DEBUG
   };
 
-  static const LogLevel DEFAULT_LOG_LEVEL = INFO;
-
   static Logger& getInstance();
 
   static inline LogStream printError() {
@@ -46,14 +44,26 @@ public:
     return getInstance().log(DEBUG, "DEBUG: ");
   }
 
-  inline LogStream log(const char* hdr = NULL) {
-    return LogStream(*stream, hdr);
+  Logger(Logger&&) = delete;
+  Logger(const Logger&) = delete;
+  Logger& operator=(Logger&&) = delete;
+  Logger& operator=(const Logger&) = delete;
+
+  ~Logger();
+
+  Logger& setLogLevel(const LogLevel logLevel);
+  Logger& setLogLevel(const std::string& logLevelStr);
+  Logger& appendToFile(const std::string& filePath);
+
+  LogStream log(const char* hdr = nullptr) const {
+    return LogStream(stream, hdr);
   }
 
-  inline LogStream log(const LogLevel level, const char* hdr = NULL,
-                       const bool print = false)
+  LogStream log(const LogLevel level,
+                const char* hdr = nullptr,
+                const bool print = false) const
   {
-    return (logLevel >= level) ? LogStream(*stream, hdr, print) : LogStream();
+    return (logLevel >= level) ? LogStream(stream, hdr, print) : LogStream();
   }
 
   std::string getLogFile() const {
@@ -64,18 +74,13 @@ public:
     return logLevel;
   }
 
-  virtual ~Logger();
-  Logger& setLogLevel(const LogLevel logLevel);
-  Logger& setLogLevel(const std::string& logLevelStr);
-  Logger& appendToFile(const std::string& filePath);
-
 private:
   Logger();
 
-  std::string logFile;
   LogLevel logLevel;
   std::ostream* stream;
   std::ofstream fileStream;
+  std::string logFile;
 };
 
 } // namespace xbs

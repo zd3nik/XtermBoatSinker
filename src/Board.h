@@ -6,10 +6,10 @@
 #define XBS_BOARD_H
 
 #include "Platform.h"
-#include "Ship.h"
-#include "Container.h"
 #include "Configuration.h"
+#include "Container.h"
 #include "DBRecord.h"
+#include "Ship.h"
 
 namespace xbs
 {
@@ -61,7 +61,10 @@ private:
   std::vector<std::string> missTaunts;
 
 public:
-  static std::string toString(const std::string& desc, const unsigned width);
+  static std::string toString(const std::string& descriptor,
+                              const unsigned width);
+
+  virtual std::string toString() const;
 
   Board(const int handle,
         const std::string& playerName,
@@ -70,51 +73,68 @@ public:
         const unsigned shipAreaHeight);
 
   Board() = default;
-  Board(const Board&);
-  Board& operator=(const Board& other);
-  Board& setPlayerName(const std::string& value);
+  Board(Board&&) = default;
+  Board(const Board&) = default;
+  Board& operator=(Board&&) = default;
+  Board& operator=(const Board&) = default;
 
-  void addHitTaunt(const std::string& value);
-  void addMissTaunt(const std::string& value);
-  void addStatsTo(DBRecord&, const bool first, const bool last) const;
-  void clearDescriptor();
-  void clearHitTaunts();
-  void clearMissTaunts();
-  void incScore(const unsigned value = 1);
-  void incSkips(const unsigned value = 1);
-  void incTurns(const unsigned value = 1);
-  void setHandle(const int handle);
-  void setScore(const unsigned value);
-  void setSkips(const unsigned value);
-  void setTurns(const unsigned value);
-  void setStatus(const std::string& str);
-  void setToMove(const bool toMove);
-  void saveTo(DBRecord&, const unsigned opponents,
-              const bool first, const bool last) const;
+  explicit operator bool() const { return isValid(); }
 
-  Container getShipArea() const;
-  std::string getAddress() const;
-  std::string getDescriptor() const;
-  std::string getHitTaunt();
-  std::string getMaskedDescriptor() const;
-  std::string getMissTaunt();
-  std::string getPlayerName() const;
-  std::string getStatus() const;
-  std::vector<std::string> getHitTaunts() const;
-  std::vector<std::string> getMissTaunts() const;
-  std::string toString(const unsigned number, const bool gameStarted) const;
+  int getHandle() const { return handle; }
+  bool isToMove() const { return toMove; }
+  unsigned getScore() const { return score; }
+  unsigned getSkips() const { return skips; }
+  unsigned getTurns() const { return turns; }
+  Container getShipArea() const { return shipArea; }
+  std::string getPlayerName() const { return playerName; }
+  std::string getDescriptor() const { return descriptor; }
+  std::string getAddress() const { return address; }
+  std::string getStatus() const { return status; }
+  std::vector<std::string> getHitTaunts() const { return hitTaunts; }
+  std::vector<std::string> getMissTaunts() const { return missTaunts; }
 
-  virtual std::string toString() const;
-  virtual Coordinate toCoord(const unsigned i) const;
-  virtual unsigned toIndex(const Coordinate&) const;
+  Board& setHandle(const int);
+  Board& setToMove(const bool);
+  Board& setScore(const unsigned);
+  Board& setSkips(const unsigned);
+  Board& setTurns(const unsigned);
+  Board& incScore(const unsigned = 1);
+  Board& incSkips(const unsigned = 1);
+  Board& incTurns(const unsigned = 1);
+  Board& setPlayerName(const std::string&);
+  Board& setAddress(const std::string&);
+  Board& setStatus(const std::string&);
+  Board& addHitTaunt(const std::string&);
+  Board& addMissTaunt(const std::string&);
+  Board& clearDescriptor();
+  Board& clearHitTaunts();
+  Board& clearMissTaunts();
 
-  int getHandle() const;
+  std::string summary(const unsigned playerNum, const bool gameStarted) const;
+  std::string maskedDescriptor() const;
+  std::string nextHitTaunt() const;
+  std::string nextMissTaunt() const;
+  std::vector<Coordinate> shipAreaCoordinates() const;
+
+  bool isDead() const;
+  bool hasHitTaunts() const;
+  bool hasMissTaunts() const;
+  bool onEdge(const Coordinate&) const;
+  bool matchesConfig(const Configuration&) const;
+  bool updateDescriptor(const std::string& newDescriptor);
+  bool addHitsAndMisses(const std::string& descriptor);
+  bool addRandomShips(const Configuration&, const double minSurfaceArea);
+  bool addShip(const Ship&, Coordinate, const Direction);
+  bool removeShip(const Ship&);
+  bool print(const bool masked, const Configuration* = nullptr) const;
+
+  char getSquare(const Coordinate&) const;
+  char setSquare(const Coordinate&, const char newValue);
+  char shootSquare(const Coordinate&);
+
+  unsigned hitCount() const;
+  unsigned missCount() const;
   unsigned getShipPointCount() const;
-  unsigned getHitCount() const;
-  unsigned getMissCount() const;
-  unsigned getScore() const;
-  unsigned getSkips() const;
-  unsigned getTurns() const;
   unsigned adjacentFree(const Coordinate&) const;
   unsigned adjacentHits(const Coordinate&) const;
   unsigned maxInlineHits(const Coordinate&) const;
@@ -123,28 +143,33 @@ public:
   unsigned freeCount(Coordinate, const Direction) const;
   unsigned hitCount(Coordinate, const Direction) const;
   unsigned distToEdge(Coordinate, const Direction) const;
-  char getSquare(const Coordinate&) const;
-  char setSquare(const Coordinate&, const char newValue);
-  bool addHitsAndMisses(const std::string& descriptor);
-  bool addRandomShips(const Configuration&, const double minSurfaceArea);
-  bool hasHitTaunts() const;
-  bool hasMissTaunts() const;
-  bool isDead() const;
-  bool isToMove() const;
-  bool isValid() const;
-  bool isValid(const Configuration&) const;
-  bool print(const bool masked, const Configuration* = NULL) const;
-  bool removeShip(const Ship&);
-  bool addShip(const Ship&, Coordinate, const Direction);
-  bool updateDescriptor(const std::string& newDescriptor);
 
-  /**
-   * @brief Shoot at a coordinate within the ship area
-   * @param coordinate The coordinate in the ship area being shot
-   * @param[out] previous Set to state of coordinate before shooting
-   * @return true if the shot is legal (in the ship area and not already shot)
-   */
-  bool shootAt(const Coordinate& coordinate, char& previous);
+  void addStatsTo(DBRecord&, const bool first, const bool last) const;
+  void saveTo(DBRecord&, const unsigned opponents,
+              const bool first, const bool last) const;
+
+  Coordinate getShipCoord(const unsigned index) const {
+    return shipArea.toCoord(index);
+  }
+
+  unsigned getShipIndex(const Coordinate& coord) const {
+    return shipArea.toIndex(coord);
+  }
+
+private:
+  bool isValid() const {
+    return (Container::isValid() &&
+            (playerName.size() > 0) &&
+            (shipArea.getSize() > 0) &&
+            (descriptor.size() == shipArea.getSize()));
+  }
+
+  bool placeShip(std::string& desc, const Ship&, Coordinate, const Direction);
+  bool placeShips(std::string& desc,
+                  const unsigned msa,
+                  const std::vector<Coordinate>& coords,
+                  const std::vector<Ship>::iterator& sBegin,
+                  const std::vector<Ship>::iterator& sEnd);
 };
 
 } // namespace xbs

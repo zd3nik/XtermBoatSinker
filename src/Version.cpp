@@ -151,7 +151,7 @@ const char* Version::nextValue(const char* str, unsigned& value,
                                std::string& other)
 {
   if (!str || !*str) {
-    return NULL;
+    return nullptr;
   }
 
   const char* p = str;
@@ -164,7 +164,7 @@ const char* Version::nextValue(const char* str, unsigned& value,
         value = tmp;
       } else {
         Logger::error() << "integer overflow in '" << str << "'";
-        return NULL;
+        return nullptr;
       }
     }
     if (*p == '.') {

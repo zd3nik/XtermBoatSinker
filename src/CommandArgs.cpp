@@ -11,7 +11,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-static CommandArgs* instance = NULL;
+static CommandArgs* instance = nullptr;
 
 //-----------------------------------------------------------------------------
 CommandArgs::CommandArgs(const int argc, const char** argv)
@@ -33,7 +33,7 @@ void CommandArgs::initialize(const int argc, const char* argv[]) {
 //-----------------------------------------------------------------------------
 const CommandArgs& CommandArgs::getInstance() {
   if (!instance) {
-    instance = new CommandArgs(0, NULL);
+    instance = new CommandArgs(0, nullptr);
   }
   return (*instance);
 }
@@ -46,7 +46,7 @@ int CommandArgs::count() const  {
 //-----------------------------------------------------------------------------
 const char* CommandArgs::get(const int index) const {
   if ((index < 0) || (index >= argc) || !argv) {
-    return NULL;
+    return nullptr;
   } else {
     return argv[index];
   }
@@ -80,7 +80,7 @@ bool CommandArgs::hasValue(const int i) const {
 //-----------------------------------------------------------------------------
 const char* CommandArgs::CommandArgs::getValueOf(const char* a, const char* b)
 const {
-  const char* param = NULL;
+  const char* param = nullptr;
   int idx = -1;
   if (argc && argv && !(Input::empty(a) && Input::empty(b))) {
     for (int i = 0; i < argc; ++i) {
@@ -103,7 +103,7 @@ const {
       return value;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 } // namespace xbs

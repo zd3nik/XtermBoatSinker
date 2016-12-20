@@ -66,7 +66,7 @@ Board* TargetingComputer::getTargetBoard(const std::string& me,
                                          const std::vector<Board*>& boardList,
                                          ScoredCoordinate& bestCoord)
 {
-  Board* bestBoard = NULL;
+  Board* bestBoard = nullptr;
   if (boardList.size() > 1) {
     std::vector<Board*> boards(boardList.begin(), boardList.end());
     std::random_shuffle(boards.begin(), boards.end());
@@ -93,7 +93,7 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
     Throw() << "Incorrect board descriptor size: " << desc.size();
   }
 
-  hitCount = board.getHitCount();
+  hitCount = board.hitCount();
   remain = (config.getPointGoal() - hitCount);
 
   coords.clear();
@@ -162,7 +162,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
 
   Coordinate statusLine(1, 5);
   Board board(-1, getName(), "local", width, height);
-  if (!board.shift(South, (statusLine.getY() - 1))) {
+  if (!Screen::get().contains(board.shift(South, (statusLine.getY() - 1)))) {
     Throw() << "Board does not fit in terminal";
   }
   Screen::print() << board.getTopLeft() << ClearToScreenEnd;
@@ -172,7 +172,6 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
 
   Timer timer;
   Input input;
-  char prev = 0;
   unsigned maxShots = 0;
   unsigned minShots = ~0U;
   unsigned perfectGames = 0ULL;
@@ -189,7 +188,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
     }
 
     Board targetBoard(board);
-    if (!targetBoard.updateDescriptor(board.getMaskedDescriptor())) {
+    if (!targetBoard.updateDescriptor(board.maskedDescriptor())) {
       Throw() << "Failed to mask boat area";
     }
 
@@ -202,11 +201,12 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
     while (hits < config.getPointGoal()) {
       ScoredCoordinate coord = getTargetCoordinate(targetBoard);
       Logger::debug() << "best shot = " << coord;
-      if (!board.shootAt(coord, prev)) {
+      const char id = board.shootSquare(coord);
+      if (!id || Ship::isHit(id) || Ship::isMiss(id)) {
         Throw() << "Invalid target coord: " << coord;
       } else if (++totalShots == 0) {
         Throw(OverflowError) << "Shot count overflow";
-      } else if (Ship::isValidID(prev)) {
+      } else if (Ship::isValidID(id)) {
         targetBoard.setSquare(coord, Ship::HIT);
         hits++;
       } else {
@@ -222,10 +222,10 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
           return;
         }
         std::string str = Input::trim(input.getString(0, ""));
-        prev = toupper(*str.c_str());
-        if (prev == 'Q') {
+        const char ch = toupper(*str.c_str());
+        if (ch == 'Q') {
           return;
-        } else if (prev == 'S') {
+        } else if (ch == 'S') {
           watch = false;
           Screen::print() << board.getTopLeft() << ClearToScreenEnd;
           board.print(true);

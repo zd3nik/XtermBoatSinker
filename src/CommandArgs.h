@@ -17,11 +17,11 @@ public:
   static const CommandArgs& getInstance();
 
   int count() const;
-  int indexOf(const char* a, const char* b = NULL) const;
+  int indexOf(const char* a, const char* b = nullptr) const;
   bool hasValue(const int i) const;
-  bool match(const int i, const char* a, const char* b = NULL) const;
+  bool match(const int i, const char* a, const char* b = nullptr) const;
   const char* get(const int index) const;
-  const char* getValueOf(const char* a, const char* b = NULL) const;
+  const char* getValueOf(const char* a, const char* b = nullptr) const;
 
   std::string getProgramName() const {
     return progName;

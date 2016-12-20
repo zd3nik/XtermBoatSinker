@@ -6,9 +6,9 @@
 #define XBS_COORDINATE_H
 
 #include "Platform.h"
+#include "CSV.h"
 #include "Movement.h"
 #include "Printable.h"
-#include "CSV.h"
 
 namespace xbs
 {
@@ -21,10 +21,26 @@ private:
   unsigned y = 0;
 
 public:
+  virtual std::string toString() const {
+    std::stringstream ss;
+    if (x <= 26) {
+      ss << static_cast<char>('a' + x - 1) << y; // "a1" format
+    } else {
+      ss << x << ',' << y;                       // "1,1" format
+    }
+    return ss.str();
+  }
+
   Coordinate(const unsigned x, const unsigned y)
     : x(x),
       y(y)
   { }
+
+  Coordinate& set(const unsigned x, const unsigned y) {
+    this->x = x;
+    this->y = y;
+    return (*this);
+  }
 
   Coordinate() = default;
   Coordinate(Coordinate&&) = default;
@@ -32,16 +48,14 @@ public:
   Coordinate& operator=(Coordinate&&) = default;
   Coordinate& operator=(const Coordinate&) = default;
 
-  Coordinate& set(const Coordinate& other) {
-    x = other.x;
-    y = other.y;
-    return (*this);
-  }
+  explicit operator bool() const { return (x && y); }
 
-  Coordinate& set(const unsigned x, const unsigned y) {
-    this->x = x;
-    this->y = y;
-    return (*this);
+  unsigned getX() const { return x; }
+  unsigned getY() const { return y; }
+  unsigned parity() const { return ((x & 1) == (y & 1)); }
+
+  Coordinate& set(const Coordinate& other) {
+    return set(other.x, other.y);
   }
 
   Coordinate& setX(const unsigned x) {
@@ -102,32 +116,6 @@ public:
 
   bool operator<(const Coordinate& other) const {
     return ((y < other.y) || ((y == other.y) && (x < other.x)));
-  }
-
-  explicit operator bool() const {
-    return (x && y);
-  }
-
-  unsigned getX() const {
-    return x;
-  }
-
-  unsigned getY() const {
-    return y;
-  }
-
-  unsigned parity() const {
-    return ((x & 1) == (y & 1));
-  }
-
-  virtual std::string toString() const {
-    std::stringstream ss;
-    if (x <= ('z' - 'a' + 1)) {
-      ss << static_cast<char>('a' + x - 1) << y; // "a1" format
-    } else {
-      ss << x << ',' << y;                       // "1,1" format
-    }
-    return ss.str();
   }
 
   bool fromString(const std::string& str) {

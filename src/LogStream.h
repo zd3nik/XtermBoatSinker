@@ -8,7 +8,6 @@
 #include "Platform.h"
 #include "Printable.h"
 #include "Screen.h"
-#include <type_traits>
 
 namespace xbs
 {
@@ -17,20 +16,22 @@ namespace xbs
 class LogStream
 {
 private:
-  const bool haveStream = false;
+  std::ostream* stream = nullptr;
   const bool print = false;
-  std::ostream& stream = std::cout;
 
 public:
-  LogStream(std::ostream& stream, const char* hdr, const bool print = false)
-    : haveStream(true),
-      print(print && ((&stream) != (&std::cout))),
-      stream(stream)
+  LogStream(std::ostream* stream,
+            const char* hdr = nullptr,
+            const bool print = false)
+    : stream(stream),
+      print(print && (stream != &(std::cout)))
   {
     if (hdr) {
-      stream << hdr;
+      if (stream) {
+        (*stream) << hdr;
+      }
       if (print) {
-        Screen::print() << EL << ClearLine << Red;
+        Screen::print() << EL << ClearLine << Red << hdr;
       }
     }
   }
@@ -42,9 +43,9 @@ public:
   LogStream& operator=(const LogStream&) = delete;
 
   virtual ~LogStream()  {
-    if (haveStream) {
-      stream << std::endl;
-      stream.flush();
+    if (stream) {
+      (*stream) << std::endl;
+      stream->flush();
     }
     if (print) {
       Screen::print() << DefaultColor << EL << Flush;
@@ -53,8 +54,8 @@ public:
 
   template<class T>
   LogStream& operator<<(const T& x) {
-    if (haveStream) {
-//      stream << x; TODO
+    if (stream) {
+      (*stream) << x;
     }
     if (print) {
       Screen::print() << x;

@@ -21,6 +21,10 @@ enum Direction {
 //-----------------------------------------------------------------------------
 class Movement
 {
+private:
+  const Direction direction;
+  const unsigned distance;
+
 public:
   Movement(const Direction direction, const unsigned distance)
     : direction(direction),
@@ -47,10 +51,6 @@ public:
   unsigned getDistance() const {
     return distance;
   }
-
-private:
-  const Direction direction;
-  const unsigned distance;
 };
 
 } // namespace xbs

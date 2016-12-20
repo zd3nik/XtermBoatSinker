@@ -43,7 +43,7 @@ Client::Client()
     gameFinished(false),
     msgEnd(~0U),
     minSurfaceArea(0),
-    taunts(NULL)
+    taunts(nullptr)
 {
   input.addHandle(STDIN_FILENO);
 }
@@ -53,7 +53,7 @@ Client::~Client() {
   closeSocket();
 
   delete taunts;
-  taunts = NULL;
+  taunts = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -255,7 +255,7 @@ bool Client::openSocket() {
   char sbuf[1024];
   snprintf(sbuf, sizeof(sbuf), "%d", port);
 
-  struct addrinfo* result = NULL;
+  struct addrinfo* result = nullptr;
   int err = getaddrinfo(host.c_str(), sbuf, &hints, &result);
   if (err) {
     Logger::printError() << "Failed to lookup host '" << host << "': "
@@ -429,14 +429,15 @@ bool Client::setupBoard() {
   boardList.clear();
 
   if (staticBoard.size()) {
-    yourBoard = Board(-1, "", "local",
+    yourBoard = Board(-1, "Board #1", "local",
                       config.getBoardWidth(),
                       config.getBoardHeight());
 
     if (!yourBoard.updateDescriptor(staticBoard) ||
-        !yourBoard.isValid(config))
+        !yourBoard.matchesConfig(config))
     {
-      Logger::printError() << "invalid static board descriptor";
+      Logger::printError() << "invalid static board descriptor ["
+                           << staticBoard << ']';
       return false;
     }
     return true;
@@ -510,7 +511,7 @@ bool Client::setupBoard() {
     } else if (ch == '1') {
       if (ships.size() && !manualSetup(ships, boards, coord)) {
         return false;
-      } else if (boards.front().isValid(config)) {
+      } else if (boards.front().matchesConfig(config)) {
         yourBoard = boards.front().setPlayerName("");
         Screen::print() << coord << ClearToScreenEnd << Flush;
         break;
@@ -518,7 +519,7 @@ bool Client::setupBoard() {
     } else if ((ch > '1') &&
                (static_cast<unsigned>(n = (ch - '1')) <= boards.size()))
     {
-      if (boards[n].isValid(config)) {
+      if (boards[n].matchesConfig(config)) {
         yourBoard = boards[n].setPlayerName("");
         Screen::print() << coord << ClearToScreenEnd << Flush;
         break;
@@ -854,7 +855,7 @@ void Client::appendMessage(const Message& message) {
 
 //-----------------------------------------------------------------------------
 bool Client::sendMessage(const Coordinate& promptCoord) {
-  Board* board = NULL;
+  Board* board = nullptr;
   std::string name;
   std::string msg;
   Coordinate coord(promptCoord);
@@ -1497,7 +1498,7 @@ bool Client::viewBoard(const Coordinate& promptCoord) {
   }
 
   Board& board = boardMap[userName];
-  if (!board.isValid()) {
+  if (!board) {
     Logger::printError() << "You board is invalid!";
     return false;
   }
@@ -1663,7 +1664,7 @@ bool Client::clearMessages(const Coordinate& promptCoord) {
 
 //-----------------------------------------------------------------------------
 Board* Client::getBoard(const std::string& str) {
-  Board* board = NULL;
+  Board* board = nullptr;
   if (str.size()) {
     if (isdigit(str[0])) {
       unsigned n = static_cast<unsigned>(atoi(str.c_str()));
@@ -1677,7 +1678,7 @@ Board* Client::getBoard(const std::string& str) {
         std::string name = it->second.getPlayerName();
         if (strncasecmp(str.c_str(), name.c_str(), str.size()) == 0) {
           if (board) {
-            return NULL;
+            return nullptr;
           } else {
             board = &(it->second);
           }
@@ -1697,7 +1698,7 @@ bool Client::shoot(const Coordinate& promptCoord) {
     return true;
   }
 
-  Board* board = NULL;
+  Board* board = nullptr;
   std::string name;
   std::string location;
   Coordinate shotCoord;

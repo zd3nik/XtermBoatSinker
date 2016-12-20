@@ -84,12 +84,12 @@ void FileSysDBRecord::load() {
   }
   catch (...) {
     fclose(fp);
-    fp = NULL;
+    fp = nullptr;
     throw;
   }
 
   fclose(fp);
-  fp = NULL;
+  fp = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ void FileSysDBRecord::store(const bool force) {
           if (fprintf(fp, "%s=%s\n", fld.c_str(), value.c_str()) <= 0) {
             Throw() << "fprintf failed: " << strerror(errno);
             fclose(fp);
-            fp = NULL;
+            fp = nullptr;
           }
         }
       }
@@ -118,11 +118,11 @@ void FileSysDBRecord::store(const bool force) {
     if (fflush(fp) != 0) {
       Throw() << "fflush(" << (*this) << ") failed: " << strerror(errno);
       fclose(fp);
-      fp = NULL;
+      fp = nullptr;
     }
 
     fclose(fp);
-    fp = NULL;
+    fp = nullptr;
   }
   dirty = false;
 }

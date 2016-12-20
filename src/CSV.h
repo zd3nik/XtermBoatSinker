@@ -18,15 +18,27 @@ private:
   std::stringstream stream;
 
 public:
+
+  //---------------------------------------------------------------------------
   class Cell : public Printable {
   private:
     std::string value;
   public:
     virtual std::string toString() const { return value; }
-    void set(const std::string& str) { value = str; }
-    bool isInt() const { return value.empty() ? false : isdigit(value[0]); }
-    int toInt() const { return value.empty() ? 0 : atoi(value.c_str()); }
     explicit operator bool() const { return !value.empty(); }
+    void set(const std::string& str) { value = str; }
+    int toInt() const { return value.empty() ? 0 : atoi(value.c_str()); }
+    bool isInt() const {
+      return value.empty()
+          ? false
+          : isdigit(value[0])
+            ? true
+            : (value.size() < 2)
+              ? false
+              : ((value[0] == '+') || (value[0] == '-'))
+                ? isdigit(value[1])
+                : false;
+    }
   };
 
   CSV(const std::string& line = std::string(), const char delim = ',')

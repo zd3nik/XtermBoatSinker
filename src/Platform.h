@@ -25,7 +25,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 #define ASSERT assert
@@ -35,5 +34,11 @@
 #else
 #define VERIFY(x) x
 #endif
+
+namespace xbs {
+  inline unsigned random(const unsigned bound) {
+    return (((static_cast<unsigned>(rand() >> 3)) & 0x7FFFU) % bound);
+  }
+}
 
 #endif // XBS_PLATFORM_H

@@ -19,7 +19,7 @@ void termSizeChanged(int) {
 //-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
-    srand((unsigned)time(NULL) * (unsigned)getpid());
+    srand((unsigned)time(nullptr) * (unsigned)getpid());
     CommandArgs::initialize(argc, argv);
     Client client;
 

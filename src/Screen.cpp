@@ -12,7 +12,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-static Screen* instance = NULL;
+static Screen* instance = nullptr;
 
 //-----------------------------------------------------------------------------
 static Container GetScreenDimensions() {
@@ -20,12 +20,16 @@ static Container GetScreenDimensions() {
   if (ioctl(0, TIOCGWINSZ , &max) < 0) {
     Throw() << "Failed to get screen dimensions: " << strerror(errno);
   }
+
   Coordinate topLeft(1, 1);
-  Coordinate bottomRight((unsigned)max.ws_col, (unsigned)max.ws_row);
+  Coordinate bottomRight(static_cast<unsigned>(max.ws_col),
+                         static_cast<unsigned>(max.ws_row));
+
   if (!bottomRight) {
     Throw() << "Invalid screen dimensions: " << bottomRight.getX()
             << 'x' << bottomRight.getY();
   }
+
   return Container(topLeft, bottomRight);
 }
 
@@ -33,7 +37,7 @@ static Container GetScreenDimensions() {
 Screen& Screen::get(const bool update) {
   if (update) {
     delete instance;
-    instance = NULL;
+    instance = nullptr;
   }
   if (!instance) {
     instance = new Screen(GetScreenDimensions());
@@ -59,7 +63,7 @@ const char* Screen::colorCode(const ScreenColor color) {
 
 //-----------------------------------------------------------------------------
 Screen::operator bool() const {
-  return (instance != NULL);
+  return (instance != nullptr);
 }
 
 //-----------------------------------------------------------------------------
