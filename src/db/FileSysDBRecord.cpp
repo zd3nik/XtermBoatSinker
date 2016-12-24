@@ -5,8 +5,8 @@
 #include "FileSysDBRecord.h"
 #include "Input.h"
 #include "Logger.h"
+#include "StringUtils.h"
 #include "Throw.h"
-#include <cstring>
 
 namespace xbs
 {
@@ -46,7 +46,7 @@ void FileSysDBRecord::load() {
   FILE* fp = fopen(filePath.c_str(), "r+");
   if (!fp) {
     if (errno != ENOENT) {
-      Throw() << "Failed to open " << filePath << ": " << strerror(errno);
+      Throw() << "Failed to open " << filePath << ": " << toError(errno);
     }
     return;
   }
@@ -67,12 +67,12 @@ void FileSysDBRecord::load() {
         continue;
       }
 
-      std::string fld(Input::trim(std::string(begin, 0, (equal - begin))));
+      std::string fld(begin, 0, (equal - begin));
       if (fld.empty()) {
         continue;
       }
 
-      std::string val(Input::trim(equal + 1));
+      std::string val(equal);
       auto it = fieldCache.find(fld);
       if (it == fieldCache.end()) {
         it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
@@ -97,7 +97,7 @@ void FileSysDBRecord::store(const bool force) {
   if ((dirty | force) && recordID.size() && filePath.size()) {
     FILE* fp = fopen(filePath.c_str(), "w");
     if (!fp) {
-      Throw() << "Failed to open '" << filePath << "': " << strerror(errno);
+      Throw() << "Failed to open '" << filePath << "': " << toError(errno);
     }
 
     for (auto it = fieldCache.begin(); it != fieldCache.end(); ++it) {
@@ -107,7 +107,7 @@ void FileSysDBRecord::store(const bool force) {
         for (unsigned i = 0; i < values.size(); ++i) {
           const std::string& value = values[i];
           if (fprintf(fp, "%s=%s\n", fld.c_str(), value.c_str()) <= 0) {
-            Throw() << "fprintf failed: " << strerror(errno);
+            Throw() << "fprintf failed: " << toError(errno);
             fclose(fp);
             fp = nullptr;
           }
@@ -116,7 +116,7 @@ void FileSysDBRecord::store(const bool force) {
     }
 
     if (fflush(fp) != 0) {
-      Throw() << "fflush(" << (*this) << ") failed: " << strerror(errno);
+      Throw() << "fflush(" << (*this) << ") failed: " << toError(errno);
       fclose(fp);
       fp = nullptr;
     }

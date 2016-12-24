@@ -5,8 +5,8 @@
 #include "FileSysDatabase.h"
 #include "FileSysDBRecord.h"
 #include "Logger.h"
+#include "StringUtils.h"
 #include "Throw.h"
-#include <cstring>
 #include <sys/stat.h>
 
 namespace xbs
@@ -47,12 +47,12 @@ FileSysDatabase& FileSysDatabase::open(const std::string& dbURI) {
     if (!(dir = opendir(homeDir.c_str()))) {
       if (errno == ENOENT) {
         if (mkdir(homeDir.c_str(), 0750) != 0) {
-          Throw() << "mkdir(" << homeDir << ") failed: " << strerror(errno);
+          Throw() << "mkdir(" << homeDir << ") failed: " << toError(errno);
         } else if (!(dir = opendir(homeDir.c_str()))) {
-          Throw() << "opendir(" << homeDir << ") failed: " << strerror(errno);
+          Throw() << "opendir(" << homeDir << ") failed: " << toError(errno);
         }
       } else {
-        Throw() << "opendir(" << homeDir << ") failed: " << strerror(errno);
+        Throw() << "opendir(" << homeDir << ") failed: " << toError(errno);
       }
     }
     loadCache();
@@ -164,7 +164,7 @@ bool FileSysDatabase::remove(const std::string& recordID) {
         Throw() << "Empty " << (*rec) << " file path";
       } else if (unlink(rec->getFilePath().c_str()) != 0) {
         Throw() << "unlink(" << rec->getFilePath() << ") failed: "
-                << strerror(errno);
+                << toError(errno);
       }
       ok = true;
     }

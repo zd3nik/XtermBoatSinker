@@ -20,26 +20,22 @@ std::string Board::toString(const std::string& desc, const unsigned width) {
     if (!(i % width)) {
       ss << '\n';
     }
-    ss << rPad(desc[i], 2);
+    ss << ' ' << desc[i];
   }
   return ss.str();
 }
 
 //-----------------------------------------------------------------------------
 Board::Board(const int handle,
-             const std::string& playerName,
+             const std::string& name,
              const std::string& address,
              const unsigned shipAreaWidth,
              const unsigned shipAreaHeight)
-  : Container(Coordinate(1, 1),
+  : Rectangle(Coordinate(1, 1),
               Coordinate((4 + (2 * shipAreaWidth)), (3 + shipAreaHeight))),
     handle(handle),
-    toMove(false),
-    score(0),
-    skips(0),
-    turns(0),
     shipArea(Coordinate(1, 1), Coordinate(shipAreaWidth, shipAreaHeight)),
-    playerName(playerName),
+    name(name),
     address(address)
 {
   clearDescriptor();
@@ -99,8 +95,8 @@ Board& Board::incTurns(const unsigned value) {
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::setPlayerName(const std::string& str) {
-  playerName = str;
+Board& Board::setName(const std::string& str) {
+  name = str;
   return (*this);
 }
 
@@ -147,18 +143,18 @@ Board& Board::clearMissTaunts() {
 }
 
 //-----------------------------------------------------------------------------
-std::string Board::summary(const unsigned playerNum,
+std::string Board::summary(const unsigned boardNum,
                            const bool gameStarted) const
 {
   std::stringstream ss;
-  ss << playerNum << ": " << (toMove ? '*' : ' ') << playerName;
+  ss << boardNum << ": " << (toMove ? '*' : ' ') << name;
   if (status.size()) {
     ss << " (" << status << ')';
   }
   if (gameStarted) {
     ss << ", Score = " << score << ", Skips = " << skips
        << ", Turns = " << turns << ", Hit = " << hitCount() << " of "
-       << getShipPointCount();
+       << shipPointCount();
   }
   return ss.str();
 }
@@ -203,7 +199,7 @@ std::vector<Coordinate> Board::shipAreaCoordinates() const {
 
 //-----------------------------------------------------------------------------
 bool Board::isDead() const {
-  return ((handle < 0) || (hitCount() >= getShipPointCount()));
+  return ((handle < 0) || (hitCount() >= shipPointCount()));
 }
 
 //-----------------------------------------------------------------------------
@@ -328,7 +324,7 @@ bool Board::print(const bool masked, const Configuration* config) const {
   } else {
     Screen::print() << rowHead << "  ";
   }
-  Screen::print() << ' ' << playerName;
+  Screen::print() << ' ' << name;
   if (status.size()) {
     Screen::print() << " (" << status << ')';
   } else if (config) {
@@ -346,7 +342,7 @@ bool Board::print(const bool masked, const Configuration* config) const {
   // X coordinate header (row 2)
   Screen::print() << rowHead.south() << "  ";
   for (unsigned x = 0; x < shipArea.getWidth(); ++x) {
-    Screen::print() << rPad(static_cast<char>('a' + x), 2);
+    Screen::print() << ' ' << static_cast<char>('a' + x);
   }
 
   // ship area (rows 3+)
@@ -421,7 +417,7 @@ unsigned Board::missCount() const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::getShipPointCount() const {
+unsigned Board::shipPointCount() const {
   unsigned count = 0;
   for (const char ch : descriptor) {
     if (Ship::isShip(ch)) {
@@ -500,7 +496,7 @@ unsigned Board::distToEdge(Coordinate coord, const Direction dir) const {
 //-----------------------------------------------------------------------------
 void Board::addStatsTo(DBRecord& stats, const bool first, const bool last)
 const {
-  std::string prefix("player." + playerName);
+  std::string prefix("player." + name);
 
   stats.incUInt((prefix + ".total.firstPlace"), (first ? 1 : 0));
   stats.incUInt((prefix + ".total.lastPlace"), (last ? 1 : 0));
@@ -521,7 +517,7 @@ void Board::saveTo(DBRecord& rec, const unsigned opponents,
   unsigned hits = hitCount();
   unsigned misses = missCount();
 
-  rec.setString("playerName", playerName);
+  rec.setString("playerName", name);
   rec.setString("lastAddress", address);
   rec.setString("lastStatus", status);
   rec.incUInt("gamesPlayed");
@@ -596,7 +592,7 @@ bool Board::placeShips(std::string& desc,
     return !msa;
   }
 
-  std::vector<Direction> dirs { North, South, East, West };
+  std::vector<Direction> dirs { North, East, South, West };
   const Ship& ship = (*shipBegin);
 
   for (const Coordinate& coord : coords) {

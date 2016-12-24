@@ -6,7 +6,7 @@
 #define XBS_SCREEN_H
 
 #include "Platform.h"
-#include "Container.h"
+#include "Rectangle.h"
 #include "Coordinate.h"
 #include "Printable.h"
 
@@ -38,7 +38,7 @@ enum ScreenFlag {
 };
 
 //-----------------------------------------------------------------------------
-class Screen : public Container {
+class Screen : public Rectangle {
 public:
   static Screen& get(const bool update = false);
   static Screen& print() { return get(false); }
@@ -155,8 +155,8 @@ public:
   }
 
 private:
-  Screen(const Container& container)
-    : Container(container)
+  Screen(const Rectangle& container)
+    : Rectangle(container)
   { }
 };
 

@@ -7,34 +7,46 @@
 
 #include "Platform.h"
 #include "Configuration.h"
-#include "Input.h"
 #include "Game.h"
+#include "Input.h"
+#include "TcpSocket.h"
 #include "Version.h"
-#include <netdb.h>
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
 class Server {
+private:
+  bool autoStart = false;
+  bool repeat = false;
+  Input input;
+  TcpSocket socket;
+  std::set<std::string> blackList;
+
 public:
   enum {
     DEFAULT_PORT = 7948
   };
 
-  static bool isValidPort(const int port) {
-    return ((port > 0) && (port <= 0x7FFF));
+  static Version getVersion();
+
+  Server() {
+    input.addHandle(STDIN_FILENO);
   }
 
-  Server();
-  virtual ~Server();
-  Version getVersion() const;
+  Server(Server&&) = delete;
+  Server(const Server&) = delete;
+  Server& operator=(Server&&) = delete;
+  Server& operator=(const Server&) = delete;
+
   void showHelp();
-  void closeSocket();
-  void openSocket();
-  void startListening(const int backlog = 10);
   bool init();
   bool run();
+
+  bool isAutoStart() const {
+    return autoStart;
+  }
 
   bool isRepeatOn() const {
     return repeat;
@@ -78,22 +90,12 @@ private:
   void joinGame(Game&, const int handle);
   void leaveGame(Game&, const int handle);
   void ping(Game&, const int handle);
+  void removePlayer(Game&, const int handle, const std::string& msg = "");
   void sendMessage(Game&, const int handle);
   void setTaunt(Game&, const int handle);
   void shoot(Game&, const int handle);
   void skip(Game&, const int handle);
-  void removePlayer(Game&, const int handle,
-                    const std::string& msg = std::string());
-
-  Input input;
-  std::set<std::string> blackList;
-  std::string bindAddress;
-  std::string dbDir;
-  int port;
-  int sock;
-  bool autoStart;
-  bool repeat;
-  struct sockaddr_in addr;
+  void startListening(const int backlog = 10);
 };
 
 } // namespace xbs

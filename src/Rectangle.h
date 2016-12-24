@@ -1,9 +1,9 @@
 //-----------------------------------------------------------------------------
-// Container.h
+// Rectangle.h
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef XBS_CONTAINER_H
-#define XBS_CONTAINER_H
+#ifndef XBS_RECTANGLE_H
+#define XBS_RECTANGLE_H
 
 #include "Platform.h"
 #include "Coordinate.h"
@@ -14,7 +14,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Container : public Printable
+class Rectangle : public Printable
 {
 private:
   Coordinate begin;
@@ -25,14 +25,14 @@ private:
 public:
   virtual std::string toString() const;
 
-  Container(const Coordinate& topLeft, const Coordinate& bottomRight)
+  Rectangle(const Coordinate& topLeft, const Coordinate& bottomRight)
     : begin(topLeft),
       end(bottomRight),
       width((begin && end) ? (end.getX() - begin.getX() + 1) : 0),
       height((begin && end) ? (end.getY() - begin.getY() + 1) : 0)
   { }
 
-  Container& set(const Coordinate& topLeft, const Coordinate& bottomRight) {
+  Rectangle& set(const Coordinate& topLeft, const Coordinate& bottomRight) {
     begin = topLeft;
     end = bottomRight;
     width = (begin && end) ? (end.getX() - begin.getX() + 1) : 0;
@@ -40,11 +40,11 @@ public:
     return (*this);
   }
 
-  Container() = default;
-  Container(Container&&) = default;
-  Container(const Container&) = default;
-  Container& operator=(Container&&) = default;
-  Container& operator=(const Container&) = default;
+  Rectangle() = default;
+  Rectangle(Rectangle&&) = default;
+  Rectangle(const Rectangle&) = default;
+  Rectangle& operator=(Rectangle&&) = default;
+  Rectangle& operator=(const Rectangle&) = default;
 
   explicit operator bool() const { return isValid();  }
 
@@ -60,24 +60,24 @@ public:
 
   Coordinate toCoord(const unsigned index) const;
   unsigned toIndex(const Coordinate&) const;
-  bool arrangeChildren(std::vector<Container*>& children) const;
+  bool arrangeChildren(std::vector<Rectangle*>& children) const;
   bool moveCoordinate(Coordinate&, const Movement&) const;
   bool moveCoordinate(Coordinate&, const Direction,
                       const unsigned distance) const;
 
-  Container& shift(const Direction dir, const unsigned count) {
+  Rectangle& shift(const Direction dir, const unsigned count) {
     return set(begin.shift(dir, count), end.shift(dir, count));
   }
 
-  bool operator<(const Container& other) const {
+  bool operator<(const Rectangle& other) const {
     return (begin < other.begin);
   }
 
-  bool operator==(const Container& other) const {
+  bool operator==(const Rectangle& other) const {
     return ((begin == other.begin) && (end == other.end));
   }
 
-  bool operator!=(const Container& other) const {
+  bool operator!=(const Rectangle& other) const {
     return ((begin != other.begin) || (end != other.end));
   }
 
@@ -91,7 +91,7 @@ public:
     return (coord && contains(coord.getX(), coord.getY()));
   }
 
-  bool contains(const Container& other) const {
+  bool contains(const Rectangle& other) const {
     return (other && contains(other.begin) && contains(other.end));
   }
 
@@ -105,4 +105,4 @@ protected:
 
 } // namespace xbs
 
-#endif // XBS_CONTAINER_H
+#endif // XBS_RECTANGLE_H

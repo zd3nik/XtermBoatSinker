@@ -52,7 +52,7 @@ protected:
   typedef std::set<unsigned> SquareSet;
 
   Configuration config;
-  Container shipArea;
+  Rectangle shipArea;
   unsigned shortBoat;
   unsigned longBoat;
   unsigned width;

@@ -18,9 +18,9 @@ WOPR::WOPR()
   : improbLimit(15)
 {
   const CommandArgs& args = CommandArgs::getInstance();
-  const char* val = args.getValueOf("--improbLimit");
-  if (val && isdigit(*val)) {
-    improbLimit = (unsigned)atoi(val);
+  const std::string val = args.getValueOf("--improbLimit");
+  if (isUInt(val)) {
+    improbLimit = toUInt(val);
   }
 }
 

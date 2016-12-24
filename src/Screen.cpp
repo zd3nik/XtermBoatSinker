@@ -4,8 +4,8 @@
 //-----------------------------------------------------------------------------
 #include "Screen.h"
 #include "Logger.h"
+#include "StringUtils.h"
 #include "Throw.h"
-#include <cstring>
 #include <sys/ioctl.h>
 
 namespace xbs
@@ -15,10 +15,10 @@ namespace xbs
 static Screen* instance = nullptr;
 
 //-----------------------------------------------------------------------------
-static Container GetScreenDimensions() {
+static Rectangle GetScreenDimensions() {
   struct winsize max;
   if (ioctl(0, TIOCGWINSZ , &max) < 0) {
-    Throw() << "Failed to get screen dimensions: " << strerror(errno);
+    Throw() << "Failed to get screen dimensions: " << toError(errno);
   }
 
   Coordinate topLeft(1, 1);
@@ -30,7 +30,7 @@ static Container GetScreenDimensions() {
             << 'x' << bottomRight.getY();
   }
 
-  return Container(topLeft, bottomRight);
+  return Rectangle(topLeft, bottomRight);
 }
 
 //-----------------------------------------------------------------------------
@@ -137,7 +137,7 @@ Screen& Screen::flag(const ScreenFlag flag) {
 //-----------------------------------------------------------------------------
 Screen& Screen::flush() {
   if (fflush(stdout)) {
-    Throw() << "Screen flush failed: " << strerror(errno);
+    Throw() << "Screen flush failed: " << toError(errno);
   }
   return (*this);
 }
@@ -145,7 +145,7 @@ Screen& Screen::flush() {
 //-----------------------------------------------------------------------------
 Screen& Screen::str(const char* x) {
   if (x && *x && (fprintf(stdout, "%s", x) <= 0)) {
-    Throw() << "Failed to print to screen: " << strerror(errno);
+    Throw() << "Failed to print to screen: " << toError(errno);
   }
   return (*this);
 }
@@ -153,7 +153,7 @@ Screen& Screen::str(const char* x) {
 //-----------------------------------------------------------------------------
 Screen& Screen::ch(const char x) {
   if (x && (fputc(x, stdout) != x)) {
-    Throw() << "Failed to print to screen: " << strerror(errno);
+    Throw() << "Failed to print to screen: " << toError(errno);
   }
   return (*this);
 }

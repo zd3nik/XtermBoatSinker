@@ -1,21 +1,21 @@
 //-----------------------------------------------------------------------------
-// Container.cpp
+// Rectangle.cpp
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include "Container.h"
+#include "Rectangle.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-std::string Container::toString() const {
+std::string Rectangle::toString() const {
   std::stringstream ss;
-  ss << getWidth() << 'x' << getHeight() << " container";
+  ss << getWidth() << 'x' << getHeight() << " Rectangle";
   return ss.str();
 }
 
 //-----------------------------------------------------------------------------
-Coordinate Container::toCoord(const unsigned index) const {
+Coordinate Rectangle::toCoord(const unsigned index) const {
   if (isValid()) {
     Coordinate coord(((index % width) + 1), ((index / height) + 1));
     if (contains(coord)) {
@@ -26,19 +26,19 @@ Coordinate Container::toCoord(const unsigned index) const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Container::toIndex(const Coordinate& coord) const {
+unsigned Rectangle::toIndex(const Coordinate& coord) const {
   return contains(coord)
       ? ((coord.getX() - 1) + (width * (coord.getY() - 1)))
       : ~0U;
 }
 
 //-----------------------------------------------------------------------------
-bool Container::arrangeChildren(std::vector<Container*>& children) const {
+bool Rectangle::arrangeChildren(std::vector<Rectangle*>& children) const {
   Coordinate topLeft(begin);
   Coordinate bottomRight;
   unsigned height = 1;
 
-  for (Container* child : children) {
+  for (Rectangle* child : children) {
     if (!child) {
       continue;
     } else if (!child->isValid()) {
@@ -70,12 +70,12 @@ bool Container::arrangeChildren(std::vector<Container*>& children) const {
 }
 
 //-----------------------------------------------------------------------------
-bool Container::moveCoordinate(Coordinate& coord, const Movement& m) const {
+bool Rectangle::moveCoordinate(Coordinate& coord, const Movement& m) const {
   return (contains(coord) && contains(coord.shift(m)));
 }
 
 //-----------------------------------------------------------------------------
-bool Container::moveCoordinate(Coordinate& coord,
+bool Rectangle::moveCoordinate(Coordinate& coord,
                                const Direction direction,
                                const unsigned distance) const
 {

@@ -77,7 +77,7 @@ Configuration& Configuration::setMaxPlayers(const unsigned maxPlayers) {
 Configuration& Configuration::setBoardSize(const unsigned width,
                                            const unsigned height)
 {
-  shipArea = Container(Coordinate(1, 1), Coordinate(width, height));
+  shipArea = Rectangle(Coordinate(1, 1), Coordinate(width, height));
   return (*this);
 }
 

@@ -3,178 +3,101 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Version.h"
+#include "CSV.h"
 #include "Logger.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-Version::Version(const unsigned major,
-                 const unsigned minor,
-                 const unsigned build,
-                 const std::string& other)
-  : major_(major),
-    minor_(minor),
-    build_(build),
-    other_(other)
-{ }
-
-//-----------------------------------------------------------------------------
-Version::Version(const std::string &str)
-  : major_(0),
-    minor_(0),
-    build_(0)
+Version::Version(const std::string& value)
+  : str(trimStr(value))
 {
-  set(str);
-}
+  CSV csv(str, '.');
+  std::string cell;
+  unsigned points = 0;
 
-//-----------------------------------------------------------------------------
-Version::Version(const Version& other)
-  : major_(other.major_),
-    minor_(other.minor_),
-    build_(other.build_),
-    other_(other.other_),
-    str_(other.str_)
-{ }
-
-//-----------------------------------------------------------------------------
-Version& Version::operator=(const Version& other) {
-  major_ = other.major_;
-  minor_ = other.minor_;
-  build_ = other.build_;
-  other_ = other.other_;
-  str_ = other.str_;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Version& Version::operator=(const std::string& str) {
-  return set(str);
-}
-
-//-----------------------------------------------------------------------------
-Version& Version::set(const std::string& str) {
-  major_ = minor_ = build_ = 0;
-  other_.clear();
-  str_ = str;
-
-  const char* p = str.c_str();
-  if ((p = nextValue(p, major_, other_))) {
-    if ((p = nextValue(p, minor_, other_))) {
-      if ((p = nextValue(p, build_, other_))) {
-        other_ = p;
+  while (csv.next(cell)) {
+    if (points < 3) {
+      const std::string num = trimStr(cell);
+      if (isUInt(num)) {
+        switch (points++) {
+        case 0:
+          majorNum = toUInt(num);
+          continue;
+        case 1:
+          minorNum = toUInt(num);
+          continue;
+        case 2:
+          buildNum = toUInt(num);
+          continue;
+        }
       }
     }
+    points = 3;
+    other += cell;
   }
-  return (*this);
-}
 
-//-----------------------------------------------------------------------------
-Version& Version::setMajor(const unsigned value) {
-  major_ = value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Version& Version::setMinor(const unsigned value) {
-  minor_ = value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Version& Version::setBuild(const unsigned value) {
-  build_ = value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Version& Version::setOther(const std::string& value) {
-  other_ = value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Version& Version::clear() {
-  major_ = minor_ = build_ = 0;
-  other_.clear();
-  str_.clear();
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-std::string Version::toString() const {
-  if (str_.size()) {
-    return str_;
-  } else if (isEmpty()) {
-    return std::string();
+  if (other.size()) {
+    other = trimStr(other);
   }
-  char sbuf[1024];
-  if (other_.size()) {
-    snprintf(sbuf, sizeof(sbuf), "%u.%u.%u%s", major_, minor_, build_,
-             other_.c_str());
-  } else {
-    snprintf(sbuf, sizeof(sbuf), "%u.%u.%u", major_, minor_, build_);
-  }
-  return sbuf;
 }
 
 //-----------------------------------------------------------------------------
-bool Version::isEmpty() const {
-  return (!(major_ | minor_ | build_) && other_.empty() && str_.empty());
+Version::Version(const unsigned majorValue,
+                 const std::string& otherValue)
+  : majorNum(majorValue),
+    other(trimStr(otherValue)),
+    str((CSV('.', true) << majorNum << other).toString())
+{ }
+
+//-----------------------------------------------------------------------------
+Version::Version(const unsigned majorValue,
+                 const unsigned minorValue,
+                 const std::string& otherValue)
+  : majorNum(majorValue),
+    minorNum(minorValue),
+    other(trimStr(otherValue)),
+    str((CSV('.', true) << majorNum << minorNum << other).toString())
+{ }
+
+//-----------------------------------------------------------------------------
+Version::Version(const unsigned majorValue,
+                 const unsigned minorValue,
+                 const unsigned buildValue,
+                 const std::string& otherValue)
+  : majorNum(majorValue),
+    minorNum(minorValue),
+    buildNum(buildValue),
+    other(trimStr(otherValue)),
+    str((CSV('.', true) << majorNum << minorNum << buildNum << other).toString())
+{ }
+
+//-----------------------------------------------------------------------------
+Version& Version::operator=(const std::string& value) {
+  (*this) = Version(value);
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
 bool Version::operator<(const Version& v) const {
-  return ((major_ < v.major_) ||
-          ((major_ == v.major_) && (minor_ < v.minor_)) ||
-          ((major_ == v.major_) && (minor_ == v.minor_) && (build_ < v.build_)));
+  return ((majorNum < v.majorNum) ||
+          ((majorNum == v.majorNum) && (minorNum < v.minorNum)) ||
+          ((majorNum == v.majorNum) && (minorNum == v.minorNum) &&
+           (buildNum < v.buildNum)));
 }
 
 //-----------------------------------------------------------------------------
 bool Version::operator>(const Version& v) const {
-  return ((major_ > v.major_) ||
-          ((major_ == v.major_) && (minor_ > v.minor_)) ||
-          ((major_ == v.major_) && (minor_ == v.minor_) && (build_ > v.build_)));
+  return ((majorNum > v.majorNum) ||
+          ((majorNum == v.majorNum) && (minorNum > v.minorNum)) ||
+          ((majorNum == v.majorNum) && (minorNum == v.minorNum) &&
+           (buildNum > v.buildNum)));
 }
 
 //-----------------------------------------------------------------------------
 bool Version::operator==(const Version& v) const {
-  return ((major_ == v.major_) &&
-          (minor_ == v.minor_) &&
-          (build_ == v.build_) &&
-          (other_ == v.other_) &&
-          (str_ == v.str_));
-}
-
-//-----------------------------------------------------------------------------
-const char* Version::nextValue(const char* str, unsigned& value,
-                               std::string& other)
-{
-  if (!str || !*str) {
-    return nullptr;
-  }
-
-  const char* p = str;
-  while ((*p) && isspace(*p)) ++p;
-  if (((*p) >= '0') && ((*p) <= '9')) {
-    for (value = 0; ((*p) >= '0') && ((*p) <= '9'); ++p) {
-      unsigned inc = ((*p) - '0');
-      unsigned tmp = ((10 * value) + inc);
-      if (tmp >= value) {
-        value = tmp;
-      } else {
-        Logger::error() << "integer overflow in '" << str << "'";
-        return nullptr;
-      }
-    }
-    if (*p == '.') {
-      return (p + 1);
-    }
-  }
-  if (*p) {
-    other = p;
-  }
-  return p;
+  return (str == v.str);
 }
 
 } // namespace xbs

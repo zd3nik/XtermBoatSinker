@@ -119,18 +119,17 @@ public:
   }
 
   bool fromString(const std::string& str) {
-    CSV::Cell xCell;
-    CSV::Cell yCell;
+    std::string xCell;
+    std::string yCell;
     CSV(str) >> xCell >> yCell;
-    if (xCell && yCell.isInt()) {
-      int newX = xCell.toInt();
-      int newY = yCell.toInt();
-      if (!xCell.isInt()) {
-        std::string str = xCell.toString();
-        if ((str.length() != 1) || !isalpha(str[0])) {
+    if (xCell.size() && isInt(yCell)) {
+      int newX = toInt(xCell);
+      int newY = toInt(yCell);
+      if (!isInt(xCell)) {
+        if ((xCell.size() != 1) || !isalpha(xCell[0])) {
           return false;
         }
-        newX = (tolower(str[0]) - 'a' + 1);
+        newX = (tolower(xCell[0]) - 'a' + 1);
       }
       if ((newX >= 0) && (newY >= 0)) {
         x = static_cast<unsigned>(newX);

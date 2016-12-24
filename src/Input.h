@@ -18,10 +18,11 @@ public:
     BUFFER_SIZE = 4096
   };
 
-  static bool empty(const char* str, const bool checkWhitespace = true);
-  static std::string trim(const std::string& str);
-
   Input();
+  Input(Input&&) = delete;
+  Input(const Input&) = delete;
+  Input& operator=(Input&&) = delete;
+  Input& operator=(const Input&) = delete;
 
   /**
    * Wait for data to become available for reading on one or more of the
@@ -59,15 +60,18 @@ public:
    */
   char readChar(const int handle);
 
-  void addHandle(const int handle, const std::string& label = std::string());
+  void addHandle(const int handle, const std::string& label = "");
   void removeHandle(const int handle);
   bool containsHandle(const int handle) const;
   std::string getHandleLabel(const int handle) const;
   unsigned getHandleCount() const;
   unsigned getFieldCount() const;
   int getInt(const unsigned index = 0, const int def = -1) const;
-  int getUnsigned(const unsigned index = 0, const unsigned def = 0) const;
-  const char* getString(const unsigned index = 0, const char* def = nullptr) const;
+  unsigned getUInt(const unsigned index = 0, const unsigned def = 0) const;
+  double getDouble(const unsigned index = 0, const double def = 0) const;
+  std::string getStr(const unsigned index = 0,
+                     const std::string& def = "",
+                     const bool trim = true) const;
 
 private:
   int bufferData(const int fd);

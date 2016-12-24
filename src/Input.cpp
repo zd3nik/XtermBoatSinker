@@ -3,46 +3,13 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Input.h"
+#include "CSV.h"
 #include "Logger.h"
-#include <cstring>
+#include "StringUtils.h"
 #include <sys/select.h>
 
 namespace xbs
 {
-
-//-----------------------------------------------------------------------------
-bool Input::empty(const char* str, const bool checkWhitespace) {
-  if (!str || !(*str)) {
-    return true;
-  }
-  if (checkWhitespace) {
-    for (const char* p = str; *p; ++p) {
-      if (!isspace(*p)) {
-        return false;
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
-//-----------------------------------------------------------------------------
-std::string Input::trim(const std::string& str) {
-  std::string result;
-  if (str.size()) {
-    result.reserve(str.size());
-    const char* begin = str.c_str();
-    while (*begin && isspace(*begin)) begin++;
-    const char* end = begin;
-    for (const char* p = begin; *p; ++p) {
-      if (!isspace(*p)) {
-        end = p;
-      }
-    }
-    result.assign(begin, (end + ((*end) != 0)));
-  }
-  return result;
-}
 
 //-----------------------------------------------------------------------------
 Input::Input()
@@ -92,7 +59,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
         Logger::debug() << "Input select interrupted";
         return true;
       }
-      Logger::error() << "Input select failed: " << strerror(errno);
+      Logger::error() << "Input select failed: " << toError(errno);
       return false;
     }
     break;
@@ -126,8 +93,7 @@ int Input::readln(const int fd, const char delimeter) {
   while (n < (BUFFER_SIZE - 1)) {
     if ((pos[fd] >= len[fd]) && (bufferData(fd) < 0)) {
       return -1;
-    }
-    if (!len[fd]) {
+    } else if (!len[fd]) {
       break;
     } else if ((pos[fd] < len[fd]) &&
                ((line[n++] = buffer[fd][pos[fd]++]) == '\n'))
@@ -137,23 +103,17 @@ int Input::readln(const int fd, const char delimeter) {
   }
   line[n] = 0;
 
-  Logger::debug() << "Received '" << line.data() << "' from channel " << fd
-                  << " " << getHandleLabel(fd);
+  if (Logger::getInstance().getLogLevel() >= Logger::DEBUG) {
+    Logger::debug() << "Received '" << trimStr(line.data())
+                    << "' from channel " << fd << " " << getHandleLabel(fd);
+  }
 
-  auto begin = line.begin();
-  auto end = begin;
-  while ((end != line.end()) && (*end) && (*end != '\r') && (*end != '\n')) {
-    if (*end == delimeter) {
-      (*end) = 0;
-      fields.push_back(std::string(begin, end));
-      begin = (end + 1);
-    }
-    ++end;
+  std::string fld;
+  CSV csv(line.data(), delimeter, true);
+  while (csv.next(fld)) {
+    fields.push_back(fld);
   }
-  if (end != begin) {
-    (*end) = 0;
-    fields.push_back(std::string(begin, end));
-  }
+
   return static_cast<int>(fields.size());
 }
 
@@ -166,7 +126,7 @@ char Input::readChar(const int fd) {
 
   char ch = 0;
   if (read(fd, &ch, 1) != 1) {
-    Logger::error() << "Input readChar failed: " << strerror(errno);
+    Logger::error() << "Input readChar failed: " << toError(errno);
     return -1;
   }
 
@@ -220,39 +180,33 @@ unsigned Input::getFieldCount() const {
 }
 
 //-----------------------------------------------------------------------------
-const char* Input::getString(const unsigned index, const char* def) const {
-  return (index >= fields.size()) ? def : fields.at(index).c_str();
+std::string Input::getStr(const unsigned index,
+                          const std::string& def,
+                          const bool trim) const
+{
+  if (index >= fields.size()) {
+    return def;
+  } else {
+    return trim ? trimStr(fields.at(index)) : fields.at(index);
+  }
 }
 
 //-----------------------------------------------------------------------------
 int Input::getInt(const unsigned index, const int def) const {
-  std::string str = trim(getString(index, ""));
-  if (str.size()) {
-    if (isdigit(str[0])) {
-      return atoi(str.c_str());
-    } else if (((str[0]) == '-') && (str.size() > 1) && isdigit(str[1])) {
-      return atoi(str.c_str());
-    } else if (((str[0]) == '+') && (str.size() > 1) && isdigit(str[1])) {
-      return atoi(str.c_str() + 1);
-    }
-  }
-  return def;
+  const std::string str = getStr(index);
+  return isInt(str) ? toInt(str) : def;
 }
 
 //-----------------------------------------------------------------------------
-int Input::getUnsigned(const unsigned index, const unsigned def) const {
-  const char* value = getString(index, nullptr);
-  if (value) {
-    const char* p = ((*value) == '+') ? (value + 1) : value;
-    if (isdigit(*p)) {
-      unsigned i = 0;
-      for (; isdigit(*p); ++p) {
-        i = ((10 * i) + (i - '0'));
-      }
-      return i;
-    }
-  }
-  return def;
+unsigned Input::getUInt(const unsigned index, const unsigned def) const {
+  const std::string str = getStr(index);
+  return isUInt(str) ? toUInt(str) : def;
+}
+
+//-----------------------------------------------------------------------------
+double Input::getDouble(const unsigned index, const double def) const {
+  const std::string str = getStr(index);
+  return isFloat(str) ? toDouble(str) : def;
 }
 
 //-----------------------------------------------------------------------------
@@ -265,7 +219,7 @@ int Input::bufferData(const int fd) {
         Logger::debug() << "Input read interrupted, retrying";
         continue;
       }
-      Logger::error() << "Input read failed: " << strerror(errno);
+      Logger::error() << "Input read failed: " << toError(errno);
       return -1;
     } else if (n <= BUFFER_SIZE) {
       len[fd] = n;

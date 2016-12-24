@@ -193,7 +193,7 @@ Board* Game::getBoardForPlayer(const std::string& name, const bool exact) {
       }
     } else {
       for (Board& board : boards) {
-        std::string playerName = board.getPlayerName();
+        std::string playerName = board.getName();
         if (playerName == name) {
           return &board;
         }
@@ -284,9 +284,9 @@ void Game::saveResults(Database& db) {
     const bool last = (board.getScore() == lowScore);
     board.addStatsTo(*stats, first, last);
 
-    DBRecord* player = db.get(("player." + board.getPlayerName()), true);
+    DBRecord* player = db.get(("player." + board.getName()), true);
     if (!player) {
-      Throw() << "Failed to get record for player '" << board.getPlayerName()
+      Throw() << "Failed to get record for player '" << board.getName()
               << "' from " << db;
     }
     board.saveTo(*player, (boards.size() - 1), first, last);

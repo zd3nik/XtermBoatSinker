@@ -7,58 +7,91 @@
 
 #include "Platform.h"
 #include "Printable.h"
+#include "StringUtils.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class CSV {
+class CSV : public Printable {
 private:
-  const char delim = ',';
+  const bool trim;
+  const char delim;
+  unsigned cellCount;
   std::stringstream stream;
 
 public:
+  virtual std::string toString() const { return stream.str(); }
 
-  //---------------------------------------------------------------------------
-  class Cell : public Printable {
-  private:
-    std::string value;
-  public:
-    virtual std::string toString() const { return value; }
-    explicit operator bool() const { return !value.empty(); }
-    void set(const std::string& str) { value = str; }
-    int toInt() const { return value.empty() ? 0 : atoi(value.c_str()); }
-    bool isInt() const {
-      return value.empty()
-          ? false
-          : isdigit(value[0])
-            ? true
-            : (value.size() < 2)
-              ? false
-              : ((value[0] == '+') || (value[0] == '-'))
-                ? isdigit(value[1])
-                : false;
-    }
-  };
-
-  CSV(const std::string& line = std::string(), const char delim = ',')
-    : delim(delim),
+  CSV(const std::string& line = "",
+      const char delim = ',',
+      const bool trim = false)
+    : trim(trim),
+      delim(delim),
+      cellCount(line.size() ? 1 : 0),
       stream(line)
   { }
 
-  CSV(CSV&&) = default;
-  CSV(const CSV&) = default;
-  CSV& operator=(CSV&&) = default;
-  CSV& operator=(const CSV&) = default;
+  CSV(const char delim, const bool trim = false)
+    : CSV("", delim, trim)
+  { }
 
-  CSV& operator>>(Cell& cell) {
-    std::string str;
-    if (std::getline(stream, str, delim)) {
-      cell.set(str);
+  CSV(const CSV& r)
+    : trim(r.trim),
+      delim(r.delim),
+      cellCount(r.cellCount),
+      stream(r.stream.str())
+  { }
+
+  CSV& operator<<(const std::string& x) {
+    if (trim) {
+      const std::string tmp = trimStr(x);
+      if (tmp.size()) {
+        if (cellCount++) {
+          stream << delim;
+        }
+        stream << tmp;
+      }
+    } else {
+      if (cellCount++) {
+        stream << delim;
+      }
+      stream << x;
     }
     return (*this);
   }
+
+  CSV& operator<<(const char* x) {
+    return operator<<(std::string(x ? x : ""));
+  }
+
+  template<typename T>
+  CSV& operator<<(const T& x) {
+    if (cellCount++) {
+      stream << delim;
+    }
+    stream << x;
+    return (*this);
+  }
+
+  CSV& operator>>(std::string& str) {
+    next(str);
+    return (*this);
+  }
+
+  bool next(std::string& str) {
+    if (std::getline(stream, str, delim)) {
+      cellCount++;
+      return true;
+    }
+    return false;
+  }
 };
+
+//-----------------------------------------------------------------------------
+inline CSV MSG(const char type) {
+  return CSV(std::string(type, 1), '|');
+}
 
 } // namespace xbs
 

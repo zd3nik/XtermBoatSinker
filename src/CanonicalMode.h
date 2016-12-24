@@ -12,20 +12,13 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
+// Saves the current statge of the terminal's canonical and echo flags,
+// enables or disables them, and restores saved state when goes out of scope
+//-----------------------------------------------------------------------------
 class CanonicalMode {
 public:
-  /**
-   * STDIN is in canonical mode by default in terminals, this means user input
-   * will not be flushed until the user presses enter.
-   * disable canonical mode to have the terminal flush every character
-   * @brief Set canonical mode on STDIN
-   * @param enabled canonical mode enabled if true, disabled if false
-   */
   CanonicalMode(const bool enabled);
 
-  /**
-   * Reset canonical mode to state it was in before this object was constructed
-   */
   ~CanonicalMode();
 
   CanonicalMode(CanonicalMode&&) = delete;

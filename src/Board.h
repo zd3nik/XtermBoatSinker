@@ -7,7 +7,7 @@
 
 #include "Platform.h"
 #include "Configuration.h"
-#include "Container.h"
+#include "Rectangle.h"
 #include "DBRecord.h"
 #include "Ship.h"
 
@@ -44,7 +44,7 @@ namespace xbs
 //                    +------+
 // Example ship area descriptor: .X..X.0X0..0...0X. (row1row2row3)
 //-----------------------------------------------------------------------------
-class Board : public Container
+class Board : public Rectangle
 {
 private:
   int handle = -1;
@@ -52,8 +52,8 @@ private:
   unsigned score = 0;
   unsigned skips = 0;
   unsigned turns = 0;
-  Container shipArea;
-  std::string playerName;
+  Rectangle shipArea;
+  std::string name;
   std::string descriptor;
   std::string address;
   std::string status;
@@ -67,7 +67,7 @@ public:
   virtual std::string toString() const;
 
   Board(const int handle,
-        const std::string& playerName,
+        const std::string& name,
         const std::string& address,
         const unsigned shipAreaWidth,
         const unsigned shipAreaHeight);
@@ -85,8 +85,8 @@ public:
   unsigned getScore() const { return score; }
   unsigned getSkips() const { return skips; }
   unsigned getTurns() const { return turns; }
-  Container getShipArea() const { return shipArea; }
-  std::string getPlayerName() const { return playerName; }
+  Rectangle getShipArea() const { return shipArea; }
+  std::string getName() const { return name; }
   std::string getDescriptor() const { return descriptor; }
   std::string getAddress() const { return address; }
   std::string getStatus() const { return status; }
@@ -101,7 +101,7 @@ public:
   Board& incScore(const unsigned = 1);
   Board& incSkips(const unsigned = 1);
   Board& incTurns(const unsigned = 1);
-  Board& setPlayerName(const std::string&);
+  Board& setName(const std::string&);
   Board& setAddress(const std::string&);
   Board& setStatus(const std::string&);
   Board& addHitTaunt(const std::string&);
@@ -110,7 +110,7 @@ public:
   Board& clearHitTaunts();
   Board& clearMissTaunts();
 
-  std::string summary(const unsigned playerNum, const bool gameStarted) const;
+  std::string summary(const unsigned boardNum, const bool gameStarted) const;
   std::string maskedDescriptor() const;
   std::string nextHitTaunt() const;
   std::string nextMissTaunt() const;
@@ -134,7 +134,7 @@ public:
 
   unsigned hitCount() const;
   unsigned missCount() const;
-  unsigned getShipPointCount() const;
+  unsigned shipPointCount() const;
   unsigned adjacentFree(const Coordinate&) const;
   unsigned adjacentHits(const Coordinate&) const;
   unsigned maxInlineHits(const Coordinate&) const;
@@ -158,8 +158,8 @@ public:
 
 private:
   bool isValid() const {
-    return (Container::isValid() &&
-            (playerName.size() > 0) &&
+    return (Rectangle::isValid() &&
+            (name.size() > 0) &&
             (shipArea.getSize() > 0) &&
             (descriptor.size() == shipArea.getSize()));
   }

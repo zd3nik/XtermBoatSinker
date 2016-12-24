@@ -221,11 +221,10 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
         if (input.readln(STDIN_FILENO, 0) < 0) {
           return;
         }
-        std::string str = Input::trim(input.getString(0, ""));
-        const char ch = toupper(*str.c_str());
-        if (ch == 'Q') {
+        const std::string str = input.getStr();
+        if (iStartsWith(str, 'Q')) {
           return;
-        } else if (ch == 'S') {
+        } else if (iStartsWith(str, 'S')) {
           watch = false;
           Screen::print() << board.getTopLeft() << ClearToScreenEnd;
           board.print(true);

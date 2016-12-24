@@ -6,14 +6,14 @@
 #define XBS_CLIENT_H
 
 #include "Platform.h"
-#include "Input.h"
 #include "Board.h"
 #include "Configuration.h"
-#include "Message.h"
-#include "Version.h"
-#include "ScoredCoordinate.h"
+#include "CSV.h"
 #include "FileSysDBRecord.h"
-#include "TargetingComputer.h"
+#include "Input.h"
+#include "Message.h"
+#include "TcpSocket.h"
+#include "Version.h"
 
 namespace xbs
 {
@@ -21,32 +21,47 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Client
 {
+private:
+  bool gameStarted = false;
+  bool gameFinished = false;
+  double minSurfaceArea = 0;
+  unsigned msgEnd = ~0U;
+  int port = -1;
+
+  Input input;
+  Board yourBoard;
+  Configuration config;
+  TcpSocket socket;
+
+  std::string host;
+  std::string userName;
+  std::string staticBoard;
+  std::vector<Message> messages;
+  std::vector<std::string> msgBuffer;
+  std::map<std::string, Board> boardMap;
+  std::vector<Board*> boardList;
+  std::unique_ptr<FileSysDBRecord> taunts;
+
 public:
-  Client();
-  virtual ~Client();
+  static Version getVersion();
+  static bool isCompatibleWith(const Version& serverVersion);
 
-  virtual Version getVersion() const;
-  virtual bool isCompatibleWith(const Version& serverVersion) const;
-  virtual bool init();
-  virtual bool join();
-  virtual bool run();
+  Client() {
+    input.addHandle(STDIN_FILENO);
+  }
 
-protected:
-  static unsigned randomIndex(const unsigned bound);
+  Client(Client&&) = delete;
+  Client(const Client&) = delete;
+  Client& operator=(Client&&) = delete;
+  Client& operator=(const Client&) = delete;
 
-  unsigned msgHeaderLen() const;
-  unsigned msgWindowHeight(const Coordinate& promptCoordinate) const;
-  char controlSequence(const char ch, char& lastChar);
-  char getChar();
-  char waitForInput(const int timeout = -1);
-  void showHelp();
-  void closeSocket();
-  void closeSocketHandle();
-  void appendMessage(const Message&);
-  void appendMessage(const std::string& message,
-                     const std::string& from = std::string(),
-                     const std::string& to = std::string());
+  bool init();
+  bool join();
+  bool run();
 
+private:
+  Board* getBoard(const std::string& nameOrNumber);
+  Board& getMyBoard();
   bool addMessage();
   bool addPlayer();
   bool clearMessages(const Coordinate& promptCoordinate);
@@ -59,9 +74,9 @@ protected:
   bool handleServerMessage();
   bool hit();
   bool home();
-  bool isConnected() const;
   bool joinGame(bool& retry);
-  bool joinPrompt(const int playersJoined);
+  bool joinPrompt(const unsigned playersJoined);
+  bool manualSetup(Board&, std::vector<Ship>& shipsRemaining);
   bool nextTurn();
   bool openSocket();
   bool pageDown(const Coordinate& promptCoordinate);
@@ -69,13 +84,18 @@ protected:
   bool printGameOptions(const Coordinate& promptCoordinate);
   bool printMessages(Coordinate& promptCoordinate);
   bool printWaitOptions(Coordinate& promptCoordinate);
+  bool prompt(Coordinate&,
+              const std::string& str,
+              std::string& field1,
+              const char fieldDelimeter = 0);
   bool quitGame(const Coordinate& promptCoord);
-  bool readGameInfo(int& playersJoined);
+  bool readGameInfo(unsigned& playersJoined);
   bool redrawScreen();
   bool removePlayer();
   bool scrollDown();
   bool scrollUp();
-  bool sendLine(const std::string& msg);
+  bool send(const CSV& csv) { return sendln(csv.toString()); }
+  bool sendln(const std::string& msg);
   bool sendMessage(const Coordinate& promptCoord);
   bool setTaunt(const Coordinate& promptCoordinate);
   bool setupBoard();
@@ -87,33 +107,18 @@ protected:
   bool updateYourBoard();
   bool viewBoard(const Coordinate& promptCoordinate);
   bool waitForGameStart();
-  bool manualSetup(std::vector<Ship>& boatsRemaining,
-                   std::vector<Board>& boards,
-                   const Coordinate& promptCoordinate);
-
-  bool prompt(Coordinate& coord, const std::string& str, std::string& field1,
-              const char fieldDelimeter = 0);
-
-  Board* getBoard(const std::string& nameOrNumber);
-
-  int port;
-  int sock;
-  bool gameStarted;
-  bool gameFinished;
-  unsigned msgEnd;
-  double minSurfaceArea;
-  FileSysDBRecord* taunts;
-
-  std::string host;
-  std::string userName;
-  std::string staticBoard;
-  std::vector<Message> messages;
-  std::vector<std::string> msgBuffer;
-  std::map<std::string, Board> boardMap;
-  std::vector<Board*> boardList;
-  Configuration config;
-  Board yourBoard;
-  Input input;
+  char controlSequence(const char ch, char& lastChar);
+  char getChar();
+  char waitForInput(const int timeout = -1);
+  unsigned msgHeaderLen() const;
+  unsigned msgWindowHeight(const Coordinate& promptCoordinate) const;
+  void appendMessage(const Message&);
+  void appendMessage(const std::string& message,
+                     const std::string& from = "",
+                     const std::string& to = "");
+  void close();
+  void closeSocket();
+  void showHelp();
 };
 
 } // namespace xbs

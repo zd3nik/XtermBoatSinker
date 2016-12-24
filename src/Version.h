@@ -14,62 +14,46 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Version : public Printable
 {
+private:
+  unsigned majorNum = 0;
+  unsigned minorNum = 0;
+  unsigned buildNum = 0;
+  std::string other;
+  std::string str;
+
 public:
-  Version(const unsigned major_ = 0,
-          const unsigned minor_ = 0,
-          const unsigned build_ = 0,
-          const std::string& other_ = std::string());
+  virtual std::string toString() const { return str; }
 
-  Version(const std::string& str);
-  Version(const Version&);
+  Version(const std::string& = "");
+  Version(const unsigned majorNum,
+          const std::string& other = "");
+  Version(const unsigned majorNum,
+          const unsigned minorNum,
+          const std::string& other = "");
+  Version(const unsigned majorNum,
+          const unsigned minorNum,
+          const unsigned buildNum,
+          const std::string& other = "");
 
-  Version& operator=(const Version&);
-  Version& operator=(const std::string& str);
-  Version& set(const std::string& str);
-  Version& setMajor(const unsigned value);
-  Version& setMinor(const unsigned value);
-  Version& setBuild(const unsigned value);
-  Version& setOther(const std::string& value);
-  Version& clear();
+  Version(Version&&) = default;
+  Version(const Version&) = default;
+  Version& operator=(Version&&) = default;
+  Version& operator=(const Version&) = default;
+  Version& operator=(const std::string&);
 
-  virtual std::string toString() const;
-  bool isEmpty() const;
+  explicit operator bool() const { return str.size(); }
+
+  unsigned getMajor() const { return majorNum; }
+  unsigned getMinor() const { return minorNum; }
+  unsigned getBuild() const { return buildNum; }
+  std::string getOther() const { return other; }
+
   bool operator<(const Version&) const;
   bool operator>(const Version&) const;
-  bool operator==(const Version& v) const;
-  bool operator!=(const Version& v) const { return !(operator==(v)); }
+  bool operator==(const Version&) const;
   bool operator<=(const Version& v) const { return !(operator>(v)); }
   bool operator>=(const Version& v) const { return !(operator<(v)); }
-
-  explicit operator bool() const {
-    return ((major_ | minor_ | build_) || other_.size() || str_.size());
-  }
-
-  unsigned getMajor() const {
-    return major_;
-  }
-
-  unsigned getMinor() const {
-    return minor_;
-  }
-
-  unsigned getBuild() const {
-    return build_;
-  }
-
-  std::string getOther() const {
-    return other_;
-  }
-
-private:
-  static const char* nextValue(const char* str, unsigned& value,
-                               std::string& other);
-
-  unsigned major_;
-  unsigned minor_;
-  unsigned build_;
-  std::string other_;
-  std::string str_;
+  bool operator!=(const Version& v) const { return !(operator==(v)); }
 };
 
 } // namespace xbs

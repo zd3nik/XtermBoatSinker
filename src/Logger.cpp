@@ -28,13 +28,13 @@ Logger::Logger()
 {
   const CommandArgs& args = CommandArgs::getInstance();
 
-  const char* level = args.getValueOf("-l", "--log-level");
-  if (level) {
+  const std::string level = args.getValueOf({"-l", "--log-level"});
+  if (level.size()) {
     setLogLevel(level);
   }
 
-  const char* file = args.getValueOf("-f", "--log-file");
-  if (Input::empty(file)) {
+  const std::string file = args.getValueOf({"-f", "--log-file"});
+  if (isEmpty(file)) {
     appendToFile(args.getProgramName() + ".log");
   } else {
     appendToFile(file);

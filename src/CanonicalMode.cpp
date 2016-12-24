@@ -19,7 +19,7 @@ CanonicalMode::CanonicalMode(const bool enabled)
     Throw() << "failed to get termios: " << strerror(errno);
   }
 
-  struct termios ios;
+  termios ios;
   if (tcgetattr(STDIN_FILENO, &ios) < 0) {
     Throw() << "tcgetattr failed: " << strerror(errno);
   }

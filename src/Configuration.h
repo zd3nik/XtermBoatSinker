@@ -7,7 +7,7 @@
 
 #include "Platform.h"
 #include "Ship.h"
-#include "Container.h"
+#include "Rectangle.h"
 #include "DBRecord.h"
 
 namespace xbs
@@ -69,7 +69,7 @@ public:
     return shipArea.getHeight();
   }
 
-  Container getShipArea() const {
+  Rectangle getShipArea() const {
     return shipArea;
   }
 
@@ -99,7 +99,7 @@ private:
   unsigned maxPlayers;
   unsigned pointGoal;
   unsigned maxSurfaceArea;
-  Container shipArea;
+  Rectangle shipArea;
   std::vector<Ship> ships;
 };
 
