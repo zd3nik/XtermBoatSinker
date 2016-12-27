@@ -7,9 +7,9 @@
 
 #include "Platform.h"
 #include "Board.h"
-#include "Configuration.h"
 #include "CSV.h"
 #include "FileSysDBRecord.h"
+#include "Game.h"
 #include "Input.h"
 #include "Message.h"
 #include "TcpSocket.h"
@@ -22,25 +22,19 @@ namespace xbs
 class Client
 {
 private:
-  bool gameStarted = false;
-  bool gameFinished = false;
   double minSurfaceArea = 0;
   unsigned msgEnd = ~0U;
   int port = -1;
-
-  Input input;
-  Board yourBoard;
-  Configuration config;
   TcpSocket socket;
-
+  Input input;
+  Game game;
   std::string host;
   std::string userName;
   std::string staticBoard;
   std::vector<Message> messages;
   std::vector<std::string> msgBuffer;
-  std::map<std::string, Board> boardMap;
-  std::vector<Board*> boardList;
   std::unique_ptr<FileSysDBRecord> taunts;
+  std::unique_ptr<Board> yourBoard;
 
 public:
   static Version getVersion();
@@ -60,12 +54,12 @@ public:
   bool run();
 
 private:
-  Board* getBoard(const std::string& nameOrNumber);
-  Board& getMyBoard();
+  Board& myBoard();
   bool addMessage();
   bool addPlayer();
-  bool clearMessages(const Coordinate& promptCoordinate);
+  bool clearMessages(Coordinate);
   bool clearScreen();
+  bool closeSocket();
   bool end();
   bool endGame();
   bool getHostAddress();
@@ -79,45 +73,43 @@ private:
   bool manualSetup(Board&, std::vector<Ship>& shipsRemaining);
   bool nextTurn();
   bool openSocket();
-  bool pageDown(const Coordinate& promptCoordinate);
-  bool pageUp(const Coordinate& promptCoordinate);
-  bool printGameOptions(const Coordinate& promptCoordinate);
-  bool printMessages(Coordinate& promptCoordinate);
-  bool printWaitOptions(Coordinate& promptCoordinate);
-  bool prompt(Coordinate&,
+  bool pageDown(Coordinate);
+  bool pageUp(Coordinate);
+  bool printGameOptions(Coordinate);
+  bool printMessages(Coordinate&); // this one uses reference intentionally
+  bool printWaitOptions(Coordinate);
+  bool prompt(Coordinate,
               const std::string& str,
               std::string& field1,
               const char fieldDelimeter = 0);
-  bool quitGame(const Coordinate& promptCoord);
+  bool quitGame(Coordinate);
   bool readGameInfo(unsigned& playersJoined);
   bool redrawScreen();
   bool removePlayer();
   bool scrollDown();
   bool scrollUp();
-  bool send(const CSV& csv) { return sendln(csv.toString()); }
-  bool sendln(const std::string& msg);
-  bool sendMessage(const Coordinate& promptCoord);
-  bool setTaunt(const Coordinate& promptCoordinate);
+  bool send(const std::string& msg);
+  bool send(const Printable& p) { return send(p.toString()); }
+  bool sendMessage(Coordinate);
+  bool setTaunt(Coordinate);
   bool setupBoard();
-  bool shoot(const Coordinate& promptCoordinate);
+  bool shoot(Coordinate);
   bool skip();
-  bool skip(const Coordinate& promptCoordinate);
+  bool skip(Coordinate);
   bool startGame();
   bool updateBoard();
   bool updateYourBoard();
-  bool viewBoard(const Coordinate& promptCoordinate);
+  bool viewBoard(Coordinate);
   bool waitForGameStart();
-  char controlSequence(const char ch, char& lastChar);
   char getChar();
   char waitForInput(const int timeout = -1);
   unsigned msgHeaderLen() const;
-  unsigned msgWindowHeight(const Coordinate& promptCoordinate) const;
+  unsigned msgWindowHeight(Coordinate) const;
   void appendMessage(const Message&);
   void appendMessage(const std::string& message,
                      const std::string& from = "",
                      const std::string& to = "");
   void close();
-  void closeSocket();
   void showHelp();
 };
 

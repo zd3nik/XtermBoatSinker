@@ -18,6 +18,7 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Server {
 private:
+  bool quietMode = false;
   bool autoStart = false;
   bool repeat = false;
   Input input;
@@ -72,30 +73,40 @@ private:
   bool printPlayers(Game&, Coordinate&);
   bool quitGame(Game&, Coordinate&);
   bool saveResult(Game&);
-  bool sendBoard(Game&, const Board&);
-  bool sendBoard(Game&, const int handle, const Board*);
+  bool sendBoard(Game&, Board& recipient, const Board&);
+  bool sendBoardToAll(Game&, const Board&);
+  bool send(Game&, Board& recipient, const std::string& msg);
   bool sendGameResults(Game&);
-  bool sendLineAll(Game&, const std::string& msg);
-  bool sendLine(Game&, const int handle, const std::string& msg);
   bool sendMessage(Game&, Coordinate&);
   bool sendStart(Game&);
-  bool sendYourBoard(Game&, const int handle, const Board*);
-  bool skipTurn(Game&, Coordinate&);
+  bool sendToAll(Game&, const std::string& msg);
+  bool sendYourBoard(Game&, Board& recipient, const Board&);
+  bool skipBoard(Game&, Coordinate&);
   bool startGame(Game&, Coordinate&);
-  bool prompt(Coordinate&, const std::string& str, std::string& field1,
+  bool prompt(Coordinate&,
+              const std::string& question,
+              std::string& response,
               const char fieldDelimeter = 0);
 
-  void getGameInfo(Game&, const int handle);
   void getPlayerInput(Game&, const int handle);
-  void joinGame(Game&, const int handle);
-  void leaveGame(Game&, const int handle);
-  void ping(Game&, const int handle);
-  void removePlayer(Game&, const int handle, const std::string& msg = "");
-  void sendMessage(Game&, const int handle);
-  void setTaunt(Game&, const int handle);
-  void shoot(Game&, const int handle);
-  void skip(Game&, const int handle);
+  void joinGame(Game&, Board& recipient);
+  void leaveGame(Game&, Board& recipient);
+  void ping(Game&, Board& recipient);
+  void removePlayer(Game&, Board& recipient, const std::string& msg = "");
+  void sendGameInfo(Game&, Board& recipient);
+  void sendMessage(Game&, Board& recipient);
+  void setTaunt(Game&, Board& recipient);
+  void shoot(Game&, Board& recipient);
+  void skip(Game&, Board& recipient);
   void startListening(const int backlog = 10);
+
+  bool sendToAll(Game& game, const Printable& p) {
+    return sendToAll(game, p.toString());
+  }
+
+  bool send(Game& game, Board& recipient, const Printable& p) {
+    return send(game, recipient, p.toString());
+  }
 };
 
 } // namespace xbs

@@ -25,37 +25,6 @@ Configuration Configuration::getDefaultConfiguration() {
 }
 
 //-----------------------------------------------------------------------------
-Configuration::Configuration()
-  : minPlayers(0),
-    maxPlayers(0),
-    pointGoal(0),
-    maxSurfaceArea(0)
-{ }
-
-//-----------------------------------------------------------------------------
-Configuration::Configuration(const Configuration& other)
-  : name(other.name),
-    minPlayers(other.minPlayers),
-    maxPlayers(other.maxPlayers),
-    pointGoal(other.pointGoal),
-    maxSurfaceArea(other.maxSurfaceArea),
-    shipArea(other.shipArea),
-    ships(other.ships.begin(), other.ships.end())
-{ }
-
-//-----------------------------------------------------------------------------
-Configuration& Configuration::operator=(const Configuration& other) {
-  name = other.name;
-  minPlayers = other.minPlayers;
-  maxPlayers = other.maxPlayers;
-  pointGoal = other.pointGoal;
-  maxSurfaceArea = other.maxSurfaceArea;
-  shipArea = other.shipArea;
-  ships.assign(other.ships.begin(), other.ships.end());
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
 Configuration& Configuration::setName(const std::string& name) {
   this->name = name;
   return (*this);
@@ -143,7 +112,8 @@ void Configuration::print(Coordinate& coord) const {
 }
 
 //-----------------------------------------------------------------------------
-bool Configuration::getShip(std::string& desc, const unsigned startIndex,
+bool Configuration::getShip(std::string& desc,
+                            const unsigned startIndex,
                             std::map<char, unsigned>& length) const
 {
   if (startIndex >= desc.size()) {
@@ -243,8 +213,7 @@ void Configuration::loadFrom(const DBRecord& record) {
   unsigned h = record.getUInt("height");
   shipArea.set(Coordinate(1, 1), Coordinate(w, h));
 
-  std::vector<std::string> values = record.getStrings("ship");
-  for (std::string str : values) {
+  for (std::string str : record.getStrings("ship")) {
     Ship ship;
     if (ship.fromString(str)) {
       ships.push_back(ship);

@@ -12,6 +12,60 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
+ControlKey controlSequence(const char ch, char& lastChar) {
+  if ((lastChar == '3') && (ch == '~')) {
+    lastChar = 0;
+    return KeyDel;
+  } else if ((lastChar == '5') && (ch == '~')) {
+    lastChar = 0;
+    return KeyPageUp;
+  } else if ((lastChar == '6') && (ch == '~')) {
+    lastChar = 0;
+    return KeyPageDown;
+  } else if (lastChar == '[') {
+    switch (ch) {
+    case 'A':
+      lastChar = 0;
+      return KeyUp;
+    case 'B':
+      lastChar = 0;
+      return KeyDown;
+    case 'H':
+      lastChar = 0;
+      return KeyHome;
+    case 'F':
+      lastChar = 0;
+      return KeyEnd;
+    case '5':
+      lastChar = '5';
+      return KeyIncomplete;
+    case '6':
+      lastChar = '6';
+      return KeyIncomplete;
+    }
+  } else if ((lastChar == 27) && (ch == '[')) {
+    lastChar = '[';
+    return KeyIncomplete;
+  } else if (ch == 27) {
+    lastChar = 27;
+    return KeyIncomplete;
+  } else if (!lastChar) {
+    switch (ch) {
+    case 8:
+    case 127:
+      return KeyBackspace;
+    }
+  }
+
+  if (lastChar) {
+    lastChar = 0;
+    return KeyIncomplete;
+  }
+  lastChar = 0;
+  return KeyNone;
+}
+
+//-----------------------------------------------------------------------------
 Input::Input()
   : line(BUFFER_SIZE, 0)
 {
@@ -177,6 +231,11 @@ unsigned Input::getHandleCount() const {
 //-----------------------------------------------------------------------------
 unsigned Input::getFieldCount() const {
   return fields.size();
+}
+
+//-----------------------------------------------------------------------------
+std::string Input::getLine() const {
+  return trimStr(line.data());
 }
 
 //-----------------------------------------------------------------------------

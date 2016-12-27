@@ -11,6 +11,23 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
+enum ControlKey : char {
+  KeyNone,
+  KeyUp,
+  KeyDown,
+  KeyHome,
+  KeyEnd,
+  KeyPageUp,
+  KeyPageDown,
+  KeyDel,
+  KeyBackspace,
+  KeyIncomplete
+};
+
+//-----------------------------------------------------------------------------
+extern ControlKey controlSequence(const char currentChar, char& previousChar);
+
+//-----------------------------------------------------------------------------
 class Input
 {
 public:
@@ -69,6 +86,7 @@ public:
   int getInt(const unsigned index = 0, const int def = -1) const;
   unsigned getUInt(const unsigned index = 0, const unsigned def = 0) const;
   double getDouble(const unsigned index = 0, const double def = 0) const;
+  std::string getLine() const;
   std::string getStr(const unsigned index = 0,
                      const std::string& def = "",
                      const bool trim = true) const;

@@ -13,81 +13,123 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-Game::Game()
-  : started(false),
-    aborted(false),
-    boardToMove(0),
-    turnCount(0)
-{ }
-
-//-----------------------------------------------------------------------------
-Game::Game(const Configuration& config)
-  : config(config),
-    started(false),
-    aborted(false),
-    boardToMove(0),
-    turnCount(0)
-{ }
-
-//-----------------------------------------------------------------------------
-Game& Game::setConfiguration(const Configuration& config) {
-  this->config = config;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Game& Game::clearBoards() {
+Game& Game::clear() {
+  title.clear();
+  started = 0;
+  aborted = 0;
+  finished = 0;
+  boardToMove = 0;
+  turnCount = 0;
+  config.clear();
   boards.clear();
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-Game& Game::addBoard(const Board& board) {
+Game& Game::addBoard(const std::shared_ptr<Board>& board) {
+  if (!board) {
+    Throw() << "Game.addBoard() null board";
+  }
+  if (isEmpty(board->getName())) {
+    Throw() << "Game.addBoard() empty name";
+  }
+  if (hasBoard(board->getName())) {
+    Throw() << "Game.addBoard() duplicate name: '" << board->getName() << "'";
+  }
+  if (hasBoard(board->handle())) {
+    Throw() << "Game.addBoard() duplicate handle: " << board->handle();
+  }
   boards.push_back(board);
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-bool Game::isValid() const {
-  return (config &&
-          (boards.size() >= config.getMinPlayers()) &&
-          (boards.size() <= config.getMaxPlayers()));
+Game& Game::setConfiguration(const Configuration& value) {
+  config = value;
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
-bool Game::isFinished() const {
-  if (aborted) {
-    return true;
-  } else if (isValid() && isStarted()) {
-    unsigned minTurns = ~0U;
-    unsigned maxTurns = 0;
-    unsigned maxScore = 0;
-    unsigned dead = 0;
-    for (const Board& board : boards) {
-      minTurns = std::min<unsigned>(minTurns, board.getTurns());
-      maxTurns = std::max<unsigned>(maxTurns, board.getTurns());
-      maxScore = std::max<unsigned>(maxScore, board.getScore());
-      if (board.isDead()) {
-        dead++;
+Game& Game::setTitle(const std::string& value) {
+  title = value;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board* Game::getBoardAtIndex(const unsigned index) {
+  if (index < boards.size()) {
+    return boards[index].get();
+  }
+  return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+Board* Game::getBoardForHandle(const int handle) {
+  if (handle >= 0) {
+    for (auto board : boards) {
+      if (board->handle() == handle) {
+        return board.get();
       }
     }
-    return ((dead >= boards.size()) ||
-            ((maxScore >= config.getPointGoal()) &&
-             (minTurns == maxTurns)));
   }
-  return false;
+  return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+Board* Game::getBoardForPlayer(const std::string& name, const bool exact) {
+  if (name.empty()) {
+    return nullptr;
+  } else if (isUInt(name)) {
+    return getBoardAtIndex(toUInt(name));
+  }
+
+  Board* match = nullptr;
+  for (auto board : boards) {
+    const std::string playerName = board->getName();
+    if (playerName == name) {
+      return board.get();
+    } else if (!exact && iEqual(playerName, name, name.size())) {
+      if (match) {
+        return nullptr;
+      } else {
+        match = board.get();
+      }
+    }
+  }
+  return match;
+}
+
+//-----------------------------------------------------------------------------
+Board* Game::getBoardToMove() {
+  if (isStarted() && !hasFinished()) {
+    return getBoardAtIndex(boardToMove);
+  }
+  return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+Board* Game::getFirstBoardForAddress(const std::string& address) {
+  if (address.size()) {
+    for (auto board : boards) {
+      if (board->getAddress() == address) {
+        return board.get();
+      }
+    }
+  }
+  return nullptr;
 }
 
 //-----------------------------------------------------------------------------
 bool Game::hasOpenBoard() const {
-  if (config && !isFinished()) {
-    if (!started && (boards.size() < config.getMaxPlayers())) {
-      return true;
-    }
-    for (const Board& board : boards) {
-      if (board.getHandle() < 0) {
-        return true;
+  if (!hasFinished()) {
+    if (isStarted()) {
+      for (auto board : boards) {
+        if (board->handle() < 0) {
+          return true;
+        }
       }
+    } else {
+      return (boards.size() < config.getMaxPlayers());
     }
   }
   return false;
@@ -98,136 +140,148 @@ bool Game::start(const bool randomize) {
   if (!isValid()) {
     Logger::error() << "can't start game because it is not valid";
     return false;
-  } else if (isStarted()) {
+  }
+  if (isStarted()) {
     Logger::error() << "can't start game because it is already started";
     return false;
-  } else if (isFinished()) {
+  }
+  if (hasFinished()) {
     Logger::error() << "can't start game because it is has finished";
-    return false;
-  } else if (randomize && !randomizeBoardOrder()) {
-    Logger::error() << "cannot randomize board order, game already started!";
     return false;
   }
 
-  Logger::info() << "starting game '" << config.getName() << "'";
-  started = true;
-  aborted = false;
+  Logger::info() << "starting game '" << title << "'";
+
+  if (randomize) {
+    std::random_shuffle(boards.begin(), boards.end());
+  }
+
+  started = Timer::now();
+  aborted = 0;
+  finished = 0;
   boardToMove = 0;
   turnCount = 0;
 
-  for (unsigned i = 0; i < boards.size(); ++i) {
-    boards[i].setToMove(i == boardToMove);
-  }
+  setBoardToMove();
   return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Game::randomizeBoardOrder() {
-  if (started) {
+bool Game::nextTurn() {
+  if (!isStarted()) {
+    Throw() << "Game.nextTurn() game has not been started";
+  }
+  if (hasFinished()) {
+    Throw() << "Game.nextTurn() game has finished";
+  }
+
+  turnCount += !boardToMove;
+  if (++boardToMove >= boards.size()) {
+    boardToMove = 0;
+  }
+
+  setBoardToMove();
+
+  unsigned minTurns = ~0U;
+  unsigned maxTurns = 0;
+  unsigned maxScore = 0;
+  unsigned dead = 0;
+  for (auto board : boards) {
+    minTurns = std::min<unsigned>(minTurns, board->getTurns());
+    maxTurns = std::max<unsigned>(maxTurns, board->getTurns());
+    maxScore = std::max<unsigned>(maxScore, board->getScore());
+    if (board->isDead()) {
+      dead++;
+    }
+  }
+  if ((dead >= boards.size()) ||
+      ((maxScore >= config.getPointGoal()) && (minTurns >= maxTurns)))
+  {
+    finished = Timer::now();
+  }
+
+  return !hasFinished();
+}
+
+//-----------------------------------------------------------------------------
+bool Game::setNextTurn(const std::string& name) {
+  if (name.empty()) {
+    Throw() << "Game.nextTurn() empty board name";
+  }
+  if (!isStarted()) {
+    Throw() << "Game.nextTurn(" << name << ") game is not started";
+  }
+  if (!hasFinished()) {
+    Throw() << "Game.nextTurn(" << name << ") game is finished";
+  }
+
+  unsigned idx = ~0U;
+  for (unsigned i = 0; i < boards.size(); ++i) {
+    if (boards[i]->getName() == name) {
+      idx = i;
+      break;
+    }
+  }
+
+  if (idx == ~0U) {
     return false;
   }
-  std::random_shuffle(boards.begin(), boards.end());
+
+  boardToMove = idx;
+  setBoardToMove();
   return true;
 }
 
 //-----------------------------------------------------------------------------
 void Game::disconnectBoard(const int handle, const std::string& msg) {
+  if (!isStarted()) {
+    Throw() << "Game.disconnectBoard() game has not started";
+  }
   Board* board = getBoardForHandle(handle);
   if (board) {
     board->setStatus(msg.size() ? msg : "disconnected");
-    board->setHandle(-1);
+    board->disconnect();
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Game::removeBoard(const std::string& name) {
+  if (isStarted()) {
+    Throw() << "Game.removeBoard() game has started";
+  }
+  for (auto it = boards.begin(); it != boards.end(); ++it) {
+    if ((*it)->getName() == name) {
+      boards.erase(it);
+      break;
+    }
   }
 }
 
 //-----------------------------------------------------------------------------
 void Game::removeBoard(const int handle) {
-  if ((handle >= 0) && !started) {
-    for (auto it = boards.begin(); it != boards.end(); ++it) {
-      if (it->getHandle() == handle) {
-        boards.erase(it);
-        break;
-      }
+  if (isStarted()) {
+    Throw() << "Game.removeBoard() game has started";
+  }
+  for (auto it = boards.begin(); it != boards.end(); ++it) {
+    if ((*it)->handle() == handle) {
+      boards.erase(it);
+      break;
     }
   }
 }
 
 //-----------------------------------------------------------------------------
-void Game::nextTurn() {
-  turnCount += !boardToMove;
-  if (++boardToMove >= boards.size()) {
-    boardToMove = 0;
-  }
-  for (unsigned i = 0; i < boards.size(); ++i) {
-    boards[i].setToMove(i == boardToMove);
+void Game::abort() {
+  if (!aborted) {
+    aborted = Timer::now();
   }
 }
 
 //-----------------------------------------------------------------------------
-Board* Game::getBoardAtIndex(const unsigned index) {
-  if (index < boards.size()) {
-    return &(boards[index]);
+void Game::finish() {
+  if (!finished) {
+    finished = Timer::now();
   }
-  return nullptr;
-}
-
-//-----------------------------------------------------------------------------
-Board* Game::getBoardForHandle(const int handle) {
-  if (handle >= 0) {
-    for (Board& board : boards) {
-      if (board.getHandle() == handle) {
-        return &board;
-      }
-    }
-  }
-  return nullptr;
-}
-
-//-----------------------------------------------------------------------------
-Board* Game::getBoardForPlayer(const std::string& name, const bool exact) {
-  Board* match = nullptr;
-  if (name.size()) {
-    if (isdigit(name[0])) {
-      unsigned n = static_cast<unsigned>(atoi(name.c_str()));
-      if ((n > 0) && (n <= boards.size())) {
-        match = getBoardAtIndex(n - 1);
-      }
-    } else {
-      for (Board& board : boards) {
-        std::string playerName = board.getName();
-        if (playerName == name) {
-          return &board;
-        }
-        if (!exact && iEqual(name, playerName, name.size())) {
-          if (match) {
-            return nullptr;
-          } else {
-            match = &board;
-          }
-        }
-      }
-    }
-  }
-  return match;
-}
-
-//-----------------------------------------------------------------------------
-Board* Game::getFirstBoardForAddress(const std::string& address) {
-  if (address.size()) {
-    for (Board& board : boards) {
-      if (board.getAddress() == address) {
-        return &board;
-      }
-    }
-  }
-  return nullptr;
-}
-
-//-----------------------------------------------------------------------------
-Board* Game::getBoardToMove() {
-  if (isStarted() && !isFinished()) {
-    return getBoardAtIndex(boardToMove);
-  }
-  return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -239,34 +293,30 @@ void Game::saveResults(Database& db) {
   unsigned hits = 0;
   unsigned highScore = 0;
   unsigned lowScore = ~0U;
-  for (const Board& board : boards) {
-    hits += board.getScore();
-    highScore = std::max<unsigned>(highScore, board.getScore());
-    lowScore = std::min<unsigned>(lowScore, board.getScore());
+  for (auto board : boards) {
+    hits += board->getScore();
+    highScore = std::max<unsigned>(highScore, board->getScore());
+    lowScore = std::min<unsigned>(lowScore, board->getScore());
   }
 
   unsigned ties = 0;
-  for (const Board& board : boards) {
-    ties += (board.getScore() == highScore);
+  for (auto board : boards) {
+    ties += (board->getScore() == highScore);
   }
   if (ties > 0) {
     ties--;
   } else {
-    Throw() << "Error calculating ties for game title '"
-            << config.getName() << "'";
+    Logger::error() << "Error calculating ties for game '" << title << "'";
   }
 
-  DBRecord* stats = db.get(("game." + config.getName()), true);
+  DBRecord* stats = db.get(("game." + title), true);
   if (!stats) {
-    Throw() << "Failed to get stats record for game title '"
-            << config.getName() << "' from " << db;
+    Throw() << "Failed to get stats record for game title '" << title
+            << "' from " << db;
   }
 
   config.saveTo(*stats);
-  if (!stats->incUInt("gameCount")) {
-    Throw() << "Failed to increment game count in " << (*stats);
-  }
-
+  stats->incUInt("gameCount");
   stats->incUInt("total.aborted", (aborted ? 1 : 0));
   stats->incUInt("total.turnCount", turnCount);
   stats->incUInt("total.playerCount", boards.size());
@@ -279,17 +329,31 @@ void Game::saveResults(Database& db) {
   stats->setUInt("last.hits", hits);
   stats->setUInt("last.ties", ties);
 
-  for (const Board& board : boards) {
-    const bool first = (board.getScore() == highScore);
-    const bool last = (board.getScore() == lowScore);
-    board.addStatsTo(*stats, first, last);
+  for (auto board : boards) {
+    const bool first = (board->getScore() == highScore);
+    const bool last = (board->getScore() == lowScore);
+    board->addStatsTo(*stats, first, last);
 
-    DBRecord* player = db.get(("player." + board.getName()), true);
+    DBRecord* player = db.get(("player." + board->getName()), true);
     if (!player) {
-      Throw() << "Failed to get record for player '" << board.getName()
+      Throw() << "Failed to get record for player '" << board->getName()
               << "' from " << db;
     }
-    board.saveTo(*player, (boards.size() - 1), first, last);
+    board->saveTo(*player, (boards.size() - 1), first, last);
+  }
+}
+
+//-----------------------------------------------------------------------------
+bool Game::isValid() const {
+  return (!isEmpty(title) && config &&
+          (boards.size() >= config.getMinPlayers()) &&
+          (boards.size() <= config.getMaxPlayers()));
+}
+
+//-----------------------------------------------------------------------------
+void Game::setBoardToMove() {
+  for (unsigned i = 0; i < boards.size(); ++i) {
+    boards[i]->setToMove(i == boardToMove);
   }
 }
 

@@ -10,6 +10,7 @@
 #include "Rectangle.h"
 #include "DBRecord.h"
 #include "Ship.h"
+#include "TcpSocket.h"
 
 namespace xbs
 {
@@ -47,15 +48,13 @@ namespace xbs
 class Board : public Rectangle
 {
 private:
-  int handle = -1;
   bool toMove = false;
   unsigned score = 0;
   unsigned skips = 0;
   unsigned turns = 0;
   Rectangle shipArea;
-  std::string name;
+  TcpSocket socket;
   std::string descriptor;
-  std::string address;
   std::string status;
   std::vector<std::string> hitTaunts;
   std::vector<std::string> missTaunts;
@@ -66,34 +65,36 @@ public:
 
   virtual std::string toString() const;
 
-  Board(const int handle,
-        const std::string& name,
-        const std::string& address,
+  Board(const std::string& name,
         const unsigned shipAreaWidth,
         const unsigned shipAreaHeight);
 
+  Board(const std::string& name, const Configuration& config)
+    : Board(name, config.getBoardWidth(), config.getBoardHeight())
+  { }
+
   Board() = default;
   Board(Board&&) = default;
-  Board(const Board&) = default;
+  Board(const Board&) = delete;
   Board& operator=(Board&&) = default;
-  Board& operator=(const Board&) = default;
+  Board& operator=(const Board&) = delete;
 
   explicit operator bool() const { return isValid(); }
 
-  int getHandle() const { return handle; }
+  int handle() const { return socket.getHandle(); }
   bool isToMove() const { return toMove; }
   unsigned getScore() const { return score; }
   unsigned getSkips() const { return skips; }
   unsigned getTurns() const { return turns; }
   Rectangle getShipArea() const { return shipArea; }
-  std::string getName() const { return name; }
+  std::string getName() const { return socket.getLabel(); }
+  std::string getAddress() const { return socket.getAddress(); }
   std::string getDescriptor() const { return descriptor; }
-  std::string getAddress() const { return address; }
   std::string getStatus() const { return status; }
   std::vector<std::string> getHitTaunts() const { return hitTaunts; }
   std::vector<std::string> getMissTaunts() const { return missTaunts; }
+  void disconnect() { socket.close(); }
 
-  Board& setHandle(const int);
   Board& setToMove(const bool);
   Board& setScore(const unsigned);
   Board& setSkips(const unsigned);
@@ -102,7 +103,6 @@ public:
   Board& incSkips(const unsigned = 1);
   Board& incTurns(const unsigned = 1);
   Board& setName(const std::string&);
-  Board& setAddress(const std::string&);
   Board& setStatus(const std::string&);
   Board& addHitTaunt(const std::string&);
   Board& addMissTaunt(const std::string&);
@@ -159,7 +159,6 @@ public:
 private:
   bool isValid() const {
     return (Rectangle::isValid() &&
-            (name.size() > 0) &&
             (shipArea.getSize() > 0) &&
             (descriptor.size() == shipArea.getSize()));
   }

@@ -26,30 +26,20 @@ std::string Board::toString(const std::string& desc, const unsigned width) {
 }
 
 //-----------------------------------------------------------------------------
-Board::Board(const int handle,
-             const std::string& name,
-             const std::string& address,
+Board::Board(const std::string& name,
              const unsigned shipAreaWidth,
              const unsigned shipAreaHeight)
   : Rectangle(Coordinate(1, 1),
               Coordinate((4 + (2 * shipAreaWidth)), (3 + shipAreaHeight))),
-    handle(handle),
-    shipArea(Coordinate(1, 1), Coordinate(shipAreaWidth, shipAreaHeight)),
-    name(name),
-    address(address)
+    shipArea(Coordinate(1, 1), Coordinate(shipAreaWidth, shipAreaHeight))
 {
+  socket.setLabel(name);
   clearDescriptor();
 }
 
 //-----------------------------------------------------------------------------
 std::string Board::toString() const {
   return toString(descriptor, shipArea.getWidth());
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::setHandle(const int handle) {
-  this->handle = handle;
-  return (*this);
 }
 
 //-----------------------------------------------------------------------------
@@ -95,32 +85,26 @@ Board& Board::incTurns(const unsigned value) {
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::setName(const std::string& str) {
-  name = str;
+Board& Board::setName(const std::string& value) {
+  socket.setLabel(value);
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::setAddress(const std::string& str) {
-  status = str;
+Board& Board::setStatus(const std::string& value) {
+  status = value;
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::setStatus(const std::string& str) {
-  status = str;
+Board& Board::addHitTaunt(const std::string& value) {
+  hitTaunts.push_back(value);
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::addHitTaunt(const std::string& str) {
-  hitTaunts.push_back(str);
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::addMissTaunt(const std::string& str) {
-  missTaunts.push_back(str);
+Board& Board::addMissTaunt(const std::string& value) {
+  missTaunts.push_back(value);
   return (*this);
 }
 
@@ -147,7 +131,7 @@ std::string Board::summary(const unsigned boardNum,
                            const bool gameStarted) const
 {
   std::stringstream ss;
-  ss << boardNum << ": " << (toMove ? '*' : ' ') << name;
+  ss << boardNum << ": " << (toMove ? '*' : ' ') << socket.getLabel();
   if (status.size()) {
     ss << " (" << status << ')';
   }
@@ -199,7 +183,7 @@ std::vector<Coordinate> Board::shipAreaCoordinates() const {
 
 //-----------------------------------------------------------------------------
 bool Board::isDead() const {
-  return ((handle < 0) || (hitCount() >= shipPointCount()));
+  return (!socket || (hitCount() >= shipPointCount()));
 }
 
 //-----------------------------------------------------------------------------
@@ -287,7 +271,7 @@ bool Board::addRandomShips(const Configuration& config,
 
   if (placeShips(desc, msa, coords, ships.begin(), ships.end())) {
     descriptor = desc;
-    return isValid();
+    return matchesConfig(config);
   }
 
   return false;
@@ -324,7 +308,7 @@ bool Board::print(const bool masked, const Configuration* config) const {
   } else {
     Screen::print() << rowHead << "  ";
   }
-  Screen::print() << ' ' << name;
+  Screen::print() << ' ' << socket.getLabel();
   if (status.size()) {
     Screen::print() << " (" << status << ')';
   } else if (config) {
@@ -496,7 +480,7 @@ unsigned Board::distToEdge(Coordinate coord, const Direction dir) const {
 //-----------------------------------------------------------------------------
 void Board::addStatsTo(DBRecord& stats, const bool first, const bool last)
 const {
-  std::string prefix("player." + name);
+  std::string prefix("player." + socket.getLabel());
 
   stats.incUInt((prefix + ".total.firstPlace"), (first ? 1 : 0));
   stats.incUInt((prefix + ".total.lastPlace"), (last ? 1 : 0));
@@ -517,8 +501,8 @@ void Board::saveTo(DBRecord& rec, const unsigned opponents,
   unsigned hits = hitCount();
   unsigned misses = missCount();
 
-  rec.setString("playerName", name);
-  rec.setString("lastAddress", address);
+  rec.setString("playerName", socket.getLabel());
+  rec.setString("lastAddress", socket.getAddress());
   rec.setString("lastStatus", status);
   rec.incUInt("gamesPlayed");
 

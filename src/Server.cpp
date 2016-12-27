@@ -42,26 +42,30 @@ void Server::showHelp() {
       << "Options:" << EL
       << EL
       << "  --help                 Show help and exit" << EL
-      << "  -a, --auto-start       Auto start game if max players joined" << EL
-      << "  -r, --repeat           Repeat game when done" << EL
-      << "  -b <addr>," << EL
-      << "  --bind-address <addr>  Bind server to given IP address" << EL
-      << "  -p <port>," << EL
-      << "  --port <port>          Listen for connections on given port" << EL
-      << "  -c <file>," << EL
-      << "  --config <file>        Use given board configuration file" << EL
-      << "  -t <title>," << EL
-      << "  --title <title>        Set game title to given value" << EL
       << "  --min <players>        Set minimum number of players" << EL
       << "  --max <players>        Set maximum number of players" << EL
       << "  --width <count>        Set board width" << EL
       << "  --height <count>       Set board height" << EL
-      << "  -d <dir>," << EL
+      << "  --quiet                No screen updates during game" << EL
+      << "   -q"<< EL
+      << "  --auto-start           Auto start game if max players joined" << EL
+      << "   -a" << EL
+      << "  --repeat               Repeat game when done" << EL
+      << "   -r" << EL
+      << "  --bind-address <addr>  Bind server to given IP address" << EL
+      << "   -b <addr>" << EL
+      << "  --port <port>          Listen for connections on given port" << EL
+      << "   -p <port>" << EL
+      << "  --config <file>        Use given board configuration file" << EL
+      << "   -c <file>" << EL
+      << "  --title <title>        Set game title to given value" << EL
+      << "   -t <title>" << EL
       << "  --db-dir <dir>         Save game stats to given directory" << EL
-      << "  -l <level>," << EL
+      << "   -d <dir>" << EL
       << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
-      << "  -f <file>," << EL
+      << "   -l <level>" << EL
       << "  --log-file <file>      Log messages to given file" << EL
+      << "   -f <file>" << EL
       << EL << Flush;
 }
 
@@ -77,6 +81,7 @@ bool Server::init() {
     return false;
   }
 
+  quietMode = (args.indexOf({"-q", "--quiet"}) > 0);
   autoStart = (args.indexOf({"-a", "--auto-start"}) > 0);
   repeat    = (args.indexOf({"-r", "--repeat"}) > 0);
   return true;
@@ -102,13 +107,22 @@ bool Server::run() {
   try {
     CanonicalMode(false);
     Coordinate coord;
+    Coordinate quietCoord;
 
     startListening(gameConfig.getMaxPlayers() + 2);
 
     while (!game.isFinished()) {
-      if (!printGameInfo(game, coord.set(1, 1)) ||
-          !printPlayers(game, coord) ||
-          !printOptions(game, coord))
+      if (quietMode && game.isStarted()) {
+        if (!quietCoord && (!printGameInfo(game, quietCoord.set(1, 1)) ||
+                            !printPlayers(game, coord) ||
+                            !printOptions(game, coord)))
+        {
+          Throw() << "Print failed";
+        }
+        coord.set(quietCoord);
+      } else if (!printGameInfo(game, coord.set(1, 1)) ||
+                 !printPlayers(game, coord) ||
+                 !printOptions(game, coord))
       {
         Throw() << "Print failed";
       }
@@ -201,7 +215,7 @@ bool Server::handleUserInput(Game& game, Coordinate& coord) {
   case 'A': return blacklistAddress(game, coord);
   case 'B': return bootPlayer(game, coord);
   case 'C': return clearBlacklist(game, coord);
-  case 'K': return skipTurn(game, coord);
+  case 'K': return skipBoard(game, coord);
   case 'M': return sendMessage(game, coord);
   case 'P': return blacklistPlayer(game, coord);
   case 'Q': return quitGame(game, coord);
@@ -215,33 +229,25 @@ bool Server::handleUserInput(Game& game, Coordinate& coord) {
 }
 
 //-----------------------------------------------------------------------------
-bool Server::skipTurn(Game& game, Coordinate& coord) {
+bool Server::skipBoard(Game& game, Coordinate& coord) {
   Board* board = game.getBoardToMove();
   if (!board || !board->isToMove()) {
     return true;
   }
 
-  char sbuf[Input::BUFFER_SIZE];
-  snprintf(sbuf, sizeof(sbuf), "Skip %s's turn? y/N -> ",
-           board->getName().c_str());
-
-  std::string str;
-  if (!prompt(coord, sbuf, str)) {
+  std::string s;
+  if (!prompt(coord, ("Skip " + board->getName() + "'s turn? [y/N] -> "), s)) {
     return false;
-  } else if (toupper(*str.c_str()) != 'Y') {
+  } else if (!iStartsWith(s, 'Y')) {
     return true;
   }
 
-  if (!prompt(coord, "Enter reason [RET=Abort] -> ", str)) {
+  if (!prompt(coord, "Enter reason [RET=Abort] -> ", s)) {
     return false;
-  } else if (str.size() && board->isToMove() &&
-             (board == game.getBoardToMove()))
-  {
+  } else if (s.size()) {
     board->incSkips();
     board->incTurns();
-    snprintf(sbuf, sizeof(sbuf), "K|%s|%s",
-             board->getName().c_str(), str.c_str());
-    sendLineAll(game, sbuf);
+    sendAll(game, MSG('K') << board->getName() << s);
     return nextTurn(game);
   }
   return true;
@@ -269,38 +275,32 @@ bool Server::sendMessage(Game& game, Coordinate& coord) {
   std::string msg;
   if (!prompt(coord, "Enter message [RET=Abort] -> ", msg)) {
     return false;
-  }
-
-  if (msg.size()) {
+  } else if (msg.size()) {
     if (!board) {
-      return sendLineAll(game, ("M||" + msg));
-    } else if (board->getHandle()) {
-      return sendLine(game, board->getHandle(), ("M||" + msg));
+      return sendAll(game, MSG('M') << "" << msg);
+    } else {
+      return send(game, board->getSocket(), MSG('M') << "" << msg);
     }
   }
   return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Server::clearBlacklist(Game& game, Coordinate& coord) {
+bool Server::clearBlacklist(Game&, Coordinate& coord) {
   if (blackList.empty()) {
     return true;
   }
 
   Screen::print() << coord << ClearToScreenEnd << "Blacklist:";
-
   coord.south().setX(3);
-
-  std::set<std::string>::const_iterator it;
-  for (it = blackList.begin(); it != blackList.end(); ++it) {
-    Screen::print() << coord.south() << (*it);
+  for (auto it : blackList) {
+    Screen::print() << coord.south() << it;
   }
 
   std::string str;
   if (!prompt(coord.south(2).setX(1), "Clear Blacklist? [y/N] -> ", str)) {
     return false;
-  }
-  if (toupper(*str.c_str()) == 'Y') {
+  } else if (iStartsWith(str, 'Y')) {
     blackList.clear();
   }
   return true;
@@ -315,12 +315,10 @@ bool Server::bootPlayer(Game& game, Coordinate& coord) {
   std::string user;
   if (!prompt(coord, "Enter name or number of player to boot -> ", user)) {
     return false;
-  }
-
-  if (user.size()) {
+  } else if (user.size()) {
     Board* board = game.getBoardForPlayer(user);
     if (board) {
-      removePlayer(game, board->getHandle(), BOOTED);
+      removePlayer(game, board->getSocket(), BOOTED);
     }
   }
   return true;
@@ -335,13 +333,11 @@ bool Server::blacklistPlayer(Game& game, Coordinate& coord) {
   std::string user;
   if (!prompt(coord, "Enter name or number of player to blacklist -> ", user)) {
     return false;
-  }
-
-  if (user.size()) {
+  } else if (user.size()) {
     Board* board = game.getBoardForPlayer(user);
     if (board) {
       blackList.insert(PLAYER_PREFIX + board->getName());
-      removePlayer(game, board->getHandle(), BOOTED);
+      removePlayer(game, board->getSocket(), BOOTED);
     }
   }
   return true;
@@ -352,13 +348,11 @@ bool Server::blacklistAddress(Game& game, Coordinate& coord) {
   std::string str;
   if (!prompt(coord, "Enter IP address to blacklist -> ", str)) {
     return false;
-  }
-
-  if (str.size()) {
+  } else if (str.size()) {
     blackList.insert(ADDRESS_PREFIX + str);
     Board* board;
     while ((board = game.getFirstBoardForAddress(str)) != nullptr) {
-      removePlayer(game, board->getHandle(), BOOTED);
+      removePlayer(game, board->getSocket(), BOOTED);
     }
   }
   return true;
@@ -369,8 +363,7 @@ bool Server::quitGame(Game& game, Coordinate& coord) {
   std::string str;
   if (!prompt(coord, "Quit Game? [y/N] -> ", str)) {
     return false;
-  }
-  if (toupper(*str.c_str()) == 'Y') {
+  } else if (iStartsWith(str, 'Y')) {
     game.abort();
   }
   return true;
@@ -382,8 +375,7 @@ bool Server::startGame(Game& game, Coordinate& coord) {
     std::string str;
     if (!prompt(coord, "Start Game? [y/N] -> ", str)) {
       return false;
-    }
-    if ((toupper(*str.c_str()) == 'Y') && game.start(true)) {
+    } else if (iStartsWith(str, 'Y') && game.start(true)) {
       if (!sendStart(game)) {
         return false;
       }
@@ -394,42 +386,41 @@ bool Server::startGame(Game& game, Coordinate& coord) {
 
 //-----------------------------------------------------------------------------
 bool Server::sendGameResults(Game& game) {
-  char sbuf[Input::BUFFER_SIZE];
-  snprintf(sbuf, sizeof(sbuf), "F|%s|%u|%u",
-           ((game.isFinished() && !game.isAborted()) ? "finished" : "aborted"),
-           game.getTurnCount(),
-           game.getBoardCount());
+  CSV finishMessage = MSG('F')
+      << ((game.isFinished() && !game.isAborted()) ? "finished" : "aborted")
+      << game.getTurnCount()
+      << game.getBoardCount();
 
+  // send finish message to all boards
   std::vector<const Board*> sortedBoards;
-  for (const Board& board : game) {
-    sortedBoards.push_back(&board);
-    if (board.getHandle() >= 0) {
-      sendLine(game, board.getHandle(), sbuf);
-    }
+  for (const Board& recipient : game) {
+    send(game, recipient, finishMessage);
+    // collect boards along the way for sorting below
+    sortedBoards.push_back(&recipient);
   }
 
+  // sort boards by score, descending
   std::stable_sort(sortedBoards.begin(), sortedBoards.end(),
     [](const Board* a, const Board* b) {
       return (a->getScore() > b->getScore());
     }
   );
 
+  // send sorted board results to all boards (N x N)
   for (const Board& recipient : game) {
-    if (recipient.getHandle() >= 0) {
-      for (const Board* board : sortedBoards) {
-        snprintf(sbuf, sizeof(sbuf), "R|%s|%u|%u|%u|%s",
-                 board->getName().c_str(),
-                 board->getScore(),
-                 board->getSkips(),
-                 board->getTurns(),
-                 board->getStatus().c_str());
-        sendLine(game, recipient.getHandle(), sbuf);
-      }
+    for (const Board* board : sortedBoards) {
+      send(game, recipient, MSG('R')
+           << board->getName()
+           << board->getScore()
+           << board->getSkips()
+           << board->getTurns()
+           << board->getStatus());
     }
   }
 
+  // disconnect all boards
   for (const Board& board : game) {
-    removePlayer(game, board.getHandle());
+    removePlayer(game, board.getSocket());
   }
   return true;
 }
@@ -442,28 +433,22 @@ bool Server::sendStart(Game& game) {
     return false;
   }
 
-  std::string startStr = "S";
+  // send all boards to all players (N x N)
+  CSV startMsg = MSG('S');
   for (const Board& board : game) {
-    startStr += '|';
-    startStr += board.getName();
-    if (!sendBoard(game, board)) {
+    if (!sendBoardToAll(game, board)) {
       return false;
     }
+    // add board/player name to 'S' message
+    startMsg << board.getName();
   }
 
-  std::string toMoveStr = ("N|" + toMove->getName());
-  for (const Board& board : game) {
-    if (sendLine(game, board.getHandle(), startStr)) {
-      sendLine(game, board.getHandle(), toMoveStr);
-    }
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Server::sendBoard(Game& game, const Board& board) {
-  for (const Board& dest : game) {
-    if (!sendBoard(game, dest.getHandle(), &board)) {
+  // send 'S' and 'N' messages to all boards
+  CSV nextTurnMsg = MSG('N') << toMove->getName();
+  for (const Board& recipient : game) {
+    if (!send(game, recipient, startMsg) ||
+        !send(game, recipient, nextTurnMsg))
+    {
       return false;
     }
   }
@@ -471,45 +456,46 @@ bool Server::sendBoard(Game& game, const Board& board) {
 }
 
 //-----------------------------------------------------------------------------
-bool Server::sendBoard(Game& game, const int handle, const Board* board) {
-  if (board && (handle > 0)) {
-    char sbuf[Input::BUFFER_SIZE];
-    snprintf(sbuf, sizeof(sbuf), "B|%s|%s|%s|%u|%u",
-             board->getName().c_str(),
-             board->getStatus().c_str(),
-             board->maskedDescriptor().c_str(),
-             board->getScore(),
-             board->getSkips());
-    return sendLine(game, handle, sbuf);
-  }
-  return false;
-}
-
-//-----------------------------------------------------------------------------
-bool Server::sendYourBoard(Game& game, const int handle, const Board* board) {
-  if (board && (handle > 0)) {
-    char sbuf[Input::BUFFER_SIZE];
-    snprintf(sbuf, sizeof(sbuf), "Y|%s", board->getDescriptor().c_str());
-    for (unsigned i = 2; sbuf[i]; ++i) {
-      Ship::unHit(sbuf[i]);
+bool Server::sendBoardToAll(Game& game, const Board& board) {
+  for (const Board& recipient : game) {
+    if (!sendBoard(game, recipient, board)) {
+      return false;
     }
-    return sendLine(game, handle, sbuf);
   }
-  return false;
+  return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Server::prompt(Coordinate& coord, const std::string& str,
-                    std::string& field1, const char delim)
+bool Server::sendBoard(Game& game, Board& recipient, const Board& board) {
+  return send(game, recipient, MSG('B')
+              << board.getName()
+              << board.getStatus()
+              << board.maskedDescriptor()
+              << board.getScore()
+              << board.getSkips());
+}
+
+//-----------------------------------------------------------------------------
+bool Server::sendYourBoard(Game& game, Board& recipient, const Board& board) {
+  std::string desc = board.getDescriptor();
+  for (char& ch : desc) {
+    ch = Ship::unHit(ch);
+  }
+  return send(game, recipient, MSG('Y') << desc);
+}
+
+//-----------------------------------------------------------------------------
+bool Server::prompt(Coordinate& coord, const std::string& question,
+                    std::string& response, const char delim)
 {
   CanonicalMode(true);
-  Screen::print() << coord << ClearToLineEnd << str << Flush;
+  Screen::print() << coord << ClearToLineEnd << question << Flush;
 
   if (input.readln(STDIN_FILENO, delim) < 0) {
     return false;
   }
 
-  field1 = input.getStr();
+  response = input.getStr();
   return true;
 }
 
@@ -531,9 +517,7 @@ char Server::waitForInput(Game& game, const int timeout) {
   }
 
   char userInput = 0;
-  std::set<int>::const_iterator it;
-  for (it = ready.begin(); it != ready.end(); ++it) {
-    const int handle = (*it);
+  for (const int handle : ready) {
     if (isServerHandle(handle)) {
       if (!addPlayerHandle(game)) {
         return -1;
@@ -549,182 +533,119 @@ char Server::waitForInput(Game& game, const int timeout) {
 
 //-----------------------------------------------------------------------------
 bool Server::addPlayerHandle(Game& game) {
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
-  socklen_t len = sizeof(addr);
-
-  while (true) {
-    // TODO move accept method to TcpSocket class
-    const int handle = accept(sock, (struct sockaddr*)&addr, &len);
-    if (handle < 0) {
-      if (errno == EINTR) {
-        Logger::debug() << "accept interrupted, trying again";
-        continue;
-      } else if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-        return true;
-      }
-      Logger::error() << "accept failed: %s" << strerror(errno);
-      return false;
-    }
-
-    std::string address = inet_ntoa(addr.sin_addr);
-    Logger::debug() << "connection from '" << address << "' on channel "
-                    << handle;
-
-    if (handle == STDIN_FILENO) {
-      Logger::error() << "got stdin from accept call";
-      return false;
-    }
-
-    if (blackList.count(ADDRESS_PREFIX + address)) {
-      Logger::debug() << "address is blacklisted";
-      shutdown(handle, SHUT_RDWR);
-      close(handle);
-      break;
-    }
-
-    if (game.hasBoard(handle)) {
-      Logger::error() << "Duplicate handle " << handle << " created!";
-      return false;
-    }
-
-    if (!game.hasOpenBoard()) {
-      Logger::debug() << "rejecting connnection because game in progress";
-      shutdown(handle, SHUT_RDWR);
-      close(handle);
-      break;
-    }
-
-    input.addHandle(handle, address);
-    getGameInfo(game, handle);
-    break;
+  TcpSocket newSocket = socket.accept();
+  if (!newSocket) {
+    Logger::debug() << "no new connetion from accept"; // not an error
+    return true;
   }
+
+  if (game.hasBoard(newSocket.getHandle())) {
+    Throw() << "Duplicate handle accepted: " << newSocket;
+  }
+
+  if (blackList.count(ADDRESS_PREFIX + newSocket.getAddress())) {
+    Logger::debug() << newSocket << " address is blacklisted";
+    return true;
+  }
+
+  if (!game.hasOpenBoard()) {
+    Logger::debug() << "rejecting connnection because game in progress";
+    return true;
+  }
+
+  input.addHandle(newSocket.getHandle(), address);
+  sendGameInfo(game, newSocket);
+  // TODO store newSocket somewhere
   return true;
 }
 
 //-----------------------------------------------------------------------------
 void Server::getPlayerInput(Game& game, const int handle) {
+  Board* board = game.getBoardForHandle(handle);
+  if (!board) {
+    Throw() << "Unknown player channel: " << handle;
+  }
+
   if (input.readln(handle) <= 0) {
-    removePlayer(game, handle);
+    removePlayer(game, *board);
     return;
   }
 
   std::string str = input.getStr();
-  if (str == "G") {
-    getGameInfo(game, handle);
-  } else if (str == "J") {
-    joinGame(game, handle);
-  } else if (str == "L") {
-    leaveGame(game, handle);
-  } else if (str == "M") {
-    sendMessage(game, handle);
-  } else if (str == "P") {
-    ping(game, handle);
-  } else if (str == "S") {
-    shoot(game, handle);
-  } else if (str == "K") {
-    skip(game, handle);
-  } else if (str == "T") {
-    setTaunt(game, handle);
-  } else if (game.hasBoard(handle)) {
-    sendLine(game, handle, PROTOCOL_ERROR);
-  } else {
-    Logger::debug() << "Invalid message from channel " << handle << " "
-                    << input.getHandleLabel(handle);
-    input.removeHandle(handle);
-    shutdown(handle, SHUT_RDWR);
-    close(handle);
+  if (str.size() == 1) {
+    switch (str[0]) {
+    case 'G': return sendGameInfo(game, *board);
+    case 'J': return joinGame(game, *board);
+    case 'K': return skip(game, *board);
+    case 'L': return leaveGame(game, *board);
+    case 'M': return sendMessage(game, *board);
+    case 'P': return ping(game, *board);
+    case 'S': return shoot(game, *board);
+    case 'T': return setTaunt(game, *board);
+    default:
+      break;
+    }
   }
+
+  Logger::debug() << "Invalid message(" << str << ") from "
+                  << board->getSocket();
+  send(game, *board, PROTOCOL_ERROR);
 }
 
 //-----------------------------------------------------------------------------
-bool Server::sendLineAll(Game& game, const std::string& msg) {
-  for (const Board& dest : game) {
-    if (dest.getHandle() >= 0) {
-      sendLine(game, dest.getHandle(), msg);
-    }
+bool Server::sendToAll(Game& game, const std::string& msg) {
+  for (const Board& recipient : game) {
+    send(game, recipient, msg);
   }
   return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Server::sendLine(Game& game, const int handle, const std::string& msg) {
-  if (isEmpty(msg)) {
-    Logger::error() << "not sending empty message";
+bool Server::send(Game& game, Board& recipient, const std::string& msg) {
+  if (!recipient.getSocket()) {
+    Logger::debug() << "not sending message to " << recipient.getSocket();
     return true;
-  }
-  if (handle < 0) {
-    Logger::error() << "not sending message to channel " << handle;
-    return true;
-  }
-  if (strchr(msg.c_str(), '\n')) {
-    Logger::error() << "message contains newline (" << msg << ")";
-    return false;
   }
   if (msg.size() >= Input::BUFFER_SIZE) {
-    Logger::error() << "message exceeds buffer size (" << msg << ")";
+    Logger::error() << "message exceeds buffer size (" << msg.size() << ','
+                    << msg << ")";
     return false;
   }
-
-  std::string s(msg);
-  s += '\n';
-
-  Logger::debug() << "Sending " << s.size() << " bytes (" << msg
-                  << ") to channel " << handle << " "
-                  << input.getHandleLabel(handle);
-
-  size_t n = send(handle, s.c_str(), s.size(), MSG_NOSIGNAL);
-  if (n != s.size()) {
-    Logger::error() << "Failed to write " << s.size() << " bytes (" << msg
-                    << ") to channel " << handle << " "
-                    << input.getHandleLabel(handle) << ": " << strerror(errno);
-
-    removePlayer(game, handle, COMM_ERROR);
+  if (!recipient.getSocket().send(msg)) {
+    removePlayer(game, recipient, COMM_ERROR);
     return false;
   }
   return true;
 }
 
 //-----------------------------------------------------------------------------
-void Server::removePlayer(Game& game, const int handle,
-                          const std::string& msg)
-{
+void Server::removePlayer(Game& game, Board& board, const std::string& msg) {
+  input.removeHandle(board.getSocket().getHandle());
+
   std::string leaveMessage;
-  Board* board = game.getBoardForHandle(handle);
-  if (board) {
-    leaveMessage += "L|";
-    leaveMessage += board->getName();
-    leaveMessage += '|';
-    leaveMessage += msg;
+  if (board.getName().size()) {
+    leaveMessage = (MSG('L') << board.getName() << msg).toString();
   }
 
-  bool closed = (msg.size() && (msg != COMM_ERROR))
-      ? !sendLine(game, handle, msg)
-      : false;
+  if (msg.size() && (msg != COMM_ERROR)) {
+    send(game, board, msg);
+  }
 
   if (game.isStarted()) {
-    game.disconnectBoard(handle, msg);
+    game.disconnectBoard(board, msg);
   } else {
-    game.removeBoard(handle);
+    game.removeBoard(board);
   }
 
-  if (board) {
-    bool inProgress = (game.isStarted() && !game.isFinished());
-    for (const Board& dest : game) {
-      if ((dest.getHandle() >= 0) && (dest.getHandle() != handle)) {
-        if (inProgress) {
-          sendBoard(game, *board);
-        } else {
-          sendLine(game, dest.getHandle(), leaveMessage);
-        }
+  bool inProgress = (game.isStarted() && !game.isFinished());
+  for (const Board& recipient : game) {
+    if (recipient.getSocket().getHandle() != board.getSocket().getHandle()) {
+      if (inProgress) {
+        sendBoard(game, recipient, board);
+      } else {
+        send(game, recipient, leaveMessage);
       }
     }
-  }
-
-  if (!closed) {
-    input.removeHandle(handle);
-    shutdown(handle, SHUT_RDWR);
-    close(handle);
   }
 }
 
@@ -734,36 +655,34 @@ void Server::startListening(const int backlog) {
   const std::string portStr = args.getValueOf({"-p", "--port"});
   int bindPort = isInt(portStr) ? toInt(portStr) : DEFAULT_PORT;
 
-  TcpSocket socket;
   socket.listen(bindAddress, bindPort, backlog);
   input.addHandle(socket.getHandle());
-  return std::move(socket);
 }
 
 //-----------------------------------------------------------------------------
-void Server::getGameInfo(Game& game, const int handle) {
+void Server::sendGameInfo(Game& game, Board& recipient) {
   const Configuration& config = game.getConfiguration();
-  std::stringstream ss;
-  ss << "G|" << getVersion().toString()
-     << '|' << config.getName()
-     << '|' << (game.isStarted() ? 'Y' : 'N')
-     << '|' << config.getMinPlayers()
-     << '|' << config.getMaxPlayers()
-     << '|' << game.getBoardCount()
-     << '|' << config.getPointGoal()
-     << '|' << config.getBoardWidth()
-     << '|' << config.getBoardHeight()
-     << '|' << config.getShipCount();
+  CSV msg = MSG('G')
+      << getVersion()
+      << config.getName()
+      << (game.isStarted() ? 'Y' : 'N')
+      << config.getMinPlayers()
+      << config.getMaxPlayers()
+      << game.getBoardCount()
+      << config.getPointGoal()
+      << config.getBoardWidth()
+      << config.getBoardHeight()
+      << config.getShipCount();
 
   for (const Ship& ship : config) {
-    ss << '|' << ship.toString();
+    msg << ship.toString();
   }
 
-  sendLine(game, handle, ss.str());
+  send(game, recipient, msg.toString());
 }
 
 //-----------------------------------------------------------------------------
-void Server::joinGame(Game& game, const int handle) {
+void Server::joinGame(Game& game, Board& recipient) {
   const Configuration& config = game.getConfiguration();
   const std::string playerName = input.getStr(1);
   const std::string shipDescriptor = input.getStr(2);
@@ -903,13 +822,13 @@ bool Server::isValidPlayerName(const std::string& name) const {
 }
 
 //-----------------------------------------------------------------------------
-void Server::leaveGame(Game& game, const int handle) {
+void Server::leaveGame(Game& game, const Board& recipient) {
   std::string reason = input.getStr(1);
   removePlayer(game, handle, reason);
 }
 
 //-----------------------------------------------------------------------------
-void Server::sendMessage(Game& game, const int handle) {
+void Server::sendMessage(Game& game, const TcpSocket&) {
   Board* sender = game.getBoardForHandle(handle);
   if (!sender) {
     Logger::error() << "no board for channel " << handle << " "
@@ -943,7 +862,7 @@ void Server::sendMessage(Game& game, const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::ping(Game& game, const int handle) {
+void Server::ping(Game& game, const Board& recipient) {
   std::string msg = input.getStr(1);
   if (msg.length() && game.hasBoard(handle)) {
     sendLine(game, handle, ("P|" + msg));
@@ -1051,7 +970,7 @@ bool Server::nextTurn(Game& game) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::setTaunt(Game& game, const int handle) {
+void Server::setTaunt(Game& game, const TcpSocket&) {
   Board* sender = game.getBoardForHandle(handle);
   if (!sender) {
     Logger::error() << "no board for channel " << handle << " "

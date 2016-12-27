@@ -9,47 +9,77 @@
 #include "Board.h"
 #include "Configuration.h"
 #include "Database.h"
+#include "Timer.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Game
-{
+class Game {
+private:
+  std::string title;
+  Timestamp started = 0;
+  Timestamp aborted = 0;
+  Timestamp finished = 0;
+  unsigned boardToMove = 0;
+  unsigned turnCount = 0;
+  Configuration config;
+  std::vector<std::shared_ptr<Board>> boards;
+
 public:
-  Game();
-  Game(const Configuration&);
-  Game& addBoard(const Board&);
-  Game& clearBoards();
+  Game(const Configuration& config)
+    : config(config)
+  { }
+
+  Game() = default;
+  Game(Game&&) = default;
+  Game(const Game&) = default;
+  Game& operator=(Game&&) = default;
+  Game& operator=(const Game&) = default;
+
+  explicit operator bool() const { return isValid(); }
+
+  Game& clear();
+  Game& addBoard(const std::shared_ptr<Board>&);
   Game& setConfiguration(const Configuration&);
-  bool hasOpenBoard() const;
-  bool isFinished() const;
-  bool isValid() const;
-  bool start(const bool randomizeBoardOrder);
-  void disconnectBoard(const int handle, const std::string& msg);
-  void nextTurn();
-  void removeBoard(const int handle);
-  void saveResults(Database&);
+  Game& setTitle(const std::string&);
+
   Board* getBoardAtIndex(const unsigned index);
   Board* getBoardForHandle(const int handle);
-  Board* getBoardForPlayer(const std::string& name, const bool exact = false);
+  Board* getBoardForPlayer(const std::string& name, const bool exact);
   Board* getBoardToMove();
   Board* getFirstBoardForAddress(const std::string& address);
 
-  std::vector<Board>::const_iterator begin() const {
+  bool hasOpenBoard() const;
+  bool start(const bool randomizeBoardOrder = false);
+  bool nextTurn();
+  bool setNextTurn(const std::string& name);
+
+  void disconnectBoard(const int handle, const std::string& msg);
+  void removeBoard(const std::string& name);
+  void removeBoard(const int handle);
+  void abort();
+  void finish();
+  void saveResults(Database&);
+
+  std::vector<std::shared_ptr<Board>>::const_iterator begin() const {
     return boards.begin();
   }
 
-  std::vector<Board>::const_iterator end() const {
+  std::vector<std::shared_ptr<Board>>::const_iterator end() const {
     return boards.end();
   }
 
-  std::vector<Board>::iterator begin() {
+  std::vector<std::shared_ptr<Board>>::iterator begin() {
     return boards.begin();
   }
 
-  std::vector<Board>::iterator end() {
+  std::vector<std::shared_ptr<Board>>::iterator end() {
     return boards.end();
+  }
+
+  std::string getTitle() const {
+    return title;
   }
 
   const Configuration& getConfiguration() const {
@@ -68,27 +98,25 @@ public:
     return aborted;
   }
 
+  bool hasFinished() const { // TODO rename back to isFinished()
+    return (aborted || finished);
+  }
+
+  bool hasBoard(const std::string& name) {
+    return getBoardForPlayer(name, true);
+  }
+
   bool hasBoard(const int handle) {
-    return (getBoardForHandle(handle) != nullptr);
+    return getBoardForHandle(handle);
   }
 
   unsigned getTurnCount() const {
     return turnCount;
   }
 
-  void abort() {
-    aborted = true;
-  }
-
 private:
-  bool randomizeBoardOrder();
-
-  Configuration config;
-  std::vector<Board> boards;
-  bool started;
-  bool aborted;
-  unsigned boardToMove;
-  unsigned turnCount;
+  bool isValid() const;
+  void setBoardToMove();
 };
 
 } // namespace xbs

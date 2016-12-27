@@ -16,12 +16,18 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Configuration
 {
+private:
+  std::string name;
+  unsigned minPlayers = 0;
+  unsigned maxPlayers = 0;
+  unsigned pointGoal = 0;
+  unsigned maxSurfaceArea = 0;
+  Rectangle shipArea;
+  std::vector<Ship> ships;
+
 public:
   static Configuration getDefaultConfiguration();
 
-  Configuration();
-  Configuration(const Configuration& other);
-  Configuration& operator=(const Configuration& other);
   Configuration& setName(const std::string& name);
   Configuration& setMinPlayers(const unsigned minPlayers);
   Configuration& setMaxPlayers(const unsigned maxPlayers);
@@ -91,16 +97,9 @@ public:
 
 private:
   bool isValid() const;
-  bool getShip(std::string& desc, const unsigned startIndex,
+  bool getShip(std::string& desc,
+               const unsigned startIndex,
                std::map<char, unsigned>& shipLengthMap) const;
-
-  std::string name;
-  unsigned minPlayers;
-  unsigned maxPlayers;
-  unsigned pointGoal;
-  unsigned maxSurfaceArea;
-  Rectangle shipArea;
-  std::vector<Ship> ships;
 };
 
 } // namespace xbs

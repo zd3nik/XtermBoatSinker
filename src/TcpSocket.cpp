@@ -5,6 +5,7 @@
 #include "TcpSocket.h"
 #include "Logger.h"
 #include "Throw.h"
+#include <cerrno>
 #include <cstring>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -17,12 +18,34 @@ const std::string ANY_ADDRESS("0.0.0.0");
 
 //-----------------------------------------------------------------------------
 std::string TcpSocket::toString() const {
-  std::stringstream ss;
-  ss << "TcpSocket(" << address << ':' << port
-     << ((mode == Client) ? ",client" : (mode == Server) ? ",server" : "")
-     << ((handle >= 0) ? ",open" : ",closed")
-     << ')';
-  return ss.str();
+  CSV params(',', true);
+  switch (mode) {
+  case Client:
+    params << "Client";
+    break;
+  case Server:
+    params << "Server";
+    break;
+  case Remote:
+    params << "Remote";
+    break;
+  default:
+    break;
+  }
+  if (label.size()) {
+    params << ("label=" + label);
+  }
+  if (address.size()) {
+    params << ("address=" + address + ':' + toStr(port));
+  } else if (port >= 0) {
+    params << ("port=" + toStr(port));
+  }
+  if (handle >= 0) {
+    params << ("handle=" + toStr(handle));
+  } else {
+    params << "not open";
+  }
+  return ("TcpSocket(" + params.toString() + ')');
 }
 
 //-----------------------------------------------------------------------------
@@ -34,25 +57,23 @@ void TcpSocket::close() {
     if (::close(handle)) {
       Logger::error() << (*this) << " close failed: " << strerror(errno);
     }
+    handle = -1;
   }
-  address.clear();
-  port = -1;
-  handle = -1;
-  mode = Unknown;
 }
 
 //-----------------------------------------------------------------------------
 TcpSocket& TcpSocket::connect(const std::string& hostAddress,
                               const int hostPort)
 {
+  if (handle >= 0) {
+    Throw() << "connect(" << hostAddress << ',' << hostPort << ") called on "
+            << (*this);
+  }
   if (isEmpty(hostAddress)) {
     Throw(InvalidArgument) << "TcpSocket.connect() empty host address";
   }
   if (!isValidPort(hostPort)) {
     Throw(InvalidArgument) << "TcpSocket.connect() invalid port: " << hostPort;
-  }
-  if (handle >= 0) {
-    Throw() << "connect() called on " << (*this);
   }
 
   addrinfo hints;
@@ -101,14 +122,15 @@ TcpSocket& TcpSocket::listen(const std::string& bindAddress,
                              const int bindPort,
                              const int backlog)
 {
+  if (handle >= 0) {
+    Throw() << "listen(" << bindAddress << ',' << bindPort << ',' << backlog
+            << ") called on " << (*this);
+  }
   if (!isValidPort(bindPort)) {
     Throw(InvalidArgument) << "TcpSocket.listen() invalid port: " << bindPort;
   }
   if (backlog < 1) {
     Throw(InvalidArgument) << "TcpSocket.listen() invalid backlog: " << backlog;
-  }
-  if (handle >= 0) {
-    Throw() << "listen() called on " << (*this);
   }
   if ((handle = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     Throw() << "Failed to create socket handle: " << strerror(errno);
@@ -152,6 +174,70 @@ TcpSocket& TcpSocket::listen(const std::string& bindAddress,
 
   Logger::info() << (*this) << " listening";
   return (*this);
+}
+
+//-----------------------------------------------------------------------------
+TcpSocket TcpSocket::accept() const {
+  if (handle < 0) {
+    Throw() << "accept() called on " << (*this);
+  }
+
+  while (true) {
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    socklen_t len = sizeof(addr);
+
+    const int newHandle = ::accept(handle, (sockaddr*)&addr, &len);
+    if (newHandle < 0) {
+      if (errno == EINTR) {
+        Logger::debug() << (*this) << ".accept() interrupted, trying again";
+        continue;
+      } else if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+        return TcpSocket();
+      } else {
+        Throw() << (*this) << ".accept() failed: %s" << strerror(errno);
+      }
+    }
+
+    if (newHandle == STDIN_FILENO) {
+      Throw() << (*this) << ".accept() stdin";
+    }
+
+    TcpSocket sock(inet_ntoa(addr.sin_addr), port, newHandle);
+    Logger::debug() << (*this) << ".accept() " << sock;
+    return std::move(sock);
+  }
+}
+
+//-----------------------------------------------------------------------------
+bool TcpSocket::send(const std::string& msg) const {
+  if (handle < 0) {
+    Logger::error() << "send(" << msg.size() << ',' << msg << ") called on "
+                    << (*this);
+    return false;
+  }
+  if (isEmpty(msg)) {
+    Logger::error() << (*this) << ".send() empty message";
+    return false;
+  }
+  if (contains(msg, '\n')) {
+    Logger::error() << (*this) << ".send(" << msg.size() << ',' << msg
+                    << ") message contains newline";
+    return false;
+  }
+
+  std::string tmp(msg);
+  tmp += '\n';
+
+  Logger::debug() << (*this) << ".send(" << tmp.size() << "," << msg << ')';
+
+  size_t n = ::send(handle, tmp.c_str(), tmp.size(), MSG_NOSIGNAL);
+  if (n != tmp.size()) {
+    Logger::error() << (*this) << ".send(" << tmp.size() << "," << msg
+                    << ") failed: " << strerror(errno);
+    return false;
+  }
+  return true;
 }
 
 } // namespace xbs

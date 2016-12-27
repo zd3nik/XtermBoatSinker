@@ -122,20 +122,17 @@ public:
     std::string xCell;
     std::string yCell;
     CSV(str) >> xCell >> yCell;
-    if (xCell.size() && isInt(yCell)) {
-      int newX = toInt(xCell);
-      int newY = toInt(yCell);
-      if (!isInt(xCell)) {
-        if ((xCell.size() != 1) || !isalpha(xCell[0])) {
-          return false;
-        }
-        newX = (tolower(xCell[0]) - 'a' + 1);
-      }
-      if ((newX >= 0) && (newY >= 0)) {
-        x = static_cast<unsigned>(newX);
-        y = static_cast<unsigned>(newY);
-        return true;
-      }
+    if (isUInt(xCell) && isUInt(yCell)) {
+      x = static_cast<unsigned>(toUInt(xCell));
+      y = static_cast<unsigned>(toUInt(yCell));
+      return true;
+    }
+    if (yCell.empty() && (xCell.size() > 1) && isalpha(xCell[0]) &&
+        isUInt(xCell.substr(1)))
+    {
+      x = static_cast<unsigned>(tolower(xCell[0]) - 'a' + 1);
+      y = static_cast<unsigned>(toUInt(xCell.substr(1)));
+      return true;
     }
     return false;
   }
