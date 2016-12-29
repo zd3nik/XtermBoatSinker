@@ -206,7 +206,7 @@ bool Client::readGameInfo(unsigned& playersJoined) {
   if (!socket) {
     Logger::printError() << "Not connected, can't read game info";
     return false;
-  } else if (input.readln(socket.getHandle()) <= 0) {
+  } else if (!input.readln(socket.getHandle())) {
     Logger::printError() << "No game info received";
     return false;
   }
@@ -348,8 +348,8 @@ bool Client::setupBoard() {
   }
 
   // try to fit up to 9 boards in the terminal screen
-  std::vector<std::shared_ptr<Board>> boards;
-    for (unsigned i = 0; i < 9; ++i) {
+  std::vector<BoardPtr> boards;
+  for (unsigned i = 0; i < 9; ++i) {
     const std::string name = ("Board #" + toStr(i + 1));
     auto board = std::make_shared<Board>(name, config);
     if ((i > 0) && !board->addRandomShips(config, minSurfaceArea)) {
@@ -505,6 +505,37 @@ char Client::getChar() {
 }
 
 //-----------------------------------------------------------------------------
+char Client::getKey(Coordinate coord) {
+  CanonicalMode(false);
+  char ch = 0;
+  switch (input.readKey(STDIN_FILENO, ch)) {
+  case KeyChar:
+    return toupper(ch);
+  case KeyUp:
+    scrollUp();
+    break;
+  case KeyDown:
+    scrollDown();
+    break;
+  case KeyHome:
+    scrollHome();
+    break;
+  case KeyEnd:
+    scrollEnd();
+    break;
+  case KeyPageUp:
+    pageUp(coord);
+    break;
+  case KeyPageDown:
+    pageDown(coord);
+    break;
+  default:
+    break;
+  }
+  return 0;
+}
+
+//-----------------------------------------------------------------------------
 bool Client::getUserName() {
   userName = getUserArg();
   while (true) {
@@ -627,7 +658,6 @@ bool Client::waitForGameStart() {
   }
 
   CanonicalMode(false);
-  char previousChar = 0;
   bool ok = true;
 
   while (ok && !game.isStarted() && !game.hasFinished()) {
@@ -638,7 +668,7 @@ bool Client::waitForGameStart() {
     Screen::print() << coord.south() << "Joined : " << game.getBoardCount();
     coord.south().setX(3);
 
-    for (auto board : game) {
+    for (auto board : game.getAllBoards()) {
       Screen::print() << coord.south() << board->getName();
       if (userName == board->getName()) {
         Screen::print() << " (you)";
@@ -654,41 +684,16 @@ bool Client::waitForGameStart() {
     }
 
     Screen::print() << " -> " << Flush;
-    char ch = waitForInput();
-    if (ch < 0) {
-      return false;
-    } else if ((ch > 0) && ((ch = input.readChar(STDIN_FILENO)) <= 0)) {
-      return false;
-    }
-
-    switch (controlSequence(ch, previousChar)) {
-    case KeyNone:     ch = toupper(ch); break;
-    case KeyUp:       ch = 'U';         break;
-    case KeyDown:     ch = 'D';         break;
-    case KeyHome:     ch = 'H';         break;
-    case KeyEnd:      ch = 'E';         break;
-    case KeyPageUp:   ch = 'u';         break;
-    case KeyPageDown: ch = 'd';         break;
-    case KeyDel:
-    case KeyBackspace:
-    case KeyIncomplete:
-      continue;
-    }
-
-    switch (ch) {
-    case 'C': ok = clearMessages(coord); break;
-    case 'd': ok = pageDown(coord);      break;
-    case 'D': ok = scrollDown();         break;
-    case 'E': ok = end();                break;
-    case 'H': ok = home();               break;
-    case 'M': ok = sendMessage(coord);   break;
-    case 'Q': ok = !quitGame(coord);     break;
-    case 'R': ok = redrawScreen();       break;
-    case 'T': ok = setTaunt(coord);      break;
-    case 'u': ok = pageUp(coord);        break;
-    case 'U': ok = scrollUp();           break;
-    default:
-      break;
+    if (waitForInput()) {
+      switch (getKey(coord)) {
+      case 'C': ok = clearMessages(coord); break;
+      case 'M': ok = sendMessage(coord);   break;
+      case 'Q': ok = !quitGame(coord);     break;
+      case 'R': ok = redrawScreen();       break;
+      case 'T': ok = setTaunt(coord);      break;
+      default:
+        break;
+      }
     }
   }
 
@@ -758,12 +763,13 @@ bool Client::sendMessage(Coordinate coord) {
 
   Screen::print() << coord.south() << ClearToScreenEnd;
   while (true) {
-    Board* board;
     if (!prompt(coord, "Enter recipient [RET=All] -> ", name)) {
       return false;
     } else if (name.empty()) {
       break;
-    } else if (!(board = game.getBoardForPlayer(name, false))) {
+    }
+    auto board = game.getBoardForPlayer(name, false);
+    if (!board) {
       Logger::printError() << "Invalid player name: " << name;
     } else if (board->getName() == userName) {
       Logger::printError() << "Sorry, you can't message yourself!";
@@ -839,13 +845,13 @@ bool Client::pageDown(Coordinate coord) {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::home() {
+bool Client::scrollHome() {
   msgEnd = 0;
   return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Client::end() {
+bool Client::scrollEnd() {
   msgEnd = ~0U;
   return true;
 }
@@ -860,23 +866,29 @@ bool Client::send(const std::string& msg) {
 }
 
 //-----------------------------------------------------------------------------
-char Client::waitForInput(const int timeout) {
+bool Client::isServerHandle(const int handle) const {
+  return ((handle >= 0) && (handle == socket.getHandle()));
+}
+
+//-----------------------------------------------------------------------------
+bool Client::isUserHandle(const int handle) const {
+  return ((handle >= 0) && (handle == STDIN_FILENO));
+}
+
+//-----------------------------------------------------------------------------
+bool Client::waitForInput(const int timeout) {
   std::set<int> ready;
   if (!input.waitForData(ready, timeout)) {
-    return -1;
-  } else if (ready.empty()) {
     redrawScreen();
-    return 0;
+    return false;
   }
 
-  char userInput = 0;
+  bool userInput = false;
   for (const int handle : ready) {
-    if (handle == socket.getHandle()) {
-      if (!handleServerMessage()) {
-        return -1;
-      }
-    } else if (handle == STDIN_FILENO) {
-      userInput = 1;
+    if (isServerHandle(handle)) {
+      handleServerMessage();
+    } else {
+      userInput = isUserHandle(handle);
     }
   }
   return userInput;
@@ -891,16 +903,16 @@ bool Client::handleServerMessage() {
   const std::string str = input.getStr();
   if (str.size() == 1) {
     switch (str[0]) {
-      case 'B': return updateBoard();
-      case 'F': return endGame();
-      case 'H': return hit();
-      case 'J': return addPlayer();
-      case 'K': return skip();
-      case 'L': return removePlayer();
-      case 'M': return addMessage();
-      case 'N': return nextTurn();
-      case 'S': return startGame();
-      case 'Y': return updateYourBoard();
+    case 'B': return updateBoard();
+    case 'F': return endGame();
+    case 'H': return hit();
+    case 'J': return addPlayer();
+    case 'K': return skip();
+    case 'L': return removePlayer();
+    case 'M': return addMessage();
+    case 'N': return nextTurn();
+    case 'S': return startGame();
+    case 'Y': return updateYourBoard();
     }
   }
 
@@ -1124,7 +1136,8 @@ bool Client::endGame() {
                       << " " << sts;
     }
   }
-  return Screen::print() << coord.south(2).setX(1) << Flush;
+  Screen::print() << coord.south(2).setX(1) << Flush;
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1136,13 +1149,12 @@ bool Client::run() {
 
   const Configuration& config = game.getConfiguration();
   Screen::get(true).clear().flush();
-  char lastChar = 0;
   bool ok = true;
 
   while (ok && !game.hasFinished()) {
     Coordinate coord(1, 1);
     Screen::print() << coord << ClearToScreenEnd;
-    for (auto board : game) {
+    for (auto board : game.getAllBoards()) {
       if (board->print(true, &config)) {
         coord.set(board->getBottomRight());
       } else {
@@ -1158,44 +1170,19 @@ bool Client::run() {
       return false;
     }
 
-    int ch = waitForInput();
-    if (ch < 0) {
-      return false;
-    } else if ((ch > 0) && ((ch = input.readChar(STDIN_FILENO)) <= 0)) {
-      return false;
-    }
-
-    switch (controlSequence(ch, lastChar)) {
-    case KeyNone:     ch = toupper(ch); break;
-    case KeyUp:       ch = 'U';         break;
-    case KeyDown:     ch = 'D';         break;
-    case KeyHome:     ch = 'H';         break;
-    case KeyEnd:      ch = 'E';         break;
-    case KeyPageUp:   ch = 'u';         break;
-    case KeyPageDown: ch = 'd';         break;
-    case KeyDel:
-    case KeyBackspace:
-    case KeyIncomplete:
-      continue;
-    }
-
-    switch (ch) {
-    case 'C': ok = clearMessages(coord); break;
-    case 'd': ok = pageDown(coord);      break;
-    case 'D': ok = scrollDown();         break;
-    case 'E': ok = end();                break;
-    case 'H': ok = home();               break;
-    case 'M': ok = sendMessage(coord);   break;
-    case 'Q': ok = !quitGame(coord);     break;
-    case 'R': ok = redrawScreen();       break;
-    case 'S': ok = shoot(coord);         break;
-    case 'K': ok = skip(coord);          break;
-    case 'T': ok = setTaunt(coord);      break;
-    case 'u': ok = pageUp(coord);        break;
-    case 'U': ok = scrollUp();           break;
-    case 'V': ok = viewBoard(coord);     break;
-    default:
-      break;
+    if (waitForInput()) {
+      switch (getKey(coord)) {
+      case 'C': ok = clearMessages(coord); break;
+      case 'K': ok = skip(coord);          break;
+      case 'M': ok = sendMessage(coord);   break;
+      case 'Q': ok = !quitGame(coord);     break;
+      case 'R': ok = redrawScreen();       break;
+      case 'S': ok = shoot(coord);         break;
+      case 'T': ok = setTaunt(coord);      break;
+      case 'V': ok = viewBoard(coord);     break;
+      default:
+        break;
+      }
     }
   }
 
@@ -1203,15 +1190,15 @@ bool Client::run() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::clearScreen() {
+void Client::clearScreen() {
   msgEnd = ~0U;
-  return Screen::get(true).clear();
+  Screen::get(true).clear();
 }
 
 //-----------------------------------------------------------------------------
 bool Client::redrawScreen() {
   std::vector<Rectangle*> children;
-  for (auto child : game) {
+  for (auto child : game.getAllBoards()) {
     children.push_back(child.get());
   }
   if (!Screen::get(true).clear().flush().arrangeChildren(children)) {
@@ -1440,28 +1427,34 @@ bool Client::shoot(Coordinate coord) {
     Logger::printError() << "It's not your turn";
     return true;
   }
+  if (!game.hasBoard(userName)) {
+    Logger::printError() << "You are not in the game!";
+    return false;
+  }
 
   Screen::print() << coord.south() << ClearToScreenEnd;
 
-  Board* board = nullptr;
+  std::string name;
   if (game.getBoardCount() == 2) {
-    for (auto b : game) {
-      if (b->getName() != userName) {
-        board = b.get();
+    for (auto board : game.getAllBoards()) {
+      if (board->getName() != userName) {
+        name = board->getName();
       }
     }
   } else {
     while (true) {
-      std::string name;
       if (!prompt(coord, "Shoot which board? -> ", name)) {
         return false;
       } else if (isEmpty(name)) {
         return true;
-      } else if (!(board = game.getBoardForPlayer(name, false))) {
+      }
+      auto board = game.getBoardForPlayer(name, false);
+      if (!board) {
         Screen::print() << ClearLine << "Invalid player name: " << name;
       } else if (board->getName() == userName) {
         Screen::print() << ClearLine << "Don't shoot yourself stupid!";
       } else {
+        name = board->getName();
         break;
       }
     }
@@ -1477,17 +1470,14 @@ bool Client::shoot(Coordinate coord) {
       return true;
     } else if (!shotCoord.fromString(location)) {
       Screen::print() << ClearLine << "Invalid coordinates";
-    } else if (!board->getShipArea().contains(shotCoord)) {
+    } else if (!game.getConfiguration().getShipArea().contains(shotCoord)) {
       Screen::print() << ClearLine << "Illegal coordinates";
     } else {
       break;
     }
   }
 
-  return send(MSG('S')
-              << board->getName()
-              << shotCoord.getX()
-              << shotCoord.getY());
+  return send(MSG('S') << name << shotCoord.getX() << shotCoord.getY());
 }
 
 //-----------------------------------------------------------------------------

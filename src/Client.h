@@ -58,16 +58,17 @@ private:
   bool addMessage();
   bool addPlayer();
   bool clearMessages(Coordinate);
-  bool clearScreen();
   bool closeSocket();
-  bool end();
+  bool scrollEnd();
   bool endGame();
   bool getHostAddress();
   bool getHostPort();
   bool getUserName();
   bool handleServerMessage();
   bool hit();
-  bool home();
+  bool scrollHome();
+  bool isServerHandle(const int handle) const;
+  bool isUserHandle(const int handle) const;
   bool joinGame(bool& retry);
   bool joinPrompt(const unsigned playersJoined);
   bool manualSetup(Board&, std::vector<Ship>& shipsRemaining);
@@ -101,14 +102,16 @@ private:
   bool updateYourBoard();
   bool viewBoard(Coordinate);
   bool waitForGameStart();
+  bool waitForInput(const int timeout = -1);
   char getChar();
-  char waitForInput(const int timeout = -1);
+  char getKey(Coordinate);
   unsigned msgHeaderLen() const;
   unsigned msgWindowHeight(Coordinate) const;
   void appendMessage(const Message&);
   void appendMessage(const std::string& message,
                      const std::string& from = "",
                      const std::string& to = "");
+  void clearScreen();
   void close();
   void showHelp();
 };

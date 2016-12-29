@@ -12,7 +12,7 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 enum ControlKey : char {
-  KeyNone,
+  KeyChar,
   KeyUp,
   KeyDown,
   KeyHome,
@@ -21,25 +21,53 @@ enum ControlKey : char {
   KeyPageDown,
   KeyDel,
   KeyBackspace,
-  KeyIncomplete
+  KeyUnknown
 };
-
-//-----------------------------------------------------------------------------
-extern ControlKey controlSequence(const char currentChar, char& previousChar);
 
 //-----------------------------------------------------------------------------
 class Input
 {
+private:
+  char lastChar = 0;
+  std::vector<char> line;
+  std::vector<std::string> fields;
+  std::map<int, std::string> handles;
+  std::map<int, std::vector<char>> buffer;
+  std::map<int, unsigned> pos;
+  std::map<int, unsigned> len;
+
 public:
   enum {
     BUFFER_SIZE = 4096
   };
 
-  Input();
+  Input()
+    : line(BUFFER_SIZE, 0)
+  { }
+
   Input(Input&&) = delete;
   Input(const Input&) = delete;
   Input& operator=(Input&&) = delete;
   Input& operator=(const Input&) = delete;
+
+  /**
+   * This method does not alter internal buffers or field state,
+   * it does a direct read on the given handle
+   * @brief Read a single character from the given handle
+   * @param handle The handle to read data from
+   * @return the first available char read from the given handle
+   */
+  char readChar(const int handlde);
+
+  /**
+    This method does not alter internal buffers of field state,
+    it does direct reads on the given handle to determine the next key sequence
+   * @brief Read the next complete key sequence from the given handle
+   * @param handle The handle to read data from
+   * @param ch Update with char read from given handle if return type = KeyChar
+   * @return the type of key sequence read from the given handle
+   */
+  ControlKey readKey(const int handle, char& ch);
 
   /**
    * Wait for data to become available for reading on one or more of the
@@ -47,7 +75,7 @@ public:
    * @brief Block execution until timeout or data becomes available for reading
    * @param[out] ready Populated with handles that have data available
    * @param timeout_ms max milliseconds to wait, -1 = wait indefinitely
-   * @return false on error
+   * @return true if data available, otherwise false
    */
   bool waitForData(std::set<int>& ready, const int timeout_ms = -1);
 
@@ -58,24 +86,16 @@ public:
    *   no more data available
    * Then split the data into fields using the specified delimiter.
    * You can the get individual field values via:
-   *   this::getString(fieldIndex)
+   *   this::getStr(fieldIndex)
    *   this::getInt(fieldIndex)
-   *   this::getUnsigned(fieldIndex)
+   *   this::getUInt(fieldIndex)
+   *   this::getDouble(fieldIndex)
    * @brief Read one line of data from the given handle
    * @param handle The handle to read data from
    * @param delimeter If not 0 split line into fields via this delimeter
-   * @return -1 on error, otherwise number of '|' delimited fields read
+   * @return number of '|' delimited fields read
    */
-  int readln(const int handle, const char delimeter = '|');
-
-  /**
-   * This function does not use internal buffer or alter field state,
-   * it simply does a direct read on the givne handle
-   * @brief Read a single character from the given handle
-   * @param handle The handle to read data from
-   * @return -1 on error, otherwise the first char read from the given handle
-   */
-  char readChar(const int handle);
+  unsigned readln(const int handle, const char delimeter = '|');
 
   void addHandle(const int handle, const std::string& label = "");
   void removeHandle(const int handle);
@@ -86,20 +106,13 @@ public:
   int getInt(const unsigned index = 0, const int def = -1) const;
   unsigned getUInt(const unsigned index = 0, const unsigned def = 0) const;
   double getDouble(const unsigned index = 0, const double def = 0) const;
-  std::string getLine() const;
+  std::string getLine(const bool trim = true) const;
   std::string getStr(const unsigned index = 0,
                      const std::string& def = "",
                      const bool trim = true) const;
 
 private:
-  int bufferData(const int fd);
-
-  std::vector<char> line;
-  std::map<int, std::vector<char>> buffer;
-  std::map<int, unsigned> pos;
-  std::map<int, unsigned> len;
-  std::map<int, std::string> handles;
-  std::vector<std::string> fields;
+  void bufferData(const int fd);
 };
 
 } // namespace xbs

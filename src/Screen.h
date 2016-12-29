@@ -44,8 +44,6 @@ public:
   static Screen& print() { return get(false); }
   static const char* colorCode(const ScreenColor);
 
-  operator bool() const;
-
   Screen& ch(const char);
   Screen& clear();
   Screen& clearLine();
@@ -158,6 +156,11 @@ private:
   Screen(const Rectangle& container)
     : Rectangle(container)
   { }
+
+  Screen(Screen&&) = delete;
+  Screen(const Screen&) = delete;
+  Screen& operator=(Screen&&) = delete;
+  Screen& operator=(const Screen&) = delete;
 };
 
 } // namespace xbs

@@ -6,6 +6,7 @@
 #include "Logger.h"
 #include "Screen.h"
 #include "StringUtils.h"
+#include "Throw.h"
 
 namespace xbs
 {
@@ -81,6 +82,24 @@ Board& Board::incSkips(const unsigned value) {
 //-----------------------------------------------------------------------------
 Board& Board::incTurns(const unsigned value) {
   turns += value;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::setSocket(TcpSocket&& value) {
+  if (socket) {
+    Throw() << "Board(" << getName() << ").setSocket() socket already set";
+  }
+  socket = std::move(value);
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::stealSocket(Board& other) {
+  if (socket) {
+    Throw() << "Board(" << getName() << ").stealSocket() socket already set";
+  }
+  socket = std::move(other.socket);
   return (*this);
 }
 

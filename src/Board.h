@@ -81,12 +81,13 @@ public:
 
   explicit operator bool() const { return isValid(); }
 
-  int handle() const { return socket.getHandle(); }
+  int handle() const { return socket.getHandle(); } // TODO rename back to getHandle()
   bool isToMove() const { return toMove; }
   unsigned getScore() const { return score; }
   unsigned getSkips() const { return skips; }
   unsigned getTurns() const { return turns; }
   Rectangle getShipArea() const { return shipArea; }
+  const TcpSocket& getSocket() const { return socket; }
   std::string getName() const { return socket.getLabel(); }
   std::string getAddress() const { return socket.getAddress(); }
   std::string getDescriptor() const { return descriptor; }
@@ -102,6 +103,8 @@ public:
   Board& incScore(const unsigned = 1);
   Board& incSkips(const unsigned = 1);
   Board& incTurns(const unsigned = 1);
+  Board& setSocket(TcpSocket&&);
+  Board& stealSocket(Board&);
   Board& setName(const std::string&);
   Board& setStatus(const std::string&);
   Board& addHitTaunt(const std::string&);
@@ -170,6 +173,9 @@ private:
                   const std::vector<Ship>::iterator& sBegin,
                   const std::vector<Ship>::iterator& sEnd);
 };
+
+//-----------------------------------------------------------------------------
+typedef std::shared_ptr<Board> BoardPtr;
 
 } // namespace xbs
 

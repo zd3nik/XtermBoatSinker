@@ -12,7 +12,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-static Screen* instance = nullptr;
+static std::unique_ptr<Screen> instance;
 
 //-----------------------------------------------------------------------------
 static Rectangle GetScreenDimensions() {
@@ -35,12 +35,8 @@ static Rectangle GetScreenDimensions() {
 
 //-----------------------------------------------------------------------------
 Screen& Screen::get(const bool update) {
-  if (update) {
-    delete instance;
-    instance = nullptr;
-  }
-  if (!instance) {
-    instance = new Screen(GetScreenDimensions());
+  if (update || !instance) {
+    instance.reset(new Screen(GetScreenDimensions()));
   }
   return (*instance);
 }
@@ -59,11 +55,6 @@ const char* Screen::colorCode(const ScreenColor color) {
     break;
   }
   return "\033[0;0m";
-}
-
-//-----------------------------------------------------------------------------
-Screen::operator bool() const {
-  return (instance != nullptr);
 }
 
 //-----------------------------------------------------------------------------

@@ -26,7 +26,7 @@ Game& Game::clear() {
 }
 
 //-----------------------------------------------------------------------------
-Game& Game::addBoard(const std::shared_ptr<Board>& board) {
+Game& Game::addBoard(const BoardPtr& board) {
   if (!board) {
     Throw() << "Game.addBoard() null board";
   }
@@ -56,19 +56,24 @@ Game& Game::setTitle(const std::string& value) {
 }
 
 //-----------------------------------------------------------------------------
-Board* Game::getBoardAtIndex(const unsigned index) {
-  if (index < boards.size()) {
-    return boards[index].get();
+BoardPtr Game::getBoardToMove() {
+  BoardPtr board;
+  if (isStarted() &&
+      !hasFinished() &&
+      (board = getBoardAtIndex(boardToMove)) &&
+      !board->isToMove())
+  {
+    Throw() << "Game.getBoardToMove() board.toMove is not in sync!";
   }
-  return nullptr;
+  return board;
 }
 
 //-----------------------------------------------------------------------------
-Board* Game::getBoardForHandle(const int handle) {
-  if (handle >= 0) {
+BoardPtr Game::getFirstBoardForAddress(const std::string& address) {
+  if (address.size()) {
     for (auto board : boards) {
-      if (board->handle() == handle) {
-        return board.get();
+      if (board->getAddress() == address) {
+        return board;
       }
     }
   }
@@ -76,47 +81,49 @@ Board* Game::getBoardForHandle(const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-Board* Game::getBoardForPlayer(const std::string& name, const bool exact) {
+BoardPtr Game::getBoardAtIndex(const unsigned index) {
+  if (index < boards.size()) {
+    return boards[index];
+  }
+  return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+BoardPtr Game::getBoardForHandle(const int handle) {
+  if (handle >= 0) {
+    for (auto board : boards) {
+      if (board->handle() == handle) {
+        return board;
+      }
+    }
+  }
+  return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+BoardPtr Game::getBoardForPlayer(const std::string& name,
+                                 const bool exact)
+{
   if (name.empty()) {
     return nullptr;
   } else if (isUInt(name)) {
     return getBoardAtIndex(toUInt(name));
   }
 
-  Board* match = nullptr;
+  BoardPtr match;
   for (auto board : boards) {
     const std::string playerName = board->getName();
     if (playerName == name) {
-      return board.get();
+      return board;
     } else if (!exact && iEqual(playerName, name, name.size())) {
       if (match) {
         return nullptr;
       } else {
-        match = board.get();
+        match = board;
       }
     }
   }
   return match;
-}
-
-//-----------------------------------------------------------------------------
-Board* Game::getBoardToMove() {
-  if (isStarted() && !hasFinished()) {
-    return getBoardAtIndex(boardToMove);
-  }
-  return nullptr;
-}
-
-//-----------------------------------------------------------------------------
-Board* Game::getFirstBoardForAddress(const std::string& address) {
-  if (address.size()) {
-    for (auto board : boards) {
-      if (board->getAddress() == address) {
-        return board.get();
-      }
-    }
-  }
-  return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -237,7 +244,7 @@ void Game::disconnectBoard(const int handle, const std::string& msg) {
   if (!isStarted()) {
     Throw() << "Game.disconnectBoard() game has not started";
   }
-  Board* board = getBoardForHandle(handle);
+  auto board = getBoardForHandle(handle);
   if (board) {
     board->setStatus(msg.size() ? msg : "disconnected");
     board->disconnect();

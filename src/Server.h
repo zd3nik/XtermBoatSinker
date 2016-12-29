@@ -6,6 +6,7 @@
 #define XBS_SERVER_H
 
 #include "Platform.h"
+#include "Board.h"
 #include "Configuration.h"
 #include "Game.h"
 #include "Input.h"
@@ -24,6 +25,7 @@ private:
   Input input;
   TcpSocket socket;
   std::set<std::string> blackList;
+  std::map<int, BoardPtr> newBoards;
 
 public:
   enum {
@@ -34,6 +36,10 @@ public:
 
   Server() {
     input.addHandle(STDIN_FILENO);
+  }
+
+  ~Server() {
+    closeSocket();
   }
 
   Server(Server&&) = delete;
@@ -54,59 +60,61 @@ public:
   }
 
 private:
-  Configuration getGameConfig();
-  char waitForInput(Game&, const int timeout = -1);
-
-  bool addPlayerHandle(Game&);
-  bool blacklistAddress(Game&, Coordinate&);
-  bool blacklistPlayer(Game&, Coordinate&);
-  bool bootPlayer(Game&, Coordinate&);
-  bool clearBlacklist(Game&, Coordinate&);
-  bool getGameTitle(std::string& title);
-  bool handleUserInput(Game&, Coordinate&);
-  bool isServerHandle(const int handle) const;
-  bool isUserHandle(const int handle) const;
-  bool isValidPlayerName(const std::string& name) const;
-  bool nextTurn(Game&);
-  bool printGameInfo(Game&, Coordinate&);
-  bool printOptions(Game&, Coordinate&);
-  bool printPlayers(Game&, Coordinate&);
-  bool quitGame(Game&, Coordinate&);
-  bool saveResult(Game&);
-  bool sendBoard(Game&, Board& recipient, const Board&);
-  bool sendBoardToAll(Game&, const Board&);
-  bool send(Game&, Board& recipient, const std::string& msg);
-  bool sendGameResults(Game&);
-  bool sendMessage(Game&, Coordinate&);
-  bool sendStart(Game&);
-  bool sendToAll(Game&, const std::string& msg);
-  bool sendYourBoard(Game&, Board& recipient, const Board&);
-  bool skipBoard(Game&, Coordinate&);
-  bool startGame(Game&, Coordinate&);
-  bool prompt(Coordinate&,
-              const std::string& question,
-              std::string& response,
-              const char fieldDelimeter = 0);
-
-  void getPlayerInput(Game&, const int handle);
-  void joinGame(Game&, Board& recipient);
-  void leaveGame(Game&, Board& recipient);
-  void ping(Game&, Board& recipient);
-  void removePlayer(Game&, Board& recipient, const std::string& msg = "");
-  void sendGameInfo(Game&, Board& recipient);
-  void sendMessage(Game&, Board& recipient);
-  void setTaunt(Game&, Board& recipient);
-  void shoot(Game&, Board& recipient);
-  void skip(Game&, Board& recipient);
-  void startListening(const int backlog = 10);
-
-  bool sendToAll(Game& game, const Printable& p) {
-    return sendToAll(game, p.toString());
+  void sendToAll(Game& game, const Printable& p) {
+    sendToAll(game, p.toString());
   }
 
   bool send(Game& game, Board& recipient, const Printable& p) {
     return send(game, recipient, p.toString());
   }
+
+  Configuration getGameConfig();
+  std::string prompt(Coordinate&,
+                     const std::string& question,
+                     const char fieldDelimeter = 0);
+
+  bool getGameTitle(std::string& title);
+  bool isServerHandle(const int handle) const;
+  bool isUserHandle(const int handle) const;
+  bool isValidPlayerName(const std::string& name) const;
+  bool sendBoard(Game&, Board& recipient, const Board&);
+  bool sendGameInfo(Game&, Board&);
+  bool sendYourBoard(Game&, Board&);
+  bool waitForInput(Game&, const int timeout = -1);
+  bool send(Game&, Board& recipient, const std::string& msg,
+            const bool removeOnFailure = true);
+
+  void addPlayerHandle(Game&);
+  void blacklistAddress(Game&, Coordinate&);
+  void blacklistPlayer(Game&, Coordinate&);
+  void bootPlayer(Game&, Coordinate&);
+  void clearBlacklist(Game&, Coordinate&);
+  void closeSocket();
+  void handlePlayerInput(Game&, const int handle);
+  void handleUserInput(Game&, Coordinate&);
+  void joinGame(Game&, BoardPtr&);
+  void leaveGame(Game&, Board&);
+  void nextTurn(Game&);
+  void ping(Game&, Board&);
+  void printGameInfo(Game&, Coordinate&);
+  void printOptions(Game&, Coordinate&);
+  void printPlayers(Game&, Coordinate&);
+  void quitGame(Game&, Coordinate&);
+  void rejoinGame(Game&, Board&);
+  void removePlayer(Game&, Board&, const std::string& msg = "");
+  void saveResult(Game&);
+  void sendBoardToAll(Game&, const Board&);
+  void sendGameResults(Game&);
+  void sendMessage(Game&, Board&);
+  void sendMessage(Game&, Coordinate&);
+  void sendStart(Game&);
+  void sendToAll(Game&, const std::string& msg);
+  void setTaunt(Game&, Board&);
+  void shoot(Game&, Board&);
+  void skipBoard(Game&, Coordinate&);
+  void skip(Game&, Board&);
+  void startGame(Game&, Coordinate&);
+  void startListening(const int backlog = 10);
 };
 
 } // namespace xbs

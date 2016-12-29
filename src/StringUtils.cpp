@@ -104,6 +104,11 @@ bool contains(const std::string& str, const std::string& pattern) {
 }
 
 //-----------------------------------------------------------------------------
+bool containsAny(const std::string& str, const std::string& pattern) {
+  return (str.find_first_of(pattern) != std::string::npos);
+}
+
+//-----------------------------------------------------------------------------
 bool iContains(const std::string& str, const char ch) {
   return (toUpper(str).find(toupper(ch)) != std::string::npos);
 }
@@ -111,6 +116,11 @@ bool iContains(const std::string& str, const char ch) {
 //-----------------------------------------------------------------------------
 bool iContains(const std::string& str, const std::string& pattern) {
   return (toUpper(str).find(toUpper(pattern).c_str()) != std::string::npos);
+}
+
+//-----------------------------------------------------------------------------
+bool iContainsAny(const std::string& str, const std::string& pattern) {
+  return (toUpper(str).find_first_of(toUpper(pattern)) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------

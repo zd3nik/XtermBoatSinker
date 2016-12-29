@@ -24,7 +24,7 @@ private:
   unsigned boardToMove = 0;
   unsigned turnCount = 0;
   Configuration config;
-  std::vector<std::shared_ptr<Board>> boards;
+  std::vector<BoardPtr> boards;
 
 public:
   Game(const Configuration& config)
@@ -40,15 +40,15 @@ public:
   explicit operator bool() const { return isValid(); }
 
   Game& clear();
-  Game& addBoard(const std::shared_ptr<Board>&);
+  Game& addBoard(const BoardPtr&);
   Game& setConfiguration(const Configuration&);
   Game& setTitle(const std::string&);
 
-  Board* getBoardAtIndex(const unsigned index);
-  Board* getBoardForHandle(const int handle);
-  Board* getBoardForPlayer(const std::string& name, const bool exact);
-  Board* getBoardToMove();
-  Board* getFirstBoardForAddress(const std::string& address);
+  BoardPtr getBoardToMove();
+  BoardPtr getFirstBoardForAddress(const std::string& address);
+  BoardPtr getBoardAtIndex(const unsigned index);
+  BoardPtr getBoardForHandle(const int handle);
+  BoardPtr getBoardForPlayer(const std::string& name, const bool exact);
 
   bool hasOpenBoard() const;
   bool start(const bool randomizeBoardOrder = false);
@@ -62,20 +62,15 @@ public:
   void finish();
   void saveResults(Database&);
 
-  std::vector<std::shared_ptr<Board>>::const_iterator begin() const {
-    return boards.begin();
+  std::vector<BoardPtr> getAllBoards() { // TODO rename to allBoard()
+    return std::vector<BoardPtr>(boards.begin(), boards.end());
   }
 
-  std::vector<std::shared_ptr<Board>>::const_iterator end() const {
-    return boards.end();
-  }
-
-  std::vector<std::shared_ptr<Board>>::iterator begin() {
-    return boards.begin();
-  }
-
-  std::vector<std::shared_ptr<Board>>::iterator end() {
-    return boards.end();
+  std::vector<BoardPtr> connectedBoards() {
+    std::vector<BoardPtr> result;
+    std::copy_if(boards.begin(), boards.end(), std::back_inserter(result),
+                 [](const BoardPtr& b) { return (b->handle() >= 0); });
+    return std::move(result);
   }
 
   std::string getTitle() const {
@@ -103,11 +98,11 @@ public:
   }
 
   bool hasBoard(const std::string& name) {
-    return getBoardForPlayer(name, true);
+    return static_cast<bool>(getBoardForPlayer(name, true));
   }
 
   bool hasBoard(const int handle) {
-    return getBoardForHandle(handle);
+    return static_cast<bool>(getBoardForHandle(handle));
   }
 
   unsigned getTurnCount() const {

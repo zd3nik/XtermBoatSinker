@@ -6,23 +6,68 @@
 #include "CSV.h"
 #include "Logger.h"
 #include "StringUtils.h"
+#include "Throw.h"
 #include <sys/select.h>
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-ControlKey controlSequence(const char ch, char& lastChar) {
-  if ((lastChar == '3') && (ch == '~')) {
-    lastChar = 0;
-    return KeyDel;
-  } else if ((lastChar == '5') && (ch == '~')) {
-    lastChar = 0;
-    return KeyPageUp;
-  } else if ((lastChar == '6') && (ch == '~')) {
-    lastChar = 0;
-    return KeyPageDown;
-  } else if (lastChar == '[') {
+char Input::readChar(const int fd) {
+  if (fd < 0) {
+    Throw() << "Input.readChar() invalid handle: " << fd;
+  }
+
+  char ch = 0;
+  if (read(fd, &ch, 1) != 1) {
+    Throw() << "Input.readChar() failed: " << toError(errno);
+  }
+
+  Logger::debug() << "Received character '" << ch << "' from channel " << fd
+                  << " " << getHandleLabel(fd);
+  return ch;
+}
+
+//-----------------------------------------------------------------------------
+ControlKey Input::readKey(const int fd, char& ch) {
+  ch = readChar(fd);
+
+  switch (lastChar) {
+  case 0:
+    switch (ch) {
+    case 8:
+    case 127:
+      return KeyBackspace;
+    case 27:
+      lastChar = 27;
+      return readKey(fd, ch);
+    }
+    break;
+  case 27:
+    if (ch == '[') {
+      lastChar = '[';
+      return readKey(fd, ch);
+    }
+    break;
+  case '3':
+    if (ch == '~') {
+      lastChar = 0;
+      return KeyDel;
+    }
+    break;
+  case '5':
+    if (ch == '~') {
+      lastChar = 0;
+      return KeyPageUp;
+    }
+    break;
+  case '6':
+    if (ch == '~') {
+      lastChar = 0;
+      return KeyPageDown;
+    }
+    break;
+  case '[':
     switch (ch) {
     case 'A':
       lastChar = 0;
@@ -38,40 +83,20 @@ ControlKey controlSequence(const char ch, char& lastChar) {
       return KeyEnd;
     case '5':
       lastChar = '5';
-      return KeyIncomplete;
+      return readKey(fd, ch);
     case '6':
       lastChar = '6';
-      return KeyIncomplete;
+      return readKey(fd, ch);
     }
-  } else if ((lastChar == 27) && (ch == '[')) {
-    lastChar = '[';
-    return KeyIncomplete;
-  } else if (ch == 27) {
-    lastChar = 27;
-    return KeyIncomplete;
-  } else if (!lastChar) {
-    switch (ch) {
-    case 8:
-    case 127:
-      return KeyBackspace;
-    }
+    break;
   }
 
   if (lastChar) {
-    lastChar = 0;
-    return KeyIncomplete;
+    lastChar = ch = 0;
+    return KeyUnknown;
   }
-  lastChar = 0;
-  return KeyNone;
-}
 
-//-----------------------------------------------------------------------------
-Input::Input()
-  : line(BUFFER_SIZE, 0)
-{
-  buffer[STDIN_FILENO].resize(BUFFER_SIZE, 0);
-  pos[STDIN_FILENO] = 0;
-  len[STDIN_FILENO] = 0;
+  return KeyChar;
 }
 
 //-----------------------------------------------------------------------------
@@ -79,13 +104,13 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
   ready.clear();
   if (handles.empty()) {
     Logger::warn() << "No input handles specified to wait for";
-    return true;
+    return false;
   }
 
   fd_set set;
   FD_ZERO(&set);
 
-  int maxFd = 0;
+  int maxFd = -1;
   for (auto it = handles.begin(); it != handles.end(); ++it) {
     const int fd = it->first;
     if (fd >= 0) {
@@ -97,46 +122,46 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
       }
     }
   }
-  if (ready.size()) {
-    return true;
+
+  if (ready.empty() && (maxFd >= 0)) {
+    struct timeval tv;
+    tv.tv_sec = (timeout_ms / 1000);
+    tv.tv_usec = ((timeout_ms % 1000) * 10);
+
+    int ret = 0;
+    while (true) {
+      ret = select((maxFd + 1), &set, nullptr, nullptr,
+                   ((timeout_ms < 0) ? nullptr : &tv));
+      if (ret < 0) {
+        if (errno == EINTR) {
+          Logger::debug() << "Input select interrupted";
+          return false;
+        }
+        Throw() << "Input select failed: " << toError(errno);
+      }
+      break;
+    }
+    if (ret) {
+      for (auto it = handles.begin(); it != handles.end(); ++it) {
+        const int fd = it->first;
+        if (FD_ISSET(fd, &set)) {
+          ready.insert(fd);
+        }
+      }
+    }
   }
 
-  struct timeval tv;
-  tv.tv_sec = (timeout_ms / 1000);
-  tv.tv_usec = ((timeout_ms % 1000) * 10);
-
-  int ret = 0;
-  while (true) {
-    ret = select((maxFd + 1), &set, nullptr, nullptr, (timeout_ms < 0) ? nullptr : &tv);
-    if (ret < 0) {
-      if (errno == EINTR) {
-        Logger::debug() << "Input select interrupted";
-        return true;
-      }
-      Logger::error() << "Input select failed: " << toError(errno);
-      return false;
-    }
-    break;
-  }
-  if (ret) {
-    for (auto it = handles.begin(); it != handles.end(); ++it) {
-      const int fd = it->first;
-      if (FD_ISSET(fd, &set)) {
-        ready.insert(fd);
-      }
-    }
-  }
-  return true;
+  return ready.size();
 }
 
 //-----------------------------------------------------------------------------
-int Input::readln(const int fd, const char delimeter) {
-  fields.clear();
+unsigned Input::readln(const int fd, const char delimeter) {
   if (fd < 0) {
-    Logger::error() << "Input readln() invalid handle: " << fd;
-    return 0;
+    Throw(InvalidArgument) << "Input readln() invalid handle: " << fd;
   }
 
+  line[0] = 0;
+  fields.clear();
   if (buffer.find(fd) == buffer.end()) {
     buffer[fd].resize(BUFFER_SIZE, 0);
     pos[fd] = 0;
@@ -145,8 +170,8 @@ int Input::readln(const int fd, const char delimeter) {
 
   unsigned n = 0;
   while (n < (BUFFER_SIZE - 1)) {
-    if ((pos[fd] >= len[fd]) && (bufferData(fd) < 0)) {
-      return -1;
+    if (pos[fd] >= len[fd]) {
+      bufferData(fd);
     } else if (!len[fd]) {
       break;
     } else if ((pos[fd] < len[fd]) &&
@@ -162,31 +187,12 @@ int Input::readln(const int fd, const char delimeter) {
                     << "' from channel " << fd << " " << getHandleLabel(fd);
   }
 
-  std::string fld;
   CSV csv(line.data(), delimeter, true);
-  while (csv.next(fld)) {
+  for (std::string fld; csv.next(fld); ) {
     fields.push_back(fld);
   }
 
-  return static_cast<int>(fields.size());
-}
-
-//-----------------------------------------------------------------------------
-char Input::readChar(const int fd) {
-  if (fd < 0) {
-    Logger::error() << "Input readChar() invalid handle: " << fd;
-    return 0;
-  }
-
-  char ch = 0;
-  if (read(fd, &ch, 1) != 1) {
-    Logger::error() << "Input readChar failed: " << toError(errno);
-    return -1;
-  }
-
-  Logger::debug() << "Received character '" << ch << "' from channel " << fd
-                  << " " << getHandleLabel(fd);
-  return ch;
+  return fields.size();
 }
 
 //-----------------------------------------------------------------------------
@@ -201,9 +207,25 @@ void Input::addHandle(const int handle, const std::string& label) {
 void Input::removeHandle(const int handle) {
   Logger::debug() << "Removing channel " << handle << " "
                   << getHandleLabel(handle);
-  auto it = handles.find(handle);
-  if (it != handles.end()) {
-    handles.erase(it);
+
+  auto i1 = handles.find(handle);
+  if (i1 != handles.end()) {
+    handles.erase(i1);
+  }
+
+  auto i2 = buffer.find(handle);
+  if (i2 != buffer.end()) {
+    buffer.erase(i2);
+  }
+
+  auto i3 = pos.find(handle);
+  if (i3 != pos.end()) {
+    pos.erase(i3);
+  }
+
+  auto i4 = len.find(handle);
+  if (i4 != len.end()) {
+    len.erase(i4);
   }
 }
 
@@ -214,11 +236,9 @@ bool Input::containsHandle(const int handle) const {
 
 //-----------------------------------------------------------------------------
 std::string Input::getHandleLabel(const int handle) const {
-  if (handle >= 0) {
-    auto it = handles.find(handle);
-    if (it != handles.end()) {
-      return it->second;
-    }
+  auto it = handles.find(handle);
+  if (it != handles.end()) {
+    return it->second;
   }
   return std::string();
 }
@@ -234,8 +254,8 @@ unsigned Input::getFieldCount() const {
 }
 
 //-----------------------------------------------------------------------------
-std::string Input::getLine() const {
-  return trimStr(line.data());
+std::string Input::getLine(const bool trim) const {
+  return trim ? trimStr(line.data()) : std::string(line.data());
 }
 
 //-----------------------------------------------------------------------------
@@ -269,7 +289,7 @@ double Input::getDouble(const unsigned index, const double def) const {
 }
 
 //-----------------------------------------------------------------------------
-int Input::bufferData(const int fd) {
+void Input::bufferData(const int fd) {
   pos[fd] = len[fd] = 0;
   while (len[fd] < BUFFER_SIZE) {
     ssize_t n = read(fd, buffer[fd].data(), BUFFER_SIZE);
@@ -278,17 +298,14 @@ int Input::bufferData(const int fd) {
         Logger::debug() << "Input read interrupted, retrying";
         continue;
       }
-      Logger::error() << "Input read failed: " << toError(errno);
-      return -1;
+      Throw() << "Input read failed: " << toError(errno);
     } else if (n <= BUFFER_SIZE) {
       len[fd] = n;
       break;
     } else {
-      Logger::error() << "Input buffer overflow!";
-      exit(1);
+      Throw(OverflowError) << "Input buffer overflow!";
     }
   }
-  return len[fd];
 }
 
 } // namespace xbs
