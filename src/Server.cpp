@@ -111,21 +111,17 @@ bool Server::run() {
     Coordinate quietCoord;
 
     while (!game.hasFinished()) {
-      if (quietMode && game.isStarted()) {
-        if (!quietCoord) {
-          printGameInfo(game, coord.set(1, 1));
-          printPlayers(game, coord);
-          printOptions(game, coord);
-          quietCoord.set(coord);
-        }
-      } else {
+      if (!quietMode || !quietCoord || !game.isStarted()) {
         printGameInfo(game, coord.set(1, 1));
         printPlayers(game, coord);
-        printOptions(game, coord);;
+        printOptions(game, coord);
       }
-
+      if (quietMode && !quietCoord) {
+        quietCoord.set(coord);
+      }
       if (waitForInput(game)) {
         handleUserInput(game, coord);
+        quietCoord.clear();
       }
     }
 
@@ -146,7 +142,7 @@ bool Server::run() {
 }
 
 //-----------------------------------------------------------------------------
-std::string Server::prompt(Coordinate& coord,
+std::string Server::prompt(Coordinate coord,
                            const std::string& question,
                            const char delim)
 {
@@ -352,7 +348,7 @@ void Server::addPlayerHandle(Game& game) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::blacklistAddress(Game& game, Coordinate& coord) {
+void Server::blacklistAddress(Game& game, Coordinate coord) {
   std::string str = prompt(coord, "Enter IP address to blacklist -> ");
   if (str.size()) {
     blackList.insert(ADDRESS_PREFIX + str);
@@ -365,7 +361,7 @@ void Server::blacklistAddress(Game& game, Coordinate& coord) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::blacklistPlayer(Game& game, Coordinate& coord) {
+void Server::blacklistPlayer(Game& game, Coordinate coord) {
   if (!game.getBoardCount()) {
     return;
   }
@@ -382,7 +378,7 @@ void Server::blacklistPlayer(Game& game, Coordinate& coord) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::bootPlayer(Game& game, Coordinate& coord) {
+void Server::bootPlayer(Game& game, Coordinate coord) {
   if (!game.getBoardCount()) {
     return;
   }
@@ -397,7 +393,7 @@ void Server::bootPlayer(Game& game, Coordinate& coord) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::clearBlacklist(Game&, Coordinate& coord) {
+void Server::clearBlacklist(Game&, Coordinate coord) {
   if (blackList.empty()) {
     return;
   }
@@ -461,7 +457,7 @@ void Server::handlePlayerInput(Game& game, const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::handleUserInput(Game& game, Coordinate& coord) {
+void Server::handleUserInput(Game& game, Coordinate coord) {
   char ch = 0;
   if (input.readKey(STDIN_FILENO, ch) == KeyChar) {
     switch (toupper(ch)) {
@@ -631,7 +627,7 @@ void Server::printPlayers(Game& game, Coordinate& coord) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::quitGame(Game& game, Coordinate& coord) {
+void Server::quitGame(Game& game, Coordinate coord) {
   std::string s = prompt(coord, "Quit Game? [y/N] -> ");
   if (iStartsWith(s, 'Y')) {
     game.abort();
@@ -795,7 +791,7 @@ void Server::sendMessage(Game& game, Board& sender) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::sendMessage(Game& game, Coordinate& coord) {
+void Server::sendMessage(Game& game, Coordinate coord) {
   if (!game.getBoardCount()) {
     return;
   }
@@ -926,7 +922,7 @@ void Server::shoot(Game& game, Board& shooter) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::skipBoard(Game& game, Coordinate& coord) {
+void Server::skipBoard(Game& game, Coordinate coord) {
   auto toMove = game.getBoardToMove();
   if (!toMove) {
     return;
@@ -968,7 +964,7 @@ void Server::skipTurn(Game& game, Board& board) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::startGame(Game& game, Coordinate& coord) {
+void Server::startGame(Game& game, Coordinate coord) {
   if (!game.isStarted()) {
     std::string str = prompt(coord, "Start Game? [y/N] -> ");
     if (iStartsWith(str, 'Y') && game.start(true)) {

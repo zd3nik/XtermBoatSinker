@@ -40,80 +40,85 @@ public:
   static Version getVersion();
   static bool isCompatibleWith(const Version& serverVersion);
 
-  Client() {
-    input.addHandle(STDIN_FILENO);
-  }
+  Client() { input.addHandle(STDIN_FILENO); }
+  ~Client() { closeSocket(); }
 
   Client(Client&&) = delete;
   Client(const Client&) = delete;
   Client& operator=(Client&&) = delete;
   Client& operator=(const Client&) = delete;
 
+  void showHelp();
   bool init();
   bool join();
   bool run();
 
 private:
   Board& myBoard();
-  bool addMessage();
-  bool addPlayer();
-  bool clearMessages(Coordinate);
+
+  std::string prompt(Coordinate, const std::string& question,
+                     const char fieldDelimeter = 0);
+
   bool closeSocket();
-  bool scrollEnd();
-  bool endGame();
   bool getHostAddress();
   bool getHostPort();
   bool getUserName();
-  bool handleServerMessage();
-  bool hit();
-  bool scrollHome();
   bool isServerHandle(const int handle) const;
   bool isUserHandle(const int handle) const;
   bool joinGame(bool& retry);
   bool joinPrompt(const unsigned playersJoined);
   bool manualSetup(Board&, std::vector<Ship>& shipsRemaining);
-  bool nextTurn();
   bool openSocket();
-  bool pageDown(Coordinate);
-  bool pageUp(Coordinate);
-  bool printGameOptions(Coordinate);
-  bool printMessages(Coordinate&); // this one uses reference intentionally
-  bool printWaitOptions(Coordinate);
-  bool prompt(Coordinate,
-              const std::string& str,
-              std::string& field1,
-              const char fieldDelimeter = 0);
   bool quitGame(Coordinate);
   bool readGameInfo(unsigned& playersJoined);
-  bool redrawScreen();
-  bool removePlayer();
-  bool scrollDown();
-  bool scrollUp();
-  bool send(const std::string& msg);
-  bool send(const Printable& p) { return send(p.toString()); }
-  bool sendMessage(Coordinate);
-  bool setTaunt(Coordinate);
   bool setupBoard();
-  bool shoot(Coordinate);
-  bool skip();
-  bool skip(Coordinate);
-  bool startGame();
-  bool updateBoard();
-  bool updateYourBoard();
-  bool viewBoard(Coordinate);
+  bool trySend(const Printable& p) { return trySend(p.toString()); }
+  bool trySend(const std::string& msg);
   bool waitForGameStart();
   bool waitForInput(const int timeout = -1);
+
   char getChar();
   char getKey(Coordinate);
+
   unsigned msgHeaderLen() const;
   unsigned msgWindowHeight(Coordinate) const;
+
   void appendMessage(const Message&);
   void appendMessage(const std::string& message,
                      const std::string& from = "",
                      const std::string& to = "");
+
+  void addMessage();
+  void addPlayer();
+  void clearMessages(Coordinate);
   void clearScreen();
   void close();
-  void showHelp();
+  void endGame();
+  void handleServerMessage();
+  void hit();
+  void nextTurn();
+  void pageDown(Coordinate);
+  void pageUp(Coordinate);
+  void printGameOptions(Coordinate);
+  void printMessages(Coordinate&); // this one uses reference intentionally
+  void printWaitOptions(Coordinate);
+  void redrawScreen();
+  void removePlayer();
+  void scrollDown();
+  void scrollHome();
+  void scrollToEnd();
+  void scrollUp();
+  void send(const Printable& p) { send(p.toString()); }
+  void send(const std::string& msg);
+  void sendMessage(Coordinate);
+  void setTaunts();
+  void shoot(Coordinate);
+  void skip();
+  void skip(Coordinate);
+  void startGame();
+  void updateBoard();
+  void updateYourBoard();
+  void viewBoard(Coordinate);
 };
 
 } // namespace xbs

@@ -33,18 +33,6 @@ bool Client::isCompatibleWith(const Version& ver) {
 }
 
 //-----------------------------------------------------------------------------
-void Client::close() {
-  closeSocket();
-
-  msgEnd = ~0U;
-  game.clear();
-  userName.clear();
-  messages.clear();
-  msgBuffer.clear();
-  yourBoard.reset();
-}
-
-//-----------------------------------------------------------------------------
 void Client::showHelp() {
   Screen::print()
       << EL
@@ -77,7 +65,7 @@ static std::string getHostArg() {
 //-----------------------------------------------------------------------------
 static int getPortArg() {
   std::string val = CommandArgs::getInstance().getValueOf({"-p", "--port"});
-  return val.empty() ? -1 : toInt(val);
+  return isEmpty(val) ? -1 : toInt(val);
 }
 
 //-----------------------------------------------------------------------------
@@ -128,7 +116,7 @@ bool Client::join() {
       if (joinPrompt(playersJoined)) {
         if (!game.isStarted() && !setupBoard()) {
           break;
-        } else if (getUserName() && waitForGameStart()) {
+        } else if (getUserName()) {
           return true;
         }
       }
@@ -143,17 +131,84 @@ bool Client::join() {
 }
 
 //-----------------------------------------------------------------------------
+bool Client::run() {
+  CanonicalMode(false);
+  Screen::get(true).clear().flush();
+  bool ok = waitForGameStart();
+
+  while (ok && !game.hasFinished()) {
+    Coordinate coord(1, 1);
+    Screen::print() << coord << ClearToScreenEnd;
+    for (auto board : game.getAllBoards()) {
+      if (board->print(true, &game.getConfiguration())) {
+        coord.set(board->getBottomRight());
+      }
+    }
+
+    printMessages(coord.setX(1));
+    printGameOptions(coord.south(2));
+
+    if (waitForInput()) {
+      switch (getKey(coord)) {
+      case 'C': clearMessages(coord);  break;
+      case 'K': skip(coord);           break;
+      case 'M': sendMessage(coord);    break;
+      case 'Q': ok = !quitGame(coord); break;
+      case 'R': redrawScreen();        break;
+      case 'S': shoot(coord);          break;
+      case 'T': setTaunts();           break;
+      case 'V': viewBoard(coord);      break;
+      default:
+        break;
+      }
+    }
+  }
+
+  return ok;
+}
+
+//-----------------------------------------------------------------------------
+Board& Client::myBoard() {
+  auto board = game.getBoardForPlayer(userName, true);
+  if (!board) {
+    Throw() << "Your are not in the game!";
+  }
+  return (*board);
+}
+
+//-----------------------------------------------------------------------------
+std::string Client::prompt(Coordinate coord,
+                           const std::string& question,
+                           const char delim)
+{
+  CanonicalMode(true);
+  Screen::print() << coord << ClearToLineEnd << question << Flush;
+  return input.readln(STDIN_FILENO, delim) ? input.getStr() : std::string();
+}
+
+//-----------------------------------------------------------------------------
+bool Client::closeSocket() {
+  host.clear();
+  port = -1;
+  if (socket) {
+    input.removeHandle(socket.getHandle());
+    socket.close();
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
 bool Client::getHostAddress() {
   host = getHostArg();
-  while (host.empty()) {
+  while (isEmpty(host)) {
     Screen::print() << "Enter host address [RET=quit] -> " << Flush;
     if (input.readln(STDIN_FILENO) <= 0) {
       return false;
     } else if (input.getFieldCount() > 1) {
       Logger::printError() << "Host address may not contain '|' characters";
-      continue;
+    } else {
+      host = input.getStr();
     }
-    host = input.getStr();
   }
   return true;
 }
@@ -176,6 +231,194 @@ bool Client::getHostPort() {
 }
 
 //-----------------------------------------------------------------------------
+bool Client::getUserName() {
+  userName = getUserArg();
+  while (true) {
+    if (isEmpty(userName)) {
+      Screen::print() << EL << "Enter your username -> " << Flush;
+      if (input.readln(STDIN_FILENO) < 0) {
+        return false;
+      } else if (input.getFieldCount() > 1) {
+        Logger::printError() << "Username may not contain '|' characters";
+        continue;
+      }
+      userName = input.getStr();
+    }
+    if (userName.size()) {
+      bool retry = false;
+      if (joinGame(retry)) {
+        break;
+      } else if (!retry) {
+        return false;
+      } else {
+        userName.clear();
+      }
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::isServerHandle(const int handle) const {
+  return ((handle >= 0) && (handle == socket.getHandle()));
+}
+
+//-----------------------------------------------------------------------------
+bool Client::isUserHandle(const int handle) const {
+  return ((handle >= 0) && (handle == STDIN_FILENO));
+}
+
+//-----------------------------------------------------------------------------
+bool Client::joinGame(bool& retry) {
+  retry = false;
+  if (isEmpty(userName)) {
+    Logger::printError() << "Username not set!";
+    return false;
+  }
+
+  if (game.isStarted()) {
+    // rejoining game in progress
+    if (!trySend(MSG('J') << userName)) {
+      Logger::printError() << "Failed to send join message to server";
+      return false;
+    }
+    yourBoard = std::unique_ptr<Board>(
+          new Board(userName, game.getConfiguration()));
+  } else {
+    // joining a game that hasn't started yet
+    if (!yourBoard) {
+      Logger::printError() << "Your board is not setup!";
+      return false;
+    }
+    if (!trySend(MSG('J') << userName << yourBoard->getDescriptor())) {
+      Logger::printError() << "Failed to send join message to server";
+      return false;
+    }
+  }
+
+  if (input.readln(socket.getHandle()) <= 0) {
+    Logger::printError() << "No respone from server";
+    return false;
+  }
+
+  std::string str = input.getStr();
+  if (str == "J") {
+    if (input.getStr(1) != userName) {
+      Logger::printError() << "Unexpected join response from server: '"
+                           << input.getLine() << "'";
+      return false;
+    }
+    yourBoard->setName(userName);
+    if (taunts) {
+      for (auto taunt : taunts->getStrings("hit")) {
+        if (!trySend(MSG('T') << "hit" << taunt)) {
+          Logger::printError() << "Failed to send taunt info to server";
+          return false;
+        }
+        yourBoard->addHitTaunt(taunt);
+      }
+      for (auto taunt : taunts->getStrings("miss")) {
+        if (!trySend(MSG('T') << "miss" << taunt)) {
+          Logger::printError() << "Failed to send taunt info to server";
+          return false;
+        }
+        yourBoard->addMissTaunt(taunt);
+      }
+    }
+    return true;
+  }
+
+  if (str == "E") {
+    str = input.getStr(1);
+    if (str.empty()) {
+      Logger::printError() << "Empty error message received from server";
+    } else {
+      Logger::printError() << str;
+      retry = true;
+    }
+    return false;
+  }
+
+  if (str.empty()) {
+    Logger::printError() << "Empty message received from server";
+  } else {
+    Logger::printError() << str;
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::joinPrompt(const unsigned playersJoined) {
+  clearScreen();
+
+  Coordinate coord(1, 1);
+  game.getConfiguration().print(coord);
+
+  Screen::print() << coord.south() << "Joined : " << playersJoined;
+  Screen::print() << coord.south(2);
+
+  const std::string str = game.isStarted()
+      ? prompt(coord, "Rejoin this game? [y/N] -> ")
+      : prompt(coord, "Join this game? [y/N] -> ");
+
+  return iStartsWith(str, 'Y');
+}
+
+//-----------------------------------------------------------------------------
+bool Client::manualSetup(Board& board, std::vector<Ship>& ships) {
+  std::vector<Ship> history;
+  while (ships.size()) {
+    Screen::print() << Coordinate(1, 1) << ClearToScreenEnd;
+    if (!board.print(false)) {
+      return false;
+    }
+
+    Coordinate coord(board.getBottomRight());
+    Screen::print() << coord.south().setX(1) << ClearToScreenEnd << "(D)one";
+    if (history.size()) {
+      Screen::print() << ", (U)ndo";
+    }
+    if (ships.size()) {
+      const Ship& ship = ships.front();
+      Screen::print() << ", Place ship '" << ship.getID()
+                      << "', length " << ship.getLength()
+                      << ", facing (S)outh or (E)ast?";
+    }
+
+    Screen::print() << " -> " << Flush;
+    const char ch = getChar();
+    switch (ch) {
+    case 0:
+      return false;
+    case 'D':
+      return true;
+    case 'U':
+      if (history.size()) {
+        ships.insert(ships.begin(), history.back());
+        board.removeShip(history.back());
+        history.pop_back();
+      }
+      break;
+    case 'E':
+    case 'S':
+      if (ships.size()) {
+        std::string s = ((ch == 'S') ? "South" : "East");
+        s = prompt(coord, (s + " from which coordinate? [example: e5] -> "));
+        if (coord.fromString(s) &&
+            board.contains(coord) &&
+            board.addShip(ships.front(), coord, ((ch == 'S') ? South : East)))
+        {
+          history.push_back(ships.front());
+          ships.erase(ships.begin());
+        }
+      }
+      break;
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
 bool Client::openSocket() {
   try {
     if (socket.connect(host, port)) {
@@ -191,14 +434,8 @@ bool Client::openSocket() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::closeSocket() {
-  host.clear();
-  port = -1;
-  if (socket) {
-    input.removeHandle(socket.getHandle());
-    socket.close();
-  }
-  return true;
+bool Client::quitGame(Coordinate coord) {
+  return iStartsWith(prompt(coord.south(), "Leave Game? [y/N] -> "), 'Y');
 }
 
 //-----------------------------------------------------------------------------
@@ -302,34 +539,6 @@ bool Client::readGameInfo(unsigned& playersJoined) {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::joinPrompt(const unsigned playersJoined) {
-  clearScreen();
-
-  Coordinate coord(1, 1);
-  game.getConfiguration().print(coord);
-
-  Screen::print() << coord.south() << "Joined : " << playersJoined;
-  Screen::print() << coord.south(2);
-  if (game.isStarted()) {
-    Screen::print() << "Rejoin this game? Y/N -> " << Flush;
-  } else {
-    Screen::print() << "Join this game? Y/N -> " << Flush;
-  }
-
-  while (true) {
-    const char ch = getChar();
-    if (ch <= 0) {
-      return false;
-    } else if (toupper(ch) == 'Y') {
-      break;
-    } else if (toupper(ch) == 'N') {
-      return false;
-    }
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
 bool Client::setupBoard() {
   const Configuration& config = game.getConfiguration();
   std::unique_ptr<Board> tmpBoard(new Board("", config));
@@ -341,10 +550,11 @@ bool Client::setupBoard() {
     {
       yourBoard = std::move(tmpBoard);
       return true;
+    } else {
+      Logger::printError() << "invalid static board descriptor ["
+                           << staticBoard << ']';
+      return false;
     }
-    Logger::printError() << "invalid static board descriptor ["
-                         << staticBoard << ']';
-    return false;
   }
 
   // try to fit up to 9 boards in the terminal screen
@@ -394,20 +604,13 @@ bool Client::setupBoard() {
     Screen::print() << coord.south().setX(1) << ClearToScreenEnd
                     << "(Q)uit, (R)andomize,"
                     << " or Choose Board# [1=manual setup] -> " << Flush;
-    char ch = getChar();
-    if (ch <= 0) {
-      return false;
-    }
 
-    ch = toupper(ch);
-    if (ch == 'Q') {
-      Screen::print() << coord << ClearToScreenEnd << "Quit? y/N -> " << Flush;
-      if ((input.readln(STDIN_FILENO) < 0) ||
-          iStartsWith(input.getStr(), 'Y'))
-      {
-        return false;
-      }
-    } else if (ch == 'R') {
+    const char ch = getChar();
+    switch (ch) {
+    case 0:
+    case 'Q':
+      return false;
+    case 'R':
       for (auto board : boards) {
         if (!board->addRandomShips(config, minSurfaceArea)) {
           Logger::printError() << "failed to create random ship layout on "
@@ -416,226 +619,40 @@ bool Client::setupBoard() {
           return false;
         }
       }
-    } else if (ch == '1') {
-      if (ships.size() && !manualSetup((*boards[0]), ships)) {
+      break;
+    case '1':
+      if (!manualSetup((*boards[0]), ships)) {
         return false;
       } else if (tmpBoard->updateDescriptor(boards[0]->getDescriptor()) &&
                  tmpBoard->matchesConfig(config))
       {
         Screen::print() << coord << ClearToScreenEnd << Flush;
         yourBoard = std::move(tmpBoard);
-        break;
+        return true;
       }
-    } else if (ch > '1') {
-      const unsigned n = (ch - '1');
-      if ((n <= boards.size()) &&
-          tmpBoard->updateDescriptor(boards[n]->getDescriptor()) &&
-          tmpBoard->matchesConfig(config))
-      {
-        Screen::print() << coord << ClearToScreenEnd << Flush;
-        yourBoard = std::move(tmpBoard);
-        break;
-      }
-    }
-  }
-
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::manualSetup(Board& board, std::vector<Ship>& ships) {
-  std::vector<Ship> history;
-  while (true) {
-    Screen::print() << Coordinate(1, 1) << ClearToScreenEnd;
-    if (!board.print(false)) {
-      return false;
-    }
-
-    Coordinate coord(board.getBottomRight());
-    Screen::print() << coord.south().setX(1) << ClearToScreenEnd << "(D)one";
-    if (history.size()) {
-      Screen::print() << ", (U)ndo";
-    }
-    if (ships.size()) {
-      const Ship& ship = ships.front();
-      Screen::print() << ", Place ship '" << ship.getID()
-                      << "', length " << ship.getLength()
-                      << ", facing (S)outh or (E)ast?";
-    }
-
-    Screen::print() << " -> " << Flush;
-    char ch = getChar();
-    if (ch <= 0) {
-      return false;
-    }
-
-    ch = toupper(ch);
-    if (ch == 'D') {
       break;
-    } else if (ch == 'U') {
-      if (history.size()) {
-        ships.insert(ships.begin(), history.back());
-        board.removeShip(history.back());
-        history.pop_back();
-      }
-    } else if (ships.size() && ((ch == 'S') || (ch == 'E'))) {
-      Screen::print() << coord << ClearToScreenEnd
-                      << ((ch == 'S') ? "South" : "East")
-                      << " from which coordinate? [example: e5] -> " << Flush;
-      if (input.readln(STDIN_FILENO) < 0) {
-        return false;
-      }
-      if (coord.fromString(input.getStr()) &&
-          board.contains(coord) &&
-          board.addShip(ships.front(), coord, ((ch == 'S') ? South : East)))
-      {
-        history.push_back(ships.front());
-        ships.erase(ships.begin());
-      }
-    }
-  }
-
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-char Client::getChar() {
-  CanonicalMode(false);
-  return input.readChar(STDIN_FILENO);
-}
-
-//-----------------------------------------------------------------------------
-char Client::getKey(Coordinate coord) {
-  CanonicalMode(false);
-  char ch = 0;
-  switch (input.readKey(STDIN_FILENO, ch)) {
-  case KeyChar:
-    return toupper(ch);
-  case KeyUp:
-    scrollUp();
-    break;
-  case KeyDown:
-    scrollDown();
-    break;
-  case KeyHome:
-    scrollHome();
-    break;
-  case KeyEnd:
-    scrollEnd();
-    break;
-  case KeyPageUp:
-    pageUp(coord);
-    break;
-  case KeyPageDown:
-    pageDown(coord);
-    break;
-  default:
-    break;
-  }
-  return 0;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::getUserName() {
-  userName = getUserArg();
-  while (true) {
-    if (userName.empty()) {
-      Screen::print() << EL << "Enter your username -> " << Flush;
-      if (input.readln(STDIN_FILENO) < 0) {
-        return false;
-      } else if (input.getFieldCount() > 1) {
-        Logger::printError() << "Username may not contain '|' characters";
-        continue;
-      }
-      userName = input.getStr();
-    }
-    if (userName.size()) {
-      bool retry = false;
-      if (joinGame(retry)) {
-        break;
-      } else if (!retry) {
-        return false;
-      } else {
-        userName.clear();
-      }
-    }
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::joinGame(bool& retry) {
-  retry = false;
-  if (userName.empty()) {
-    Logger::printError() << "Username not set!";
-    return false;
-  }
-
-  if (game.isStarted()) {
-    // rejoining game in progress
-    yourBoard = std::unique_ptr<Board>(new Board(userName,
-                                                 game.getConfiguration()));
-    if (!send(MSG('J') << userName)) {
-      return false;
-    }
-  } else {
-    // joining a game that hasn't started yet
-    if (!yourBoard) {
-      Logger::printError() << "Your board is not setup!";
-      return false;
-    }
-    if (!send(MSG('J') << userName << yourBoard->getDescriptor())) {
-      return false;
-    }
-  }
-
-  if (input.readln(socket.getHandle()) <= 0) {
-    Logger::printError() << "No respone from server";
-    return false;
-  }
-
-  std::string str = input.getStr();
-  if (str == "J") {
-    if (input.getStr(1) != userName) {
-      Logger::printError() << "Unexpected join response from server: '"
-                           << input.getLine() << "'";
-      return false;
-    }
-    yourBoard->setName(userName);
-    if (taunts) {
-      for (auto taunt : taunts->getStrings("hit")) {
-        if (!send(MSG('T') << "hit" << taunt)) {
-          return false;
+    default:
+      if (isdigit(ch)) {
+        const unsigned n = static_cast<unsigned>(ch - '1');
+        if ((n <= boards.size()) &&
+            tmpBoard->updateDescriptor(boards[n]->getDescriptor()) &&
+            tmpBoard->matchesConfig(config))
+        {
+          Screen::print() << coord << ClearToScreenEnd << Flush;
+          yourBoard = std::move(tmpBoard);
+          return true;
         }
-        yourBoard->addHitTaunt(taunt);
-      }
-      for (auto taunt : taunts->getStrings("miss")) {
-        if (!send(MSG('T') << "miss" << taunt)) {
-          return false;
-        }
-        yourBoard->addMissTaunt(taunt);
       }
     }
-    return true;
   }
+}
 
-  if (str == "E") {
-    str = input.getStr(1);
-    if (str.empty()) {
-      Logger::printError() << "Empty error message received from server";
-    } else {
-      Logger::printError() << str;
-      retry = true;
-    }
-    return false;
+//-----------------------------------------------------------------------------
+bool Client::trySend(const std::string& msg) {
+  if ((msg.size() + 1) >= Input::BUFFER_SIZE) {
+    Throw() << "message exceeds buffer size (" << msg << ')';
   }
-
-  if (str.empty()) {
-    Logger::printError() << "Empty message received from server";
-  } else {
-    Logger::printError() << str;
-  }
-  return false;
+  return socket.send(msg);
 }
 
 //-----------------------------------------------------------------------------
@@ -643,23 +660,17 @@ bool Client::waitForGameStart() {
   const Configuration& config = game.getConfiguration();
   clearScreen();
 
-  if (userName.empty()) {
-    Logger::printError() << "Username not set!";
-    return false;
+  if (isEmpty(userName)) {
+    Throw() << "Username not set!";
   } else if (!yourBoard) {
-    Logger::printError() << "Your board is not set!";
-    return false;
+    Throw() << "Your board is not set!";
   } else if (yourBoard->getName() != userName) {
-    Logger::printError() << "Your board name doesn't make your user name!";
-    return false;
+    Throw() << "Your board name doesn't make your user name!";
   } else if (!yourBoard->matchesConfig(config)) {
-    Logger::printError() << "Your board is not setup!";
-    return false;
+    Throw() << "Your board setup is invalid!";
   }
 
-  CanonicalMode(false);
   bool ok = true;
-
   while (ok && !game.isStarted() && !game.hasFinished()) {
     Coordinate coord(1, 1);
     Screen::print() << coord << ClearToScreenEnd;
@@ -675,22 +686,17 @@ bool Client::waitForGameStart() {
       }
     }
 
-    if (!printMessages(coord.south(2).setX(1))) {
-      return false;
-    }
-
-    if (!printWaitOptions(coord)) {
-      return false;
-    }
+    printMessages(coord.south(2).setX(1));
+    printWaitOptions(coord);
 
     Screen::print() << " -> " << Flush;
     if (waitForInput()) {
       switch (getKey(coord)) {
-      case 'C': ok = clearMessages(coord); break;
-      case 'M': ok = sendMessage(coord);   break;
-      case 'Q': ok = !quitGame(coord);     break;
-      case 'R': ok = redrawScreen();       break;
-      case 'T': ok = setTaunt(coord);      break;
+      case 'C': clearMessages(coord);  break;
+      case 'M': sendMessage(coord);    break;
+      case 'Q': ok = !quitGame(coord); break;
+      case 'R': redrawScreen();        break;
+      case 'T': setTaunts();           break;
       default:
         break;
       }
@@ -698,181 +704,6 @@ bool Client::waitForGameStart() {
   }
 
   return (ok && game.isStarted() && !game.hasFinished());
-}
-
-//-----------------------------------------------------------------------------
-bool Client::printWaitOptions(Coordinate coord) {
-  Screen::print() << coord.south(2) << "Waiting for start";
-  Screen::print() << coord.south() << "(Q)uit, (R)edraw, (T)aunts";
-  if (game.getBoardCount() > 1) {
-    Screen::print() << ", (M)essage";
-  }
-  if (messages.size()) {
-    Screen::print() << coord.south()
-                    << "(C)lear Messages, Scroll (U)p, (D)own, (H)ome, (E)nd";
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::prompt(Coordinate coord, const std::string& str,
-                    std::string& field1, const char delim)
-{
-  CanonicalMode cMode(true);
-  Screen::print() << coord << ClearToLineEnd << str << Flush;
-
-  if (input.readln(STDIN_FILENO, delim) < 0) {
-    return false;
-  }
-
-  field1 = input.getStr();
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::quitGame(Coordinate coord) {
-  std::string str;
-  return (!prompt(coord.south(), "Leave Game? y/N -> ", str) ||
-          iStartsWith(str, 'Y'));
-}
-
-//-----------------------------------------------------------------------------
-void Client::appendMessage(const std::string& message, const std::string& from,
-                           const std::string& to)
-{
-  appendMessage(Message((from.size() ? from : "server"), to, message));
-}
-
-//-----------------------------------------------------------------------------
-void Client::appendMessage(const Message& message) {
-  if (message.isValid()) {
-    messages.push_back(message);
-    message.appendTo(msgBuffer, msgHeaderLen());
-  }
-}
-
-//-----------------------------------------------------------------------------
-bool Client::sendMessage(Coordinate coord) {
-  std::string name;
-  std::string msg;
-
-  msgEnd = ~0U;
-  if (game.getBoardCount() < 2) {
-    return true;
-  }
-
-  Screen::print() << coord.south() << ClearToScreenEnd;
-  while (true) {
-    if (!prompt(coord, "Enter recipient [RET=All] -> ", name)) {
-      return false;
-    } else if (name.empty()) {
-      break;
-    }
-    auto board = game.getBoardForPlayer(name, false);
-    if (!board) {
-      Logger::printError() << "Invalid player name: " << name;
-    } else if (board->getName() == userName) {
-      Logger::printError() << "Sorry, you can't message yourself!";
-    } else {
-      name = board->getName();
-      break;
-    }
-  }
-
-  Screen::print() << coord << ClearToScreenEnd;
-  while (true) {
-    if (!prompt(coord, "Enter message [RET=Abort] -> ", msg)) {
-      return false;
-    } else if (msg.empty()) {
-      return true;
-    } else if (contains(msg, '|')) {
-      Logger::printError() << "Message may not contain '|' characters";
-    } else {
-      break;
-    }
-  }
-
-  if (!send(MSG('M') << name << msg)) {
-    return false;
-  }
-
-  appendMessage(msg, "me", (name.size() ? name : "All"));
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::scrollUp() {
-  if ((msgEnd > 0) && (msgBuffer.size() > 0)) {
-    if (msgEnd >= msgBuffer.size()) {
-      msgEnd = (msgBuffer.size() - 1);
-    } else {
-      msgEnd--;
-    }
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::scrollDown() {
-  if (msgEnd < msgBuffer.size()) {
-    msgEnd++;
-  }
-  if (msgEnd >= msgBuffer.size()) {
-    msgEnd = ~0U;
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::pageUp(Coordinate coord) {
-  unsigned height = msgWindowHeight(coord);
-  if (msgEnd > msgBuffer.size()) {
-    msgEnd = msgBuffer.size();
-  }
-  msgEnd = (msgEnd > height) ? (msgEnd - height) : 0;
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::pageDown(Coordinate coord) {
-  unsigned height = msgWindowHeight(coord);
-  if (msgEnd != ~0U) {
-    if ((msgEnd += height) >= msgBuffer.size()) {
-      msgEnd = ~0U;
-    }
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::scrollHome() {
-  msgEnd = 0;
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::scrollEnd() {
-  msgEnd = ~0U;
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::send(const std::string& msg) {
-  if ((msg.size() + 1) >= Input::BUFFER_SIZE) {
-    Logger::printError() << "message exceeds buffer size (" << msg << ')';
-    return false;
-  }
-  return socket.send(msg);
-}
-
-//-----------------------------------------------------------------------------
-bool Client::isServerHandle(const int handle) const {
-  return ((handle >= 0) && (handle == socket.getHandle()));
-}
-
-//-----------------------------------------------------------------------------
-bool Client::isUserHandle(const int handle) const {
-  return ((handle >= 0) && (handle == STDIN_FILENO));
 }
 
 //-----------------------------------------------------------------------------
@@ -895,170 +726,40 @@ bool Client::waitForInput(const int timeout) {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::handleServerMessage() {
-  if (input.readln(socket.getHandle()) <= 0) {
-    return false;
-  }
-
-  const std::string str = input.getStr();
-  if (str.size() == 1) {
-    switch (str[0]) {
-    case 'B': return updateBoard();
-    case 'F': return endGame();
-    case 'H': return hit();
-    case 'J': return addPlayer();
-    case 'K': return skip();
-    case 'L': return removePlayer();
-    case 'M': return addMessage();
-    case 'N': return nextTurn();
-    case 'S': return startGame();
-    case 'Y': return updateYourBoard();
-    }
-  }
-
-  Logger::printError() << "Received unknown message type from server: '"
-                       << input.getLine() << "'";
-  return false;
+char Client::getChar() {
+  CanonicalMode(false);
+  return toupper(input.readChar(STDIN_FILENO));
 }
 
 //-----------------------------------------------------------------------------
-bool Client::addPlayer() {
-  const std::string name = input.getStr(1);
-  if (name.empty()) {
-    Logger::printError() << "Incomplete addPlayer message from server";
-    return false;
+char Client::getKey(Coordinate coord) {
+  CanonicalMode(false);
+  char ch = 0;
+  switch (input.readKey(STDIN_FILENO, ch)) {
+  case KeyChar:
+    return toupper(ch);
+  case KeyUp:
+    scrollUp();
+    break;
+  case KeyDown:
+    scrollDown();
+    break;
+  case KeyHome:
+    scrollHome();
+    break;
+  case KeyEnd:
+    scrollToEnd();
+    break;
+  case KeyPageUp:
+    pageUp(coord);
+    break;
+  case KeyPageDown:
+    pageDown(coord);
+    break;
+  default:
+    break;
   }
-  if (game.hasBoard(name)) {
-    Logger::printError() << "Duplicate player name (" << name
-                         << ") received from server";
-    return false;
-  }
-  game.addBoard(std::make_shared<Board>(name, game.getConfiguration()));
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::removePlayer() {
-  const std::string name = input.getStr(1);
-  if (name.empty()) {
-    Logger::printError() << "Incomplete removePlayer message from server";
-    return false;
-  }
-  if (game.isStarted()) {
-    Logger::printError() << "Received removePlayer message after game start";
-    return false;
-  }
-  game.removeBoard(name);
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::updateBoard() {
-  const std::string name   = input.getStr(1);
-  const std::string status = input.getStr(2);
-  const std::string desc   = input.getStr(3);
-  const unsigned score     = input.getUInt(4);
-  const unsigned skips     = input.getUInt(5);
-
-  auto board = game.getBoardForPlayer(name, true);
-  if (!board || desc.empty()) {
-    Logger::printError() << "Invalid updateBoard message from server";
-    return false;
-  }
-
-  board->setStatus(status).setScore(score).setSkips(skips);
-
-  if (!board->updateDescriptor(desc)) {
-    Logger::printError() << "Failed to update board descriptor for " << name;
-    return false;
-  }
-
-  if ((name == userName) && !yourBoard->addHitsAndMisses(desc)) {
-    Logger::printError() << "Board descriptor mismatch: " << desc;
-    return false;
-  }
-
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::updateYourBoard() {
-  const std::string desc = input.getStr(1);
-  if (desc.empty()) {
-    Logger::printError() << "Invalid updateYourBoard message from server";
-    return false;
-  }
-  if (!yourBoard->updateDescriptor(desc) ||
-      !yourBoard->matchesConfig(game.getConfiguration()))
-  {
-    Logger::printError() << "Board descriptor is invalid: " << desc;
-    return false;
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::hit() {
-  const std::string shooter = input.getStr(1);
-  const std::string target  = input.getStr(2);
-  const std::string square  = input.getStr(3);
-
-  auto board = game.getBoardForPlayer(shooter, true);
-  if (board) {
-    Logger::error() << "Invalid shooter name '" << shooter
-                    << "' in hit message from server";
-    return false;
-  }
-  if (target.empty()) {
-    Logger::error() << "Empty target name in hit message from server";
-    return false;
-  }
-
-  std::string msg = (shooter + " hit " + target);
-  if (square.size()) {
-    msg += " at ";
-    msg += square;
-  }
-
-  appendMessage(msg);
-  board->incScore();
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::skip() {
-  const std::string user   = input.getStr(1);
-  const std::string reason = input.getStr(2);
-
-  auto board = game.getBoardForPlayer(user, true);
-  if (!board) {
-    Logger::error() << "Invalid name '" << user
-                    << "' in skip message from server";
-    return false;
-  }
-
-  if (reason.size()) {
-    appendMessage(user + " was skipped because " + reason);
-  } else {
-    appendMessage(user + " skipped a turn");
-  }
-
-  board->incSkips();
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::nextTurn() {
-  const std::string name = input.getStr(1);
-  if (name.empty()) {
-    Logger::printError() << "Incomplete nextTurn message from server";
-    return false;
-  }
-  if (!game.setNextTurn(name)) {
-    Logger::printError() << "Invalid nextTurn message: " << input.getLine();
-    return false;
-  }
-  return true;
+  return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -1067,41 +768,114 @@ unsigned Client::msgHeaderLen() const {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::addMessage() {
+unsigned Client::msgWindowHeight(Coordinate coord) const {
+  unsigned height = Screen::get().getHeight();
+  if (height >= 5) {
+    height -= 5;
+    if (height >= coord.getY()) {
+      height -= coord.getY();
+    }
+  }
+  return height;
+}
+
+//-----------------------------------------------------------------------------
+void Client::appendMessage(const Message& message) {
+  if (message.isValid()) {
+    messages.push_back(message);
+    message.appendTo(msgBuffer, msgHeaderLen());
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::appendMessage(const std::string& message, const std::string& from,
+                           const std::string& to)
+{
+  appendMessage(Message((from.size() ? from : "server"), to, message));
+}
+
+//-----------------------------------------------------------------------------
+void Client::addMessage() {
   const std::string from = input.getStr(1);
   const std::string msg  = input.getStr(2);
   const std::string to   = input.getStr(3);
   appendMessage(msg, from, to);
-  return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Client::startGame() {
-  unsigned count = (input.getFieldCount() - 1);
-  if (count != game.getBoardCount()) {
-    Logger::printError() << "Player count mismatch: boards="
-                         << game.getBoardCount() << ", players=" << count;
-    return false;
+void Client::addPlayer() {
+  const std::string name = input.getStr(1);
+  if (name.empty()) {
+    Throw() << "Incomplete addPlayer message from server";
+  } else if (game.hasBoard(name)) {
+    Throw() << "Duplicate player name (" << name << ") received from server";
   }
-
-  for (unsigned i = 1; i < input.getFieldCount(); ++i) {
-    const std::string name = input.getStr(i);
-    if (name.empty()) {
-      Logger::printError() << "Empty player name received from server";
-      return false;
-    }
-    if (!game.hasBoard(name)) {
-      Logger::printError() << "Unknown player name (" << name
-                           << ") received from server";
-      return false;
-    }
-  }
-
-  return (game.start() && redrawScreen());
+  game.addBoard(std::make_shared<Board>(name, game.getConfiguration()));
 }
 
 //-----------------------------------------------------------------------------
-bool Client::endGame() {
+void Client::clearMessages(Coordinate coord) {
+  scrollToEnd();
+
+  if (messages.empty()) {
+    return;
+  }
+
+  Screen::print() << coord << ClearToScreenEnd
+                  << "Clear (A)ll messages or messages from one (P)layer -> "
+                  << Flush;
+
+  const char ch = getChar();
+  if (ch == 'A') {
+    messages.clear();
+    msgBuffer.clear();
+  } else if (ch == 'P') {
+    std::string name = prompt(coord, "Which player? [RET=Abort] -> ");
+    if (name.size()) {
+      auto board = game.getBoardForPlayer(name, false);
+      if (board) {
+        name = board->getName();
+        if (name == userName) {
+          name = "me";
+        }
+      }
+
+      msgBuffer.clear();
+      std::vector<Message> tmp;
+      tmp.reserve(messages.size());
+      for (Message m : messages) {
+        if (m.getFrom() != name) {
+          tmp.push_back(m);
+          m.appendTo(msgBuffer, msgHeaderLen());
+        }
+      }
+
+      messages.clear();
+      messages.assign(tmp.begin(), tmp.end());
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::clearScreen() {
+  Screen::get(true).clear();
+  scrollToEnd();
+}
+
+//-----------------------------------------------------------------------------
+void Client::close() {
+  closeSocket();
+  scrollToEnd();
+
+  game.clear();
+  userName.clear();
+  messages.clear();
+  msgBuffer.clear();
+  yourBoard.reset();
+}
+
+//-----------------------------------------------------------------------------
+void Client::endGame() {
   clearScreen();
   game.finish();
 
@@ -1137,117 +911,89 @@ bool Client::endGame() {
     }
   }
   Screen::print() << coord.south(2).setX(1) << Flush;
-  return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Client::run() {
-  if (!game.isStarted()) {
-    Logger::printError() << "Cannot run because game hasn't started";
-    return false;
-  }
-
-  const Configuration& config = game.getConfiguration();
-  Screen::get(true).clear().flush();
-  bool ok = true;
-
-  while (ok && !game.hasFinished()) {
-    Coordinate coord(1, 1);
-    Screen::print() << coord << ClearToScreenEnd;
-    for (auto board : game.getAllBoards()) {
-      if (board->print(true, &config)) {
-        coord.set(board->getBottomRight());
-      } else {
-        return false;
-      }
-    }
-
-    if (!printMessages(coord.setX(1))) {
-      return false;
-    }
-
-    if (!printGameOptions(coord.south(2))) {
-      return false;
-    }
-
-    if (waitForInput()) {
-      switch (getKey(coord)) {
-      case 'C': ok = clearMessages(coord); break;
-      case 'K': ok = skip(coord);          break;
-      case 'M': ok = sendMessage(coord);   break;
-      case 'Q': ok = !quitGame(coord);     break;
-      case 'R': ok = redrawScreen();       break;
-      case 'S': ok = shoot(coord);         break;
-      case 'T': ok = setTaunt(coord);      break;
-      case 'V': ok = viewBoard(coord);     break;
+void Client::handleServerMessage() {
+  if (input.readln(socket.getHandle())) {
+    const std::string str = input.getStr();
+    if (str.size() == 1) {
+      switch (str[0]) {
+      case 'B': updateBoard();     break;
+      case 'F': endGame();         break;
+      case 'H': hit();             break;
+      case 'J': addPlayer();       break;
+      case 'K': skip();            break;
+      case 'L': removePlayer();    break;
+      case 'M': addMessage();      break;
+      case 'N': nextTurn();        break;
+      case 'S': startGame();       break;
+      case 'Y': updateYourBoard(); break;
       default:
         break;
       }
     }
+    Throw() << "Received unknown message type from server: '"
+            << input.getLine() << "'";
   }
-
-  return ok;
 }
 
 //-----------------------------------------------------------------------------
-void Client::clearScreen() {
-  msgEnd = ~0U;
-  Screen::get(true).clear();
+void Client::hit() {
+  const std::string shooter = input.getStr(1);
+  const std::string target  = input.getStr(2);
+  const std::string square  = input.getStr(3);
+
+  auto board = game.getBoardForPlayer(shooter, true);
+  if (board) {
+    Throw() << "Invalid shooter name in hit message from server: "
+            << input.getLine();
+  } else if (target.empty()) {
+    Throw() << "Empty target name in hit message from server: "
+            << input.getLine();
+  }
+
+  std::string msg = (shooter + " hit " + target);
+  if (square.size()) {
+    msg += " at ";
+    msg += square;
+  }
+
+  appendMessage(msg);
+  board->incScore();
 }
 
 //-----------------------------------------------------------------------------
-bool Client::redrawScreen() {
-  std::vector<Rectangle*> children;
-  for (auto child : game.getAllBoards()) {
-    children.push_back(child.get());
+void Client::nextTurn() {
+  const std::string name = input.getStr(1);
+  if (name.empty()) {
+    Throw() << "Incomplete nextTurn message from server";
+  } else if (!game.setNextTurn(name)) {
+    Throw() << "Invalid nextTurn message: " << input.getLine();
   }
-  if (!Screen::get(true).clear().flush().arrangeChildren(children)) {
-    Logger::printError() << EL << "Boards do not fit in terminal";
-    return false;
-  }
-  return true;
 }
 
 //-----------------------------------------------------------------------------
-unsigned Client::msgWindowHeight(Coordinate coord) const {
-  unsigned height = Screen::get().getHeight();
-  if (height >= 5) {
-    height -= 5;
-    if (height >= coord.getY()) {
-      height -= coord.getY();
-    }
-  }
-  return height;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::printMessages(Coordinate& coord) {
+void Client::pageDown(Coordinate coord) {
   unsigned height = msgWindowHeight(coord);
-  msgEnd = std::max<unsigned>(msgEnd, height);
-
-  unsigned end = std::min<unsigned>(msgEnd, msgBuffer.size());
-  unsigned idx = (end - std::min<unsigned>(height, end));
-  for (bool first = true; idx < end; ++idx) {
-    if (first) {
-      first = false;
-      coord.south();
+  if (msgEnd != ~0U) {
+    if ((msgEnd += height) >= msgBuffer.size()) {
+      msgEnd = ~0U;
     }
-    Screen::print() << coord.south() << msgBuffer[idx];
   }
-  return true;
 }
 
 //-----------------------------------------------------------------------------
-Board& Client::myBoard() {
-  auto board = game.getBoardForPlayer(userName, true);
-  if (!board) {
-    Throw() << "Your board is not in the map!";
+void Client::pageUp(Coordinate coord) {
+  unsigned height = msgWindowHeight(coord);
+  if (msgEnd > msgBuffer.size()) {
+    msgEnd = msgBuffer.size();
   }
-  return *board;
+  msgEnd = (msgEnd > height) ? (msgEnd - height) : 0;
 }
 
 //-----------------------------------------------------------------------------
-bool Client::printGameOptions(Coordinate coord) {
+void Client::printGameOptions(Coordinate coord) {
   Screen::print() << coord << ClearToScreenEnd
                   << "(Q)uit, (R)edraw, (V)iew Board, (T)aunts, (M)essage";
 
@@ -1261,35 +1007,142 @@ bool Client::printGameOptions(Coordinate coord) {
   }
 
   Screen::print() << " -> " << Flush;
-  return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Client::viewBoard(Coordinate coord) {
-  Board& board = myBoard();
-  if (yourBoard->getDescriptor().size() != board.getDescriptor().size()) {
-    Logger::printError() << "Board descriptor lengths don't match!";
-    return false;
-  }
+void Client::printMessages(Coordinate& coord) {
+  unsigned height = msgWindowHeight(coord);
+  msgEnd = std::max<unsigned>(msgEnd, height);
 
-  yourBoard->set(board.getTopLeft(), board.getBottomRight());
-  if (!yourBoard->print(false)) {
-    Logger::printError() << "Failed to print you board";
-    return false;
+  unsigned end = std::min<unsigned>(msgEnd, msgBuffer.size());
+  unsigned idx = (end - std::min<unsigned>(height, end));
+  for (bool first = true; idx < end; ++idx) {
+    if (first) {
+      first = false;
+      coord.south();
+    }
+    Screen::print() << coord.south() << msgBuffer[idx];
   }
-
-  std::string str;
-  if (!prompt(coord, "Press Enter", str)) {
-    return false;
-  }
-
-  return board.print(true, &game.getConfiguration());
 }
 
 //-----------------------------------------------------------------------------
-bool Client::setTaunt(Coordinate /*coord*/) {
+void Client::printWaitOptions(Coordinate coord) {
+  Screen::print() << coord.south(2) << "Waiting for start";
+  Screen::print() << coord.south() << "(Q)uit, (R)edraw, (T)aunts";
+  if (game.getBoardCount() > 1) {
+    Screen::print() << ", (M)essage";
+  }
+  if (messages.size()) {
+    Screen::print() << coord.south()
+                    << "(C)lear Messages, Scroll (U)p, (D)own, (H)ome, (E)nd";
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::redrawScreen() {
+  std::vector<Rectangle*> children;
+  for (auto child : game.getAllBoards()) {
+    children.push_back(child.get());
+  }
+  if (!Screen::get(true).clear().flush().arrangeChildren(children)) {
+    Throw() << EL << "Boards do not fit in terminal";
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::removePlayer() {
+  const std::string name = input.getStr(1);
+  if (name.empty()) {
+    Throw() << "Incomplete removePlayer message from server";
+  } else if (game.isStarted()) {
+    Throw() << "Received removePlayer message after game start";
+  }
+  game.removeBoard(name);
+}
+
+//-----------------------------------------------------------------------------
+void Client::scrollDown() {
+  if (msgEnd < msgBuffer.size()) {
+    msgEnd++;
+  }
+  if (msgEnd >= msgBuffer.size()) {
+    msgEnd = ~0U;
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::scrollHome() {
+  msgEnd = 0;
+}
+
+//-----------------------------------------------------------------------------
+void Client::scrollToEnd() {
   msgEnd = ~0U;
+}
 
+//-----------------------------------------------------------------------------
+void Client::scrollUp() {
+  if ((msgEnd > 0) && (msgBuffer.size() > 0)) {
+    if (msgEnd >= msgBuffer.size()) {
+      msgEnd = (msgBuffer.size() - 1);
+    } else {
+      msgEnd--;
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::send(const std::string& msg) {
+  if (!trySend(msg)) {
+    Throw() << socket << ".send(" << msg << ") failed";
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::sendMessage(Coordinate coord) {
+  if (game.getBoardCount() < 2) {
+    return;
+  }
+
+  scrollToEnd();
+
+  Screen::print() << coord.south() << ClearToScreenEnd;
+  std::string name;
+  while (true) {
+    name = prompt(coord, "Enter recipient [RET=All] -> ");
+    if (name.empty()) {
+      break;
+    }
+    auto board = game.getBoardForPlayer(name, false);
+    if (!board) {
+      Logger::printError() << "Invalid player name: " << name;
+    } else if (board->getName() == userName) {
+      Logger::printError() << "Sorry, you can't message yourself!";
+    } else {
+      name = board->getName();
+      break;
+    }
+  }
+
+  Screen::print() << coord << ClearToScreenEnd;
+  std::string msg;
+  while (true) {
+    msg = prompt(coord, "Enter message [RET=Abort] -> ");
+    if (msg.empty()) {
+      return;
+    } else if (contains(msg, '|')) {
+      Logger::printError() << "Message may not contain '|' characters";
+    } else {
+      break;
+    }
+  }
+
+  appendMessage(msg, "me", (name.size() ? name : "All"));
+  send(MSG('M') << name << msg);
+}
+
+//-----------------------------------------------------------------------------
+void Client::setTaunts() {
   while (true) {
     Coordinate coord(1, 1);
     Screen::print() << coord << ClearToScreenEnd;
@@ -1307,13 +1160,8 @@ bool Client::setTaunt(Coordinate /*coord*/) {
     Screen::print() << coord.south(2).setX(1) << ClearToScreenEnd
                     << "(A)dd, (C)lear, (D)one -> " << Flush;
 
-    char mode = input.readChar(STDIN_FILENO);
-    if (mode <= 0) {
-      return false;
-    }
-
-    mode = toupper(mode);
-    if (mode == 'D') {
+    const char mode = getChar();
+    if (!mode || (mode == 'D')) {
       break;
     } else if ((mode != 'A') && (mode != 'C')) {
       continue;
@@ -1322,33 +1170,25 @@ bool Client::setTaunt(Coordinate /*coord*/) {
     Screen::print() << coord << ClearToScreenEnd
                     << "(H)it Taunt, (M)iss Taunt, (D)one -> " << Flush;
 
-    char type = input.readChar(STDIN_FILENO);
-    if (type <= 0) {
-      return false;
-    }
-
-    type = toupper(type);
-    if (type == 'D') {
+    const char type = getChar();
+    if (!type || (type == 'D')) {
       break;
     } else if ((type != 'H') && (type != 'M')) {
       continue;
     }
 
     Screen::print() << coord << ClearToScreenEnd;
-    std::string typeStr = ((type == 'H') ? "hit" : "miss");
+    const std::string typeStr = ((type == 'H') ? "hit" : "miss");
     std::string taunt;
     if (mode == 'C') {
-      if (!send(MSG('T') << typeStr)) {
-        return false;
-      }
-    } else if (!prompt(coord, "Taunt message? -> ", taunt)) {
-      return false;
-    } else if (taunt.size()) {
-      if (!send(MSG('T') << typeStr << taunt)) {
-        return false;
-      }
+      send(MSG('T') << typeStr);
     } else {
-      continue;
+      taunt = prompt(coord, "Taunt message? -> ");
+      if (taunt.empty()) {
+        continue;
+      } else {
+        send(MSG('T') << typeStr << taunt);
+      }
     }
 
     if (mode == 'C') {
@@ -1363,74 +1203,16 @@ bool Client::setTaunt(Coordinate /*coord*/) {
       yourBoard->addMissTaunt(taunt);
     }
   }
-
-  return true;
 }
 
 //-----------------------------------------------------------------------------
-bool Client::clearMessages(Coordinate coord) {
-  msgEnd = ~0U;
-
-  if (messages.empty()) {
-    return true;
-  }
-
-  Screen::print() << coord << ClearToScreenEnd
-                  << "Clear (A)ll messages or messages from one (P)layer -> "
-                  << Flush;
-
-  char ch = input.readChar(STDIN_FILENO);
-  if (ch <= 0) {
-    return false;
-  }
-
-  ch = toupper(ch);
-  if (ch == 'A') {
-    messages.clear();
-    msgBuffer.clear();
-  } else if (ch == 'P') {
-    std::string str;
-    if (!prompt(coord, "Which player? [RET=Abort] -> ", str)) {
-      return false;
-    } else if (str.size()) {
-      auto board = game.getBoardForPlayer(str, false);
-      if (board) {
-        str = board->getName();
-        if (str == userName) {
-          str = "me";
-        }
-      }
-
-      msgBuffer.clear();
-      std::vector<Message> tmp;
-      tmp.reserve(messages.size());
-      for (Message m : messages) {
-        if (m.getFrom() != str) {
-          tmp.push_back(m);
-          m.appendTo(msgBuffer, msgHeaderLen());
-        }
-      }
-
-      messages.clear();
-      messages.assign(tmp.begin(), tmp.end());
-    }
-  }
-
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Client::shoot(Coordinate coord) {
-  msgEnd = ~0U;
-
+void Client::shoot(Coordinate coord) {
   if (!myBoard().isToMove()) {
     Logger::printError() << "It's not your turn";
-    return true;
+    return;
   }
-  if (!game.hasBoard(userName)) {
-    Logger::printError() << "You are not in the game!";
-    return false;
-  }
+
+  scrollToEnd();
 
   Screen::print() << coord.south() << ClearToScreenEnd;
 
@@ -1443,10 +1225,9 @@ bool Client::shoot(Coordinate coord) {
     }
   } else {
     while (true) {
-      if (!prompt(coord, "Shoot which board? -> ", name)) {
-        return false;
-      } else if (isEmpty(name)) {
-        return true;
+      name = prompt(coord, "Shoot which board? -> ");
+      if (isEmpty(name)) {
+        return;
       }
       auto board = game.getBoardForPlayer(name, false);
       if (!board) {
@@ -1463,11 +1244,9 @@ bool Client::shoot(Coordinate coord) {
   Screen::print() << coord << ClearToScreenEnd;
   Coordinate shotCoord;
   while (true) {
-    std::string location;
-    if (!prompt(coord, "Coordinates? [example: e5] -> ", location)) {
-      return false;
-    } else if (location.empty()) {
-      return true;
+    std::string location = prompt(coord, "Coordinates? [example: e5] -> ");
+    if (location.empty()) {
+      return;
     } else if (!shotCoord.fromString(location)) {
       Screen::print() << ClearLine << "Invalid coordinates";
     } else if (!game.getConfiguration().getShipArea().contains(shotCoord)) {
@@ -1477,29 +1256,120 @@ bool Client::shoot(Coordinate coord) {
     }
   }
 
-  return send(MSG('S') << name << shotCoord.getX() << shotCoord.getY());
+  send(MSG('S') << name << shotCoord.getX() << shotCoord.getY());
 }
 
 //-----------------------------------------------------------------------------
-bool Client::skip(Coordinate coord) {
-  msgEnd = ~0U;
+void Client::skip() {
+  const std::string user   = input.getStr(1);
+  const std::string reason = input.getStr(2);
 
+  auto board = game.getBoardForPlayer(user, true);
+  if (!board) {
+    Throw() << "Invalid name '" << user << "' in skip message from server";
+  }
+
+  if (reason.size()) {
+    appendMessage(user + " was skipped because " + reason);
+  } else {
+    appendMessage(user + " skipped a turn");
+  }
+
+  board->incSkips();
+}
+
+//-----------------------------------------------------------------------------
+void Client::skip(Coordinate coord) {
   Board& board = myBoard();
   if (!board.isToMove()) {
     Logger::printError() << "It's not your turn";
-    return true;
+    return;
   }
 
-  std::string str;
-  if (!prompt(coord.south(), "Skip your turn? y/N -> ", str)) {
-    return false;
-  } else if (toupper(*str.c_str()) != 'Y') {
-    return true;
+  std::string str = prompt(coord.south(), "Skip your turn? [y/N] -> ");
+  if (iStartsWith(str, 'Y')) {
+    board.incSkips();
+    send(MSG('K') << userName);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::startGame() {
+  unsigned count = (input.getFieldCount() - 1);
+  if (count != game.getBoardCount()) {
+    Throw() << "Player count mismatch: boards=" << game.getBoardCount()
+            << ", players=" << count;
   }
 
-  board.incSkips();
+  for (unsigned i = 1; i < input.getFieldCount(); ++i) {
+    const std::string name = input.getStr(i);
+    if (name.empty()) {
+      Throw() << "Empty player name received from server: " << input.getLine();
+    } else if (!game.hasBoard(name)) {
+      Throw() << "Unknown player name (" << name << ") received from server: "
+              << input.getLine();
+    }
+  }
 
-  return send(MSG('K') << userName);
+  if (game.start()) {
+    redrawScreen();
+  } else {
+    Throw() << "Game cannot start";
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::updateBoard() {
+  const std::string name   = input.getStr(1);
+  const std::string status = input.getStr(2);
+  const std::string desc   = input.getStr(3);
+  const unsigned score     = input.getUInt(4);
+  const unsigned skips     = input.getUInt(5);
+
+  auto board = game.getBoardForPlayer(name, true);
+  if (!board || desc.empty()) {
+    Throw() << "Invalid updateBoard message from server: " << input.getLine();
+  }
+
+  board->setStatus(status).setScore(score).setSkips(skips);
+
+  if (!board->updateDescriptor(desc)) {
+    Throw() << "Failed to update board descriptor for " << name;
+  } else if ((name == userName) && !yourBoard->addHitsAndMisses(desc)) {
+    Throw() << "Board descriptor mismatch: '" << desc << "'";
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::updateYourBoard() {
+  const std::string desc = input.getStr(1);
+  if (desc.empty()) {
+    Throw() << "Invalid YourBoard message from server: " << input.getLine();
+  } else if (!yourBoard->updateDescriptor(desc) ||
+             !yourBoard->matchesConfig(game.getConfiguration()))
+  {
+    Throw() << "Board descriptor is invalid: '" << desc << "'";
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Client::viewBoard(Coordinate coord) {
+  Board& board = myBoard();
+   if (yourBoard->getDescriptor().size() != board.getDescriptor().size()) {
+    Throw() << "Board descriptor lengths don't match!";
+  }
+
+  yourBoard->set(board.getTopLeft(), board.getBottomRight());
+  if (!yourBoard->print(false)) {
+    Throw() << "Failed to print your board";
+  }
+
+  Screen::print() << coord << ClearToLineEnd << "Press any key" << Flush;
+  getKey(coord);
+
+  if (!board.print(true, &game.getConfiguration())) {
+    Throw() << "Failed to print your board";
+  }
 }
 
 } // namespace xbs

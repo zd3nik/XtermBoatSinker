@@ -72,7 +72,7 @@ Board* TargetingComputer::getTargetBoard(const std::string& me,
     std::random_shuffle(boards.begin(), boards.end());
     for (unsigned i = 0; i < boards.size(); ++i) {
       Board* board = boards[i];
-      if (board->getPlayerName() != me) {
+      if (board->getName() != me) {
         ScoredCoordinate coord = getTargetCoordinate(*board);
         if (coord &&
             (!bestBoard || (coord.getScore() > bestCoord.getScore())))
@@ -161,7 +161,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
   }
 
   Coordinate statusLine(1, 5);
-  Board board(-1, getName(), "local", width, height);
+  Board board(getName(), width, height);
   if (!Screen::get().contains(board.shift(South, (statusLine.getY() - 1)))) {
     Throw() << "Board does not fit in terminal";
   }
@@ -187,7 +187,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
       Throw() << "Failed random boat placement";
     }
 
-    Board targetBoard(board);
+    Board targetBoard; // TODO copy (board);
     if (!targetBoard.updateDescriptor(board.maskedDescriptor())) {
       Throw() << "Failed to mask boat area";
     }

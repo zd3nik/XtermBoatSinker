@@ -7,6 +7,7 @@
 #include "Logger.h"
 #include "StringUtils.h"
 #include "Throw.h"
+#include <cstring> // TODO remove this
 
 namespace xbs
 {

@@ -54,6 +54,10 @@ public:
   unsigned getY() const { return y; }
   unsigned parity() const { return ((x & 1) == (y & 1)); }
 
+  Coordinate& clear() {
+    return set(0, 0);
+  }
+
   Coordinate& set(const Coordinate& other) {
     return set(other.x, other.y);
   }

@@ -36,7 +36,7 @@ ScoredCoordinate Jane::bestShotOn(const Board& board) {
   }
 
   std::string desc = board.getDescriptor();
-  boardKey = board.getPlayerName();
+  boardKey = board.getName();
   hits.clear();
   for (unsigned i = 0; i < desc.size(); ++i) {
     if (desc[i] == Ship::HIT) {

@@ -57,7 +57,7 @@ private:
     return send(game, recipient, p.toString());
   }
 
-  std::string prompt(Coordinate&,
+  std::string prompt(Coordinate,
                      const std::string& question,
                      const char fieldDelimeter = 0);
 
@@ -75,13 +75,13 @@ private:
             const bool removeOnFailure = true);
 
   void addPlayerHandle(Game&);
-  void blacklistAddress(Game&, Coordinate&);
-  void blacklistPlayer(Game&, Coordinate&);
-  void bootPlayer(Game&, Coordinate&);
-  void clearBlacklist(Game&, Coordinate&);
+  void blacklistAddress(Game&, Coordinate);
+  void blacklistPlayer(Game&, Coordinate);
+  void bootPlayer(Game&, Coordinate);
+  void clearBlacklist(Game&, Coordinate);
   void closeSocket();
   void handlePlayerInput(Game&, const int handle);
-  void handleUserInput(Game&, Coordinate&);
+  void handleUserInput(Game&, Coordinate);
   void joinGame(Game&, BoardPtr&);
   void leaveGame(Game&, Board&);
   void nextTurn(Game&);
@@ -89,21 +89,21 @@ private:
   void printGameInfo(Game&, Coordinate&);
   void printOptions(Game&, Coordinate&);
   void printPlayers(Game&, Coordinate&);
-  void quitGame(Game&, Coordinate&);
+  void quitGame(Game&, Coordinate);
   void rejoinGame(Game&, Board&);
   void removePlayer(Game&, Board&, const std::string& msg = "");
   void saveResult(Game&);
   void sendBoardToAll(Game&, const Board&);
   void sendGameResults(Game&);
   void sendMessage(Game&, Board&);
-  void sendMessage(Game&, Coordinate&);
+  void sendMessage(Game&, Coordinate);
   void sendStart(Game&);
   void sendToAll(Game&, const std::string& msg);
   void setTaunt(Game&, Board&);
   void shoot(Game&, Board&);
-  void skipBoard(Game&, Coordinate&);
+  void skipBoard(Game&, Coordinate);
   void skipTurn(Game&, Board&);
-  void startGame(Game&, Coordinate&);
+  void startGame(Game&, Coordinate);
   void startListening(const int backlog);
 };
 
