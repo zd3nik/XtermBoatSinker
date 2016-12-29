@@ -12,6 +12,11 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
+std::string Board::toString() const {
+  return replace(socket.toString(), "TcpSocket", "Board");
+}
+
+//-----------------------------------------------------------------------------
 std::string Board::toString(const std::string& desc, const unsigned width) {
   if (desc.size() != width) {
     return ("Invalid board descriptor: " + desc);
@@ -36,11 +41,6 @@ Board::Board(const std::string& name,
 {
   socket.setLabel(name);
   clearDescriptor();
-}
-
-//-----------------------------------------------------------------------------
-std::string Board::toString() const {
-  return toString(descriptor, shipArea.getWidth());
 }
 
 //-----------------------------------------------------------------------------
@@ -95,9 +95,10 @@ Board& Board::setSocket(TcpSocket&& value) {
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::stealSocket(Board& other) {
+Board& Board::stealSocketFrom(Board& other) {
   if (socket) {
-    Throw() << "Board(" << getName() << ").stealSocket() socket already set";
+    Throw() << (*this) << ".stealSocketFrom(" << other
+            << ") cannot steal socket when already open";
   }
   socket = std::move(other.socket);
   return (*this);

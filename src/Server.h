@@ -34,13 +34,8 @@ public:
 
   static Version getVersion();
 
-  Server() {
-    input.addHandle(STDIN_FILENO);
-  }
-
-  ~Server() {
-    closeSocket();
-  }
+  Server() { input.addHandle(STDIN_FILENO); }
+  ~Server() { closeSocket(); }
 
   Server(Server&&) = delete;
   Server(const Server&) = delete;
@@ -50,14 +45,8 @@ public:
   void showHelp();
   bool init();
   bool run();
-
-  bool isAutoStart() const {
-    return autoStart;
-  }
-
-  bool isRepeatOn() const {
-    return repeat;
-  }
+  bool isAutoStart() const { return autoStart; }
+  bool isRepeatOn() const { return repeat; }
 
 private:
   void sendToAll(Game& game, const Printable& p) {
@@ -68,15 +57,16 @@ private:
     return send(game, recipient, p.toString());
   }
 
-  Configuration getGameConfig();
   std::string prompt(Coordinate&,
                      const std::string& question,
                      const char fieldDelimeter = 0);
 
-  bool getGameTitle(std::string& title);
-  bool isServerHandle(const int handle) const;
-  bool isUserHandle(const int handle) const;
-  bool isValidPlayerName(const std::string& name) const;
+  Configuration getGameConfig();
+
+  bool getGameTitle(std::string&);
+  bool isServerHandle(const int) const;
+  bool isUserHandle(const int) const;
+  bool isValidPlayerName(const std::string&) const;
   bool sendBoard(Game&, Board& recipient, const Board&);
   bool sendGameInfo(Game&, Board&);
   bool sendYourBoard(Game&, Board&);
@@ -112,9 +102,9 @@ private:
   void setTaunt(Game&, Board&);
   void shoot(Game&, Board&);
   void skipBoard(Game&, Coordinate&);
-  void skip(Game&, Board&);
+  void skipTurn(Game&, Board&);
   void startGame(Game&, Coordinate&);
-  void startListening(const int backlog = 10);
+  void startListening(const int backlog);
 };
 
 } // namespace xbs

@@ -9,26 +9,6 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-std::string trimStr(const std::string& str) {
-  std::string result;
-  if (str.size()) {
-    result.reserve(str.size());
-    const char* begin = str.c_str();
-    while (*begin && isspace(*begin)) {
-      ++begin;
-    }
-    const char* end = begin;
-    for (const char* p = begin; *p; ++p) {
-      if (!isspace(*p)) {
-        end = p;
-      }
-    }
-    result.assign(begin, (end + ((*end) != 0)));
-  }
-  return result;
-}
-
-//-----------------------------------------------------------------------------
 bool isEmpty(const std::string& str, const bool trimWhitespace) {
   if (str.empty()) {
     return true;
@@ -242,6 +222,47 @@ std::string toLower(std::string str) {
 //-----------------------------------------------------------------------------
 std::string toError(const int errorNumber) {
   return strerror(errorNumber);
+}
+
+//-----------------------------------------------------------------------------
+std::string trimStr(const std::string& str) {
+  std::string result;
+  if (str.size()) {
+    result.reserve(str.size());
+    const char* begin = str.c_str();
+    while (*begin && isspace(*begin)) {
+      ++begin;
+    }
+    const char* end = begin;
+    for (const char* p = begin; *p; ++p) {
+      if (!isspace(*p)) {
+        end = p;
+      }
+    }
+    result.assign(begin, (end + ((*end) != 0)));
+  }
+  return result;
+}
+
+//-----------------------------------------------------------------------------
+std::string replace(const std::string& str,
+                    const std::string& pattern,
+                    const std::string& replacement)
+{
+  std::string result;
+  if (str.size() && pattern.size() && (pattern.size() <= str.size())) {
+    auto p = str.find(pattern.c_str());
+    if (p != std::string::npos) {
+      if (p > 0) {
+        result += str.substr(0, p);
+      }
+      result += replacement;
+      if ((p + pattern.size()) < str.size()) {
+        result += str.substr(p + pattern.size());
+      }
+    }
+  }
+  return result;
 }
 
 } // namespace xbs

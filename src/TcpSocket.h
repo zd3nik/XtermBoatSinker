@@ -29,12 +29,12 @@ private:
   { }
 
 public:
+  virtual std::string toString() const;
+  virtual ~TcpSocket() { close(); }
+
   static bool isValidPort(const int port) {
     return ((port > 0) && (port <= 0x7FFF));
   }
-
-  virtual std::string toString() const;
-  virtual ~TcpSocket() { close(); }
 
   TcpSocket() = default;
   TcpSocket(const TcpSocket&) = delete;

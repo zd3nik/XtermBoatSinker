@@ -12,7 +12,6 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-extern std::string trimStr(const std::string& str);
 extern bool isEmpty(const std::string& str, const bool trimWhitespace = true);
 extern bool iEqual(const std::string&, const std::string&);
 extern bool iEqual(const std::string&, const std::string&, unsigned len);
@@ -36,6 +35,10 @@ extern double toDouble(const std::string&);
 extern std::string toUpper(std::string);
 extern std::string toLower(std::string);
 extern std::string toError(const int errorNumber);
+extern std::string trimStr(const std::string& str);
+extern std::string replace(const std::string& str,
+                           const std::string& pattern,
+                           const std::string& replacement);
 
 //-----------------------------------------------------------------------------
 template<typename T>

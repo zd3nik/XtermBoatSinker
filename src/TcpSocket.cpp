@@ -42,8 +42,6 @@ std::string TcpSocket::toString() const {
   }
   if (handle >= 0) {
     params << ("handle=" + toStr(handle));
-  } else {
-    params << "not open";
   }
   return ("TcpSocket(" + params.toString() + ')');
 }

@@ -60,10 +60,10 @@ private:
   std::vector<std::string> missTaunts;
 
 public:
+  virtual std::string toString() const;
+
   static std::string toString(const std::string& descriptor,
                               const unsigned width);
-
-  virtual std::string toString() const;
 
   Board(const std::string& name,
         const unsigned shipAreaWidth,
@@ -81,13 +81,12 @@ public:
 
   explicit operator bool() const { return isValid(); }
 
-  int handle() const { return socket.getHandle(); } // TODO rename back to getHandle()
+  int handle() const { return socket.getHandle(); }
   bool isToMove() const { return toMove; }
   unsigned getScore() const { return score; }
   unsigned getSkips() const { return skips; }
   unsigned getTurns() const { return turns; }
   Rectangle getShipArea() const { return shipArea; }
-  const TcpSocket& getSocket() const { return socket; }
   std::string getName() const { return socket.getLabel(); }
   std::string getAddress() const { return socket.getAddress(); }
   std::string getDescriptor() const { return descriptor; }
@@ -104,7 +103,7 @@ public:
   Board& incSkips(const unsigned = 1);
   Board& incTurns(const unsigned = 1);
   Board& setSocket(TcpSocket&&);
-  Board& stealSocket(Board&);
+  Board& stealSocketFrom(Board&);
   Board& setName(const std::string&);
   Board& setStatus(const std::string&);
   Board& addHitTaunt(const std::string&);
@@ -130,6 +129,7 @@ public:
   bool addShip(const Ship&, Coordinate, const Direction);
   bool removeShip(const Ship&);
   bool print(const bool masked, const Configuration* = nullptr) const;
+  bool send(const std::string& msg) { return socket.send(msg); }
 
   char getSquare(const Coordinate&) const;
   char setSquare(const Coordinate&, const char newValue);
@@ -168,10 +168,10 @@ private:
 
   bool placeShip(std::string& desc, const Ship&, Coordinate, const Direction);
   bool placeShips(std::string& desc,
-                  const unsigned msa,
+                  const unsigned minSurfaceArea,
                   const std::vector<Coordinate>& coords,
-                  const std::vector<Ship>::iterator& sBegin,
-                  const std::vector<Ship>::iterator& sEnd);
+                  const std::vector<Ship>::iterator& shipBegin,
+                  const std::vector<Ship>::iterator& shipEnd);
 };
 
 //-----------------------------------------------------------------------------
