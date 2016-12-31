@@ -57,12 +57,11 @@ public:
     return isValidID(id) ? tolower(id) : id;
   }
 
-  static bool unHit(char& id) {
+  static char unHit(char& id) {
     if (isHit(id)) {
-      id = toupper(id);
-      return true;
+      return toupper(id);
     }
-    return false;
+    return id;
   }
 
   Ship(const char id, const unsigned length)

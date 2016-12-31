@@ -88,10 +88,11 @@ public:
 
   bool next(std::string& str) {
     if (std::getline(stream, str, delim)) {
-      if (!trim || (str = trimStr(str)).size()) {
-        cellCount++;
-        return true;
+      if (trim) {
+        str = trimStr(str);
       }
+      cellCount++;
+      return true;
     }
     return false;
   }

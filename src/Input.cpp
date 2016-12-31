@@ -188,6 +188,10 @@ unsigned Input::readln(const int fd, const char delimeter) {
                     << "' from channel " << fd << " " << getHandleLabel(fd);
   }
 
+  if (!line[0]) {
+    return 0;
+  }
+
   CSV csv(line.data(), delimeter, true);
   for (std::string fld; csv.next(fld); ) {
     fields.push_back(fld);

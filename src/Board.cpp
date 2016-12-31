@@ -34,13 +34,27 @@ std::string Board::toString(const std::string& desc, const unsigned width) {
 //-----------------------------------------------------------------------------
 Board::Board(const std::string& name,
              const unsigned shipAreaWidth,
-             const unsigned shipAreaHeight)
+             const unsigned shipAreaHeight,
+             TcpSocket&& tmpSocket)
   : Rectangle(Coordinate(1, 1),
               Coordinate((4 + (2 * shipAreaWidth)), (3 + shipAreaHeight))),
     shipArea(Coordinate(1, 1), Coordinate(shipAreaWidth, shipAreaHeight))
 {
+  socket = std::move(tmpSocket);
   socket.setLabel(name);
-  clearDescriptor();
+  descriptor.resize(shipArea.getSize(), Ship::NONE);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::stealConnectionFrom(Board&& other) {
+  if (socket) {
+    Throw() << (*this) << "stealConnectionFrom(" << other
+            << ") socket already set" << XX;
+  }
+  const std::string name = socket.getLabel(); // retain current name
+  socket = std::move(other.socket);
+  socket.setLabel(name);
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
@@ -86,25 +100,6 @@ Board& Board::incTurns(const unsigned value) {
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::setSocket(TcpSocket&& value) {
-  if (socket) {
-    Throw() << (*this) << ".setSocket() socket already set" << XX;
-  }
-  socket = std::move(value);
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::stealSocketFrom(Board& other) {
-  if (socket) {
-    Throw() << (*this) << ".stealSocketFrom(" << other
-            << ") cannot steal socket when already open" << XX;
-  }
-  socket = std::move(other.socket);
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
 Board& Board::setName(const std::string& value) {
   socket.setLabel(value);
   return (*this);
@@ -125,12 +120,6 @@ Board& Board::addHitTaunt(const std::string& value) {
 //-----------------------------------------------------------------------------
 Board& Board::addMissTaunt(const std::string& value) {
   missTaunts.push_back(value);
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::clearDescriptor() {
-  descriptor.resize(shipArea.getSize(), Ship::NONE);
   return (*this);
 }
 

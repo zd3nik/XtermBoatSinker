@@ -47,33 +47,34 @@ public:
       handle(other.handle),
       mode(other.mode)
   {
-    other.port = -1;
+    other.port   = -1;
     other.handle = -1;
-    other.mode = Unknown;
+    other.mode   = Unknown;
   }
 
   TcpSocket& operator=(TcpSocket&& other) {
     if (this != &other) {
-      this->close();
-      this->label = std::move(other.label);
-      this->address = std::move(other.address);
-      this->port = other.port;
-      this->handle = other.handle;
-      this->mode = other.mode;
-      other.port = -1;
+      close();
+      label        = std::move(other.label);
+      address      = std::move(other.address);
+      port         = other.port;
+      handle       = other.handle;
+      mode         = other.mode;
+      other.port   = -1;
       other.handle = -1;
-      other.mode = Unknown;
+      other.mode   = Unknown;
     }
     return (*this);
   }
 
-  explicit operator bool() const { return (handle >= 0); }
+  explicit operator bool() const { return isOpen(); }
 
-  std::string getLabel() const { return label; }
-  std::string getAddress() const { return address; }
-  int getPort() const { return port; }
+  bool isOpen() const { return (handle >= 0); }
   int getHandle() const { return handle; }
+  int getPort() const { return port; }
   Mode getMode() const { return mode; }
+  std::string getAddress() const { return address; }
+  std::string getLabel() const { return label; }
 
   void close();
   void setLabel(const std::string& value) { label = value; }

@@ -140,10 +140,10 @@ bool Client::run() {
   Screen::get(true).clear().flush();
   bool ok = waitForGameStart();
 
-  while (ok && !game.hasFinished()) {
+  while (ok && !game.isFinished()) {
     Coordinate coord(1, 1);
     Screen::print() << coord << ClearToScreenEnd;
-    for (auto board : game.getAllBoards()) {
+    for (auto& board : game.getBoards()) {
       if (board->print(true, &game.getConfiguration())) {
         coord.set(board->getBottomRight());
       }
@@ -173,7 +173,7 @@ bool Client::run() {
 
 //-----------------------------------------------------------------------------
 Board& Client::myBoard() {
-  auto board = game.getBoardForPlayer(userName, true);
+  auto board = game.boardForPlayer(userName, true);
   if (!board) {
     Throw() << "Your are not in the game!" << XX;
   }
@@ -314,14 +314,14 @@ bool Client::joinGame(bool& retry) {
     }
     yourBoard->setName(userName);
     if (taunts) {
-      for (auto taunt : taunts->getStrings("hit")) {
+      for (auto& taunt : taunts->getStrings("hit")) {
         if (!trySend(MSG('T') << "hit" << taunt)) {
           Logger::printError() << "Failed to send taunt info to server";
           return false;
         }
         yourBoard->addHitTaunt(taunt);
       }
-      for (auto taunt : taunts->getStrings("miss")) {
+      for (auto& taunt : taunts->getStrings("miss")) {
         if (!trySend(MSG('T') << "miss" << taunt)) {
           Logger::printError() << "Failed to send taunt info to server";
           return false;
@@ -574,7 +574,7 @@ bool Client::setupBoard() {
     }
 
     std::vector<Rectangle*> children;
-    for (auto child : boards) {
+    for (auto& child : boards) {
       children.push_back(child.get());
     }
 
@@ -598,7 +598,7 @@ bool Client::setupBoard() {
   while (true) {
     Screen::print() << Coordinate(1, 1) << ClearToScreenEnd;
 
-    for (auto board : boards) {
+    for (auto& board : boards) {
       if (!board->print(false)) {
         return false;
       }
@@ -615,7 +615,7 @@ bool Client::setupBoard() {
     case 'Q':
       return false;
     case 'R':
-      for (auto board : boards) {
+      for (auto& board : boards) {
         if (!board->addRandomShips(config, minSurfaceArea)) {
           Logger::printError() << "failed to create random ship layout on "
                                << board->getName() << ", MSA ratio = "
@@ -675,7 +675,7 @@ bool Client::waitForGameStart() {
   }
 
   bool ok = true;
-  while (ok && !game.isStarted() && !game.hasFinished()) {
+  while (ok && !game.isStarted() && !game.isFinished()) {
     Coordinate coord(1, 1);
     Screen::print() << coord << ClearToScreenEnd;
     config.print(coord);
@@ -683,7 +683,7 @@ bool Client::waitForGameStart() {
     Screen::print() << coord.south() << "Joined : " << game.getBoardCount();
     coord.south().setX(3);
 
-    for (auto board : game.getAllBoards()) {
+    for (auto& board : game.getBoards()) {
       Screen::print() << coord.south() << board->getName();
       if (userName == board->getName()) {
         Screen::print() << " (you)";
@@ -707,7 +707,7 @@ bool Client::waitForGameStart() {
     }
   }
 
-  return (ok && game.isStarted() && !game.hasFinished());
+  return (ok && game.isStarted() && !game.isFinished());
 }
 
 //-----------------------------------------------------------------------------
@@ -841,7 +841,7 @@ void Client::clearMessages(Coordinate coord) {
   } else if (ch == 'P') {
     std::string name = prompt(coord, "Which player? [RET=Abort] -> ");
     if (name.size()) {
-      auto board = game.getBoardForPlayer(name, false);
+      auto board = game.boardForPlayer(name, false);
       if (board) {
         name = board->getName();
         if (name == userName) {
@@ -953,7 +953,7 @@ void Client::hit() {
   const std::string target  = input.getStr(2);
   const std::string square  = input.getStr(3);
 
-  auto board = game.getBoardForPlayer(shooter, true);
+  auto board = game.boardForPlayer(shooter, true);
   if (board) {
     Throw() << "Invalid shooter name in hit message from server: "
             << input.getLine() << XX;
@@ -1050,7 +1050,7 @@ void Client::printWaitOptions(Coordinate coord) {
 //-----------------------------------------------------------------------------
 void Client::redrawScreen() {
   std::vector<Rectangle*> children;
-  for (auto child : game.getAllBoards()) {
+  for (auto& child : game.getBoards()) {
     children.push_back(child.get());
   }
   if (!Screen::get(true).clear().flush().arrangeChildren(children)) {
@@ -1122,7 +1122,7 @@ void Client::sendMessage(Coordinate coord) {
     if (name.empty()) {
       break;
     }
-    auto board = game.getBoardForPlayer(name, false);
+    auto board = game.boardForPlayer(name, false);
     if (!board) {
       Logger::printError() << "Invalid player name: " << name;
     } else if (board->getName() == userName) {
@@ -1157,12 +1157,12 @@ void Client::setTaunts() {
     Screen::print() << coord << ClearToScreenEnd;
 
     Screen::print() << coord.south().setX(1) << "Hit Taunts:";
-    for (auto taunt : yourBoard->getHitTaunts()) {
+    for (auto& taunt : yourBoard->getHitTaunts()) {
       Screen::print() << coord.south().setX(3) << taunt;
     }
 
     Screen::print() << coord.south(2).setX(1) << "Miss Taunts:";
-    for (auto taunt : yourBoard->getMissTaunts()) {
+    for (auto& taunt : yourBoard->getMissTaunts()) {
       Screen::print() << coord.south().setX(3) << taunt;
     }
 
@@ -1227,7 +1227,7 @@ void Client::shoot(Coordinate coord) {
 
   std::string name;
   if (game.getBoardCount() == 2) {
-    for (auto board : game.getAllBoards()) {
+    for (auto& board : game.getBoards()) {
       if (board->getName() != userName) {
         name = board->getName();
       }
@@ -1238,7 +1238,7 @@ void Client::shoot(Coordinate coord) {
       if (isEmpty(name)) {
         return;
       }
-      auto board = game.getBoardForPlayer(name, false);
+      auto board = game.boardForPlayer(name, false);
       if (!board) {
         Screen::print() << ClearLine << "Invalid player name: " << name;
       } else if (board->getName() == userName) {
@@ -1273,7 +1273,7 @@ void Client::skip() {
   const std::string user   = input.getStr(1);
   const std::string reason = input.getStr(2);
 
-  auto board = game.getBoardForPlayer(user, true);
+  auto board = game.boardForPlayer(user, true);
   if (!board) {
     Throw() << "Invalid name '" << user << "' in skip message from server"
             << XX;
@@ -1337,7 +1337,7 @@ void Client::updateBoard() {
   const unsigned score     = input.getUInt(4);
   const unsigned skips     = input.getUInt(5);
 
-  auto board = game.getBoardForPlayer(name, true);
+  auto board = game.boardForPlayer(name, true);
   if (!board || desc.empty()) {
     Throw() << "Invalid updateBoard message from server: " << input.getLine()
             << XX;

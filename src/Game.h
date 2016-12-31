@@ -17,13 +17,13 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Game {
 private:
-  std::string title;
-  Configuration config;
   Timestamp started = 0;
   Timestamp aborted = 0;
   Timestamp finished = 0;
-  unsigned boardToMove = 0;
+  unsigned toMove = 0;
   unsigned turnCount = 0;
+  std::string title;
+  Configuration config;
   std::vector<BoardPtr> boards;
 
 public:
@@ -45,11 +45,10 @@ public:
   Game& setConfiguration(const Configuration&);
   Game& setTitle(const std::string&);
 
-  BoardPtr getBoardAtIndex(const unsigned index);
-  BoardPtr getBoardForHandle(const int handle);
-  BoardPtr getBoardForPlayer(const std::string& name, const bool exact);
-  BoardPtr getBoardToMove();
-  BoardPtr getFirstBoardForAddress(const std::string& address);
+  BoardPtr boardAtIndex(const unsigned index);
+  BoardPtr boardForHandle(const int handle);
+  BoardPtr boardForPlayer(const std::string& name, const bool exact);
+  BoardPtr boardToMove();
 
   bool hasOpenBoard() const;
   bool nextTurn();
@@ -57,20 +56,20 @@ public:
   bool start(const bool randomizeBoardOrder = false);
 
   void abort();
-  void disconnectBoard(const int handle, const std::string& msg);
+  void disconnectBoard(const std::string& name, const std::string& msg);
   void finish();
-  void removeBoard(const int handle);
   void removeBoard(const std::string& name);
   void saveResults(Database&);
 
-  std::vector<BoardPtr> getAllBoards() { // TODO rename to allBoard()
+  std::vector<BoardPtr> getBoards() const {
     return std::vector<BoardPtr>(boards.begin(), boards.end());
   }
 
-  std::vector<BoardPtr> connectedBoards() {
+  std::vector<BoardPtr> boardsForAddress(const std::string& address) {
     std::vector<BoardPtr> result;
     std::copy_if(boards.begin(), boards.end(), std::back_inserter(result),
-                 [](const BoardPtr& b) { return (b->handle() >= 0); });
+      [&](const BoardPtr& b) { return (b->getAddress() == address); }
+    );
     return std::move(result);
   }
 
@@ -94,16 +93,16 @@ public:
     return aborted;
   }
 
-  bool hasFinished() const { // TODO rename back to isFinished()
+  bool isFinished() const {
     return (aborted || finished);
   }
 
   bool hasBoard(const std::string& name) {
-    return static_cast<bool>(getBoardForPlayer(name, true));
+    return static_cast<bool>(boardForPlayer(name, true));
   }
 
   bool hasBoard(const int handle) {
-    return static_cast<bool>(getBoardForHandle(handle));
+    return static_cast<bool>(boardForHandle(handle));
   }
 
   unsigned getTurnCount() const {
@@ -112,7 +111,7 @@ public:
 
 private:
   bool isValid() const;
-  void setBoardToMove();
+  void updateBoardToMove();
 };
 
 } // namespace xbs

@@ -67,10 +67,13 @@ public:
 
   Board(const std::string& name,
         const unsigned shipAreaWidth,
-        const unsigned shipAreaHeight);
+        const unsigned shipAreaHeight,
+        TcpSocket&& = TcpSocket());
 
-  Board(const std::string& name, const Configuration& config)
-    : Board(name, config.getBoardWidth(), config.getBoardHeight())
+  Board(const std::string& name,
+        const Configuration& c,
+        TcpSocket&& sock = TcpSocket())
+    : Board(name, c.getBoardWidth(), c.getBoardHeight(), std::move(sock))
   { }
 
   Board() = default;
@@ -82,6 +85,7 @@ public:
   explicit operator bool() const { return isValid(); }
 
   int handle() const { return socket.getHandle(); }
+  bool isConnected() const  { return socket.isOpen(); }
   bool isToMove() const { return toMove; }
   unsigned getScore() const { return score; }
   unsigned getSkips() const { return skips; }
@@ -95,6 +99,7 @@ public:
   std::vector<std::string> getMissTaunts() const { return missTaunts; }
   void disconnect() { socket.close(); }
 
+  Board& stealConnectionFrom(Board&&);
   Board& setToMove(const bool);
   Board& setScore(const unsigned);
   Board& setSkips(const unsigned);
@@ -102,13 +107,10 @@ public:
   Board& incScore(const unsigned = 1);
   Board& incSkips(const unsigned = 1);
   Board& incTurns(const unsigned = 1);
-  Board& setSocket(TcpSocket&&);
-  Board& stealSocketFrom(Board&);
   Board& setName(const std::string&);
   Board& setStatus(const std::string&);
   Board& addHitTaunt(const std::string&);
   Board& addMissTaunt(const std::string&);
-  Board& clearDescriptor();
   Board& clearHitTaunts();
   Board& clearMissTaunts();
 
