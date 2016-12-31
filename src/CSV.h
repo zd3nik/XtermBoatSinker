@@ -23,10 +23,6 @@ private:
 public:
   virtual std::string toString() const { return stream.str(); }
 
-  // NOTE older gcc stringstream issues prevent use of move semantics
-  CSV(CSV&&) = default;
-  CSV& operator=(CSV&&) = default;
-
   CSV(const std::string& line = "",
       const char delim = ',',
       const bool trim = false)
