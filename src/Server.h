@@ -91,6 +91,7 @@ private:
   void printPlayers(Game&, Coordinate&);
   void quitGame(Game&, Coordinate);
   void rejoinGame(Game&, Board&);
+  void removeNewBoard(const int);
   void removePlayer(Game&, Board&, const std::string& msg = "");
   void saveResult(Game&);
   void sendBoardToAll(Game&, const Board&);

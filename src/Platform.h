@@ -28,6 +28,7 @@
 #include <vector>
 
 #define ASSERT assert
+#define UNUSED(x) [&x]{}()
 
 #ifndef NDEBUG
 #define VERIFY ASSERT

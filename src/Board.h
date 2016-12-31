@@ -7,8 +7,8 @@
 
 #include "Platform.h"
 #include "Configuration.h"
-#include "Rectangle.h"
 #include "DBRecord.h"
+#include "Rectangle.h"
 #include "Ship.h"
 #include "TcpSocket.h"
 

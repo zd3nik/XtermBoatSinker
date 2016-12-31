@@ -48,12 +48,15 @@ FileSysDatabase& FileSysDatabase::open(const std::string& dbURI) {
     if (!(dir = opendir(homeDir.c_str()))) {
       if (errno == ENOENT) {
         if (mkdir(homeDir.c_str(), 0750) != 0) {
-          Throw() << "mkdir(" << homeDir << ") failed: " << toError(errno);
+          Throw() << "mkdir(" << homeDir << ") failed: " << toError(errno)
+                  << XX;
         } else if (!(dir = opendir(homeDir.c_str()))) {
-          Throw() << "opendir(" << homeDir << ") failed: " << toError(errno);
+          Throw() << "opendir(" << homeDir << ") failed: " << toError(errno)
+                  << XX;
         }
       } else {
-        Throw() << "opendir(" << homeDir << ") failed: " << toError(errno);
+        Throw() << "opendir(" << homeDir << ") failed: " << toError(errno)
+                << XX;
       }
     }
     loadCache();
@@ -104,7 +107,7 @@ bool FileSysDatabase::loadRecord(const std::string& recordID) {
     if (isalnum(*recordID.c_str())) {
       // TODO use shared_ptr
       if (!(rec = new FileSysDBRecord(recordID, filePath))) {
-        Throw() << "Out of memory!";
+        Throw() << "Out of memory!" << XX;
       }
 
       RecordIterator it = recordCache.find(recordID);
@@ -160,12 +163,12 @@ bool FileSysDatabase::remove(const std::string& recordID) {
     try {
       FileSysDBRecord* rec = it->second;
       if (!rec) {
-        Throw() << "Null " << (*this) << " record";
+        Throw() << "Null " << (*this) << " record" << XX;
       } else if (rec->getFilePath().empty()) {
-        Throw() << "Empty " << (*rec) << " file path";
+        Throw() << "Empty " << (*rec) << " file path" << XX;
       } else if (unlink(rec->getFilePath().c_str()) != 0) {
         Throw() << "unlink(" << rec->getFilePath() << ") failed: "
-                << toError(errno);
+                << toError(errno) << XX;
       }
       ok = true;
     }
@@ -194,7 +197,7 @@ DBRecord* FileSysDatabase::get(const std::string& recordID, const bool add) {
     FileSysDBRecord* rec = new FileSysDBRecord(recordID, filePath);
     if (!rec) {
       // TODO use shared_ptr
-      Throw() << "Out of memory!";
+      Throw() << "Out of memory!" << XX;
     }
     recordCache[recordID] = rec;
     return rec;

@@ -96,11 +96,13 @@ bool Client::init() {
   const std::string msaRatio = args.getValueOf("--msa");
   if (msaRatio.size()) {
     if (!isFloat(msaRatio)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio;
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
+                             << XX;
     }
     minSurfaceArea = toDouble(msaRatio.c_str());
     if ((minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio;
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
+                             << XX;
     }
   }
 
@@ -132,7 +134,9 @@ bool Client::join() {
 
 //-----------------------------------------------------------------------------
 bool Client::run() {
-  CanonicalMode(false);
+  CanonicalMode cmode(false);
+  UNUSED(cmode);
+
   Screen::get(true).clear().flush();
   bool ok = waitForGameStart();
 
@@ -171,7 +175,7 @@ bool Client::run() {
 Board& Client::myBoard() {
   auto board = game.getBoardForPlayer(userName, true);
   if (!board) {
-    Throw() << "Your are not in the game!";
+    Throw() << "Your are not in the game!" << XX;
   }
   return (*board);
 }
@@ -181,7 +185,9 @@ std::string Client::prompt(Coordinate coord,
                            const std::string& question,
                            const char delim)
 {
-  CanonicalMode(true);
+  CanonicalMode cmode(true);
+  UNUSED(cmode);
+
   Screen::print() << coord << ClearToLineEnd << question << Flush;
   return input.readln(STDIN_FILENO, delim) ? input.getStr() : std::string();
 }
@@ -202,7 +208,7 @@ bool Client::getHostAddress() {
   host = getHostArg();
   while (isEmpty(host)) {
     Screen::print() << "Enter host address [RET=quit] -> " << Flush;
-    if (input.readln(STDIN_FILENO) <= 0) {
+    if (!input.readln(STDIN_FILENO)) {
       return false;
     } else if (input.getFieldCount() > 1) {
       Logger::printError() << "Host address may not contain '|' characters";
@@ -219,9 +225,7 @@ bool Client::getHostPort() {
   while (!TcpSocket::isValidPort(port)) {
     Screen::print() << "Enter host port [RET=" << Server::DEFAULT_PORT
                     << "] -> " << Flush;
-    if (input.readln(STDIN_FILENO) < 0) {
-      return false;
-    } else if (input.getFieldCount() == 0) {
+    if (!input.readln(STDIN_FILENO)) {
       port = Server::DEFAULT_PORT;
     } else {
       port = input.getInt();
@@ -236,7 +240,7 @@ bool Client::getUserName() {
   while (true) {
     if (isEmpty(userName)) {
       Screen::print() << EL << "Enter your username -> " << Flush;
-      if (input.readln(STDIN_FILENO) < 0) {
+      if (!input.readln(STDIN_FILENO)) {
         return false;
       } else if (input.getFieldCount() > 1) {
         Logger::printError() << "Username may not contain '|' characters";
@@ -296,7 +300,7 @@ bool Client::joinGame(bool& retry) {
     }
   }
 
-  if (input.readln(socket.getHandle()) <= 0) {
+  if (!input.readln(socket.getHandle())) {
     Logger::printError() << "No respone from server";
     return false;
   }
@@ -650,7 +654,7 @@ bool Client::setupBoard() {
 //-----------------------------------------------------------------------------
 bool Client::trySend(const std::string& msg) {
   if ((msg.size() + 1) >= Input::BUFFER_SIZE) {
-    Throw() << "message exceeds buffer size (" << msg << ')';
+    Throw() << "message exceeds buffer size (" << msg << ')' << XX;
   }
   return socket.send(msg);
 }
@@ -661,13 +665,13 @@ bool Client::waitForGameStart() {
   clearScreen();
 
   if (isEmpty(userName)) {
-    Throw() << "Username not set!";
+    Throw() << "Username not set!" << XX;
   } else if (!yourBoard) {
-    Throw() << "Your board is not set!";
+    Throw() << "Your board is not set!" << XX;
   } else if (yourBoard->getName() != userName) {
-    Throw() << "Your board name doesn't make your user name!";
+    Throw() << "Your board name doesn't make your user name!" << XX;
   } else if (!yourBoard->matchesConfig(config)) {
-    Throw() << "Your board setup is invalid!";
+    Throw() << "Your board setup is invalid!" << XX;
   }
 
   bool ok = true;
@@ -727,13 +731,17 @@ bool Client::waitForInput(const int timeout) {
 
 //-----------------------------------------------------------------------------
 char Client::getChar() {
-  CanonicalMode(false);
+  CanonicalMode cmode(false);
+  UNUSED(cmode);
+
   return toupper(input.readChar(STDIN_FILENO));
 }
 
 //-----------------------------------------------------------------------------
 char Client::getKey(Coordinate coord) {
-  CanonicalMode(false);
+  CanonicalMode cmode(false);
+  UNUSED(cmode);
+
   char ch = 0;
   switch (input.readKey(STDIN_FILENO, ch)) {
   case KeyChar:
@@ -806,9 +814,10 @@ void Client::addMessage() {
 void Client::addPlayer() {
   const std::string name = input.getStr(1);
   if (name.empty()) {
-    Throw() << "Incomplete addPlayer message from server";
+    Throw() << "Incomplete addPlayer message from server" << XX;
   } else if (game.hasBoard(name)) {
-    Throw() << "Duplicate player name (" << name << ") received from server";
+    Throw() << "Duplicate player name (" << name << ") received from server"
+            << XX;
   }
   game.addBoard(std::make_shared<Board>(name, game.getConfiguration()));
 }
@@ -891,7 +900,7 @@ void Client::endGame() {
 
   coord.south().setX(3);
   for (unsigned i = 0; i < players; ++i) {
-    if (input.readln(socket.getHandle()) <= 0) {
+    if (!input.readln(socket.getHandle())) {
       break;
     }
 
@@ -934,7 +943,7 @@ void Client::handleServerMessage() {
       }
     }
     Throw() << "Received unknown message type from server: '"
-            << input.getLine() << "'";
+            << input.getLine() << "'" << XX;
   }
 }
 
@@ -947,10 +956,10 @@ void Client::hit() {
   auto board = game.getBoardForPlayer(shooter, true);
   if (board) {
     Throw() << "Invalid shooter name in hit message from server: "
-            << input.getLine();
+            << input.getLine() << XX;
   } else if (target.empty()) {
     Throw() << "Empty target name in hit message from server: "
-            << input.getLine();
+            << input.getLine() << XX;
   }
 
   std::string msg = (shooter + " hit " + target);
@@ -967,9 +976,9 @@ void Client::hit() {
 void Client::nextTurn() {
   const std::string name = input.getStr(1);
   if (name.empty()) {
-    Throw() << "Incomplete nextTurn message from server";
+    Throw() << "Incomplete nextTurn message from server" << XX;
   } else if (!game.setNextTurn(name)) {
-    Throw() << "Invalid nextTurn message: " << input.getLine();
+    Throw() << "Invalid nextTurn message: " << input.getLine() << XX;
   }
 }
 
@@ -1045,7 +1054,7 @@ void Client::redrawScreen() {
     children.push_back(child.get());
   }
   if (!Screen::get(true).clear().flush().arrangeChildren(children)) {
-    Throw() << EL << "Boards do not fit in terminal";
+    Throw() << "Boards do not fit in terminal" << XX;
   }
 }
 
@@ -1053,9 +1062,9 @@ void Client::redrawScreen() {
 void Client::removePlayer() {
   const std::string name = input.getStr(1);
   if (name.empty()) {
-    Throw() << "Incomplete removePlayer message from server";
+    Throw() << "Incomplete removePlayer message from server" << XX;
   } else if (game.isStarted()) {
-    Throw() << "Received removePlayer message after game start";
+    Throw() << "Received removePlayer message after game start" << XX;
   }
   game.removeBoard(name);
 }
@@ -1094,7 +1103,7 @@ void Client::scrollUp() {
 //-----------------------------------------------------------------------------
 void Client::send(const std::string& msg) {
   if (!trySend(msg)) {
-    Throw() << socket << ".send(" << msg << ") failed";
+    Throw() << socket << ".send(" << msg << ") failed" << XX;
   }
 }
 
@@ -1266,7 +1275,8 @@ void Client::skip() {
 
   auto board = game.getBoardForPlayer(user, true);
   if (!board) {
-    Throw() << "Invalid name '" << user << "' in skip message from server";
+    Throw() << "Invalid name '" << user << "' in skip message from server"
+            << XX;
   }
 
   if (reason.size()) {
@@ -1298,23 +1308,24 @@ void Client::startGame() {
   unsigned count = (input.getFieldCount() - 1);
   if (count != game.getBoardCount()) {
     Throw() << "Player count mismatch: boards=" << game.getBoardCount()
-            << ", players=" << count;
+            << ", players=" << count << XX;
   }
 
   for (unsigned i = 1; i < input.getFieldCount(); ++i) {
     const std::string name = input.getStr(i);
     if (name.empty()) {
-      Throw() << "Empty player name received from server: " << input.getLine();
+      Throw() << "Empty player name received from server: " << input.getLine()
+              << XX;
     } else if (!game.hasBoard(name)) {
       Throw() << "Unknown player name (" << name << ") received from server: "
-              << input.getLine();
+              << input.getLine() << XX;
     }
   }
 
   if (game.start()) {
     redrawScreen();
   } else {
-    Throw() << "Game cannot start";
+    Throw() << "Game cannot start" << XX;
   }
 }
 
@@ -1328,15 +1339,16 @@ void Client::updateBoard() {
 
   auto board = game.getBoardForPlayer(name, true);
   if (!board || desc.empty()) {
-    Throw() << "Invalid updateBoard message from server: " << input.getLine();
+    Throw() << "Invalid updateBoard message from server: " << input.getLine()
+            << XX;
   }
 
   board->setStatus(status).setScore(score).setSkips(skips);
 
   if (!board->updateDescriptor(desc)) {
-    Throw() << "Failed to update board descriptor for " << name;
+    Throw() << "Failed to update board descriptor for " << name << XX;
   } else if ((name == userName) && !yourBoard->addHitsAndMisses(desc)) {
-    Throw() << "Board descriptor mismatch: '" << desc << "'";
+    Throw() << "Board descriptor mismatch: '" << desc << "'" << XX;
   }
 }
 
@@ -1344,11 +1356,12 @@ void Client::updateBoard() {
 void Client::updateYourBoard() {
   const std::string desc = input.getStr(1);
   if (desc.empty()) {
-    Throw() << "Invalid YourBoard message from server: " << input.getLine();
+    Throw() << "Invalid YourBoard message from server: " << input.getLine()
+            << XX;
   } else if (!yourBoard->updateDescriptor(desc) ||
              !yourBoard->matchesConfig(game.getConfiguration()))
   {
-    Throw() << "Board descriptor is invalid: '" << desc << "'";
+    Throw() << "Board descriptor is invalid: '" << desc << "'" << XX;
   }
 }
 
@@ -1356,19 +1369,19 @@ void Client::updateYourBoard() {
 void Client::viewBoard(Coordinate coord) {
   Board& board = myBoard();
    if (yourBoard->getDescriptor().size() != board.getDescriptor().size()) {
-    Throw() << "Board descriptor lengths don't match!";
+    Throw() << "Board descriptor lengths don't match!" << XX;
   }
 
   yourBoard->set(board.getTopLeft(), board.getBottomRight());
   if (!yourBoard->print(false)) {
-    Throw() << "Failed to print your board";
+    Throw() << "Failed to print your board" << XX;
   }
 
   Screen::print() << coord << ClearToLineEnd << "Press any key" << Flush;
   getKey(coord);
 
   if (!board.print(true, &game.getConfiguration())) {
-    Throw() << "Failed to print your board";
+    Throw() << "Failed to print your board" << XX;
   }
 }
 

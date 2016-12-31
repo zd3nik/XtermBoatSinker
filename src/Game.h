@@ -18,17 +18,18 @@ namespace xbs
 class Game {
 private:
   std::string title;
+  Configuration config;
   Timestamp started = 0;
   Timestamp aborted = 0;
   Timestamp finished = 0;
   unsigned boardToMove = 0;
   unsigned turnCount = 0;
-  Configuration config;
   std::vector<BoardPtr> boards;
 
 public:
-  Game(const Configuration& config)
-    : config(config)
+  Game(const Configuration& config, const std::string& title = "")
+    : title(title),
+      config(config)
   { }
 
   Game() = default;
@@ -39,27 +40,27 @@ public:
 
   explicit operator bool() const { return isValid(); }
 
-  Game& clear();
   Game& addBoard(const BoardPtr&);
+  Game& clear();
   Game& setConfiguration(const Configuration&);
   Game& setTitle(const std::string&);
 
-  BoardPtr getBoardToMove();
-  BoardPtr getFirstBoardForAddress(const std::string& address);
   BoardPtr getBoardAtIndex(const unsigned index);
   BoardPtr getBoardForHandle(const int handle);
   BoardPtr getBoardForPlayer(const std::string& name, const bool exact);
+  BoardPtr getBoardToMove();
+  BoardPtr getFirstBoardForAddress(const std::string& address);
 
   bool hasOpenBoard() const;
-  bool start(const bool randomizeBoardOrder = false);
   bool nextTurn();
   bool setNextTurn(const std::string& name);
+  bool start(const bool randomizeBoardOrder = false);
 
-  void disconnectBoard(const int handle, const std::string& msg);
-  void removeBoard(const std::string& name);
-  void removeBoard(const int handle);
   void abort();
+  void disconnectBoard(const int handle, const std::string& msg);
   void finish();
+  void removeBoard(const int handle);
+  void removeBoard(const std::string& name);
   void saveResults(Database&);
 
   std::vector<BoardPtr> getAllBoards() { // TODO rename to allBoard()

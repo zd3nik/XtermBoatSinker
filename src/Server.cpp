@@ -89,8 +89,6 @@ bool Server::init() {
 
 //-----------------------------------------------------------------------------
 bool Server::run() {
-  Screen::get(true).clear().cursor(1, 1).flush();
-
   Configuration config = getGameConfig();
   if (!config) {
     return false;
@@ -105,8 +103,10 @@ bool Server::run() {
 
   bool ok = true;
   try {
-    Game game(config.setName(gameTitle));
-    CanonicalMode(false);
+    CanonicalMode cmode(false);
+    UNUSED(cmode);
+
+    Game game(config, gameTitle);
     Coordinate coord;
     Coordinate quietCoord;
 
@@ -146,7 +146,9 @@ std::string Server::prompt(Coordinate coord,
                            const std::string& question,
                            const char delim)
 {
-  CanonicalMode(true);
+  CanonicalMode cmode(true);
+  UNUSED(cmode);
+
   Screen::print() << coord << ClearToLineEnd << question << Flush;
   return input.readln(STDIN_FILENO, delim) ? input.getStr() : std::string();
 }
@@ -209,7 +211,7 @@ bool Server::getGameTitle(std::string& title) {
   title = CommandArgs::getInstance().getValueOf({"-t", "--title"});
   while (title.empty()) {
     Screen::print() << "Enter game title [RET=quit] -> " << Flush;
-    if (input.readln(STDIN_FILENO) <= 0) {
+    if (!input.readln(STDIN_FILENO)) {
       return false;
     }
     title = input.getStr();
@@ -292,7 +294,7 @@ bool Server::send(Game& game, Board& recipient, const std::string& msg,
 {
   if (msg.size() >= Input::BUFFER_SIZE) {
     Throw() << "message exceeds buffer size (" << msg.size() << ','
-            << msg << ")";
+            << msg << ")" << XX;
   }
   if (!recipient.send(msg)) {
     if (removeOnFailure) {
@@ -333,7 +335,7 @@ void Server::addPlayerHandle(Game& game) {
   }
 
   if (game.hasBoard(board->handle())) {
-    Throw() << "Duplicate handle accepted: " << (*board);
+    Throw() << "Duplicate handle accepted: " << (*board) << XX;
   }
 
   if (blackList.count(ADDRESS_PREFIX + board->getAddress())) {
@@ -426,25 +428,26 @@ void Server::handlePlayerInput(Game& game, const int handle) {
       : it->second;
 
   if (!board) {
-    Throw() << "Unknown player handle: " << handle;
+    Throw() << "Unknown player handle: " << handle << XX;
   }
 
   if (!input.readln(handle)) {
-    Logger::warn() << "Empty message from " << (*board);
+    Logger::warn() << "Disconnecting " << (*board);
+    removePlayer(game, (*board));
     return;
   }
 
   std::string str = input.getStr();
   if (str.size() == 1) {
     switch (str[0]) {
-    case 'G': sendGameInfo(game, (*board)); break;
-    case 'J': joinGame(game, board);        break;
-    case 'K': skipTurn(game, (*board));         break;
-    case 'L': leaveGame(game, (*board));    break;
-    case 'M': sendMessage(game, (*board));  break;
-    case 'P': ping(game, (*board));         break;
-    case 'S': shoot(game, (*board));        break;
-    case 'T': setTaunt(game, (*board));     break;
+    case 'G': sendGameInfo(game, (*board)); return;
+    case 'J': joinGame(game, board);        return;
+    case 'K': skipTurn(game, (*board));     return;
+    case 'L': leaveGame(game, (*board));    return;
+    case 'M': sendMessage(game, (*board));  return;
+    case 'P': ping(game, (*board));         return;
+    case 'S': shoot(game, (*board));        return;
+    case 'T': setTaunt(game, (*board));     return;
     default:
       break;
     }
@@ -461,15 +464,15 @@ void Server::handleUserInput(Game& game, Coordinate coord) {
   char ch = 0;
   if (input.readKey(STDIN_FILENO, ch) == KeyChar) {
     switch (toupper(ch)) {
-    case 'A': blacklistAddress(game, coord);     break;
-    case 'B': bootPlayer(game, coord);           break;
-    case 'C': clearBlacklist(game, coord);       break;
-    case 'K': skipBoard(game, coord);            break;
-    case 'M': sendMessage(game, coord);          break;
-    case 'P': blacklistPlayer(game, coord);      break;
-    case 'Q': quitGame(game, coord);             break;
-    case 'R': Screen::get(true).clear().flush(); break;
-    case 'S': startGame(game, coord);            break;
+    case 'A': blacklistAddress(game, coord);     return;
+    case 'B': bootPlayer(game, coord);           return;
+    case 'C': clearBlacklist(game, coord);       return;
+    case 'K': skipBoard(game, coord);            return;
+    case 'M': sendMessage(game, coord);          return;
+    case 'P': blacklistPlayer(game, coord);      return;
+    case 'Q': quitGame(game, coord);             return;
+    case 'R': Screen::get(true).clear().flush(); return;
+    case 'S': startGame(game, coord);            return;
     default:
       break;
     }
@@ -479,7 +482,7 @@ void Server::handleUserInput(Game& game, Coordinate coord) {
 //-----------------------------------------------------------------------------
 void Server::joinGame(Game& game, BoardPtr& joiner) {
   if (!joiner) {
-    Throw() << "Server..joinGame() null board";
+    Throw() << "Server.joinGame() null board" << XX;
   }
 
   const Configuration& config = game.getConfiguration();
@@ -488,7 +491,7 @@ void Server::joinGame(Game& game, BoardPtr& joiner) {
 
   if (game.hasBoard(joiner->handle())) {
     Throw() << "duplicate handle (" << joiner->handle()
-            << ") in join command!";
+            << ") in join command!" << XX;
   } else if (playerName.empty()) {
     removePlayer(game, (*joiner), PROTOCOL_ERROR);
   } else if (blackList.count(PLAYER_PREFIX + playerName)) {
@@ -505,6 +508,7 @@ void Server::joinGame(Game& game, BoardPtr& joiner) {
       if (existingBoard->handle() >= 0) {
         send(game, (*joiner), NAME_IN_USE);
       } else {
+        removeNewBoard(joiner->handle());
         existingBoard->stealSocketFrom(*joiner);
         existingBoard->setStatus("");
         rejoinGame(game, (*existingBoard));
@@ -517,6 +521,8 @@ void Server::joinGame(Game& game, BoardPtr& joiner) {
   {
     removePlayer(game, (*joiner), INVALID_BOARD);
   } else {
+    removeNewBoard(joiner->handle());
+    joiner->setName(playerName);
     game.addBoard(joiner);
 
     // send confirmation to joining board
@@ -562,7 +568,7 @@ void Server::nextTurn(Game& game) {
     if (toMove) {
       sendToAll(game, MSG('N') << toMove->getName());
     } else {
-      Throw() << "Failed to get board to move";
+      Throw() << "Failed to get board to move" << XX;
     }
   }
 }
@@ -664,7 +670,7 @@ void Server::rejoinGame(Game& game, Board& joiner) {
   // let rejoining player know who's turn it is
   auto toMove = game.getBoardToMove();
   if (!toMove) {
-    Throw() << "Board to move unknown!";
+    Throw() << "Board to move unknown!" << XX;
   } else if (!send(game, joiner, MSG('N') << toMove->getName())) {
     return;
   }
@@ -681,6 +687,14 @@ void Server::rejoinGame(Game& game, Board& joiner) {
 }
 
 //-----------------------------------------------------------------------------
+void Server::removeNewBoard(const int handle) {
+  auto it = newBoards.find(handle);
+  if (it != newBoards.end()) {
+    newBoards.erase(it);
+  }
+}
+
+//-----------------------------------------------------------------------------
 void Server::removePlayer(Game& game, Board& board, const std::string& msg) {
   input.removeHandle(board.handle());
 
@@ -691,7 +705,7 @@ void Server::removePlayer(Game& game, Board& board, const std::string& msg) {
   auto it = newBoards.find(board.handle());
   if (it != newBoards.end()) {
     if (game.hasBoard(board.handle())) {
-      Throw() << board << " in game boards and new boards array";
+      Throw() << board << " in game boards and new boards array" << XX;
     }
     newBoards.erase(it);
     return;
@@ -818,7 +832,7 @@ void Server::sendMessage(Game& game, Coordinate coord) {
 void Server::sendStart(Game& game) {
   auto toMove = game.getBoardToMove();
   if (!toMove) {
-    Throw() << "No board set to move";
+    Throw() << "No board set to move" << XX;
   }
 
   // send all boards to all players (N x N)
@@ -875,7 +889,7 @@ void Server::shoot(Game& game, Board& shooter) {
 
   auto toMove = game.getBoardToMove();
   if (!toMove) {
-    Throw() << "Board to move unknown!";
+    Throw() << "Board to move unknown!" << XX;
   } else if (shooter.handle() != toMove->handle()) {
     send(game, shooter, "M||it is not your turn!");
     return;
@@ -953,7 +967,7 @@ void Server::skipTurn(Game& game, Board& board) {
 
   auto toMove = game.getBoardToMove();
   if (!toMove) {
-    Throw() << "Board to move unknown!";
+    Throw() << "Board to move unknown!" << XX;
   } else if (board.handle() != toMove->handle()) {
     send(game, board, "M||it is not your turn!");
   } else {

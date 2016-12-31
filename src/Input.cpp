@@ -15,12 +15,12 @@ namespace xbs
 //-----------------------------------------------------------------------------
 char Input::readChar(const int fd) {
   if (fd < 0) {
-    Throw() << "Input.readChar() invalid handle: " << fd;
+    Throw() << "Input.readChar() invalid handle: " << fd << XX;
   }
 
   char ch = 0;
   if (read(fd, &ch, 1) != 1) {
-    Throw() << "Input.readChar() failed: " << toError(errno);
+    Throw() << "Input.readChar() failed: " << toError(errno) << XX;
   }
 
   Logger::debug() << "Received character '" << ch << "' from channel " << fd
@@ -137,7 +137,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
           Logger::debug() << "Input select interrupted";
           return false;
         }
-        Throw() << "Input select failed: " << toError(errno);
+        Throw() << "Input select failed: " << toError(errno) << XX;
       }
       break;
     }
@@ -172,7 +172,8 @@ unsigned Input::readln(const int fd, const char delimeter) {
   while (n < (BUFFER_SIZE - 1)) {
     if (pos[fd] >= len[fd]) {
       bufferData(fd);
-    } else if (!len[fd]) {
+    }
+    if (!len[fd]) {
       break;
     } else if ((pos[fd] < len[fd]) &&
                ((line[n++] = buffer[fd][pos[fd]++]) == '\n'))
@@ -298,7 +299,7 @@ void Input::bufferData(const int fd) {
         Logger::debug() << "Input read interrupted, retrying";
         continue;
       }
-      Throw() << "Input read failed: " << toError(errno);
+      Throw() << "Input read failed: " << toError(errno) << XX;
     } else if (n <= BUFFER_SIZE) {
       len[fd] = n;
       break;

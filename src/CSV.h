@@ -23,14 +23,21 @@ private:
 public:
   virtual std::string toString() const { return stream.str(); }
 
+  // NOTE older gcc stringstream issues prevent use of move semantics
+  CSV(CSV&&) = default;
+  CSV& operator=(CSV&&) = default;
+
   CSV(const std::string& line = "",
       const char delim = ',',
       const bool trim = false)
     : trim(trim),
       delim(delim),
-      cellCount(line.size() ? 1 : 0),
-      stream(line)
-  { }
+      cellCount(0)
+  {
+    if (line.size()) {
+      (*this) << line; // use (*this) here instead of 'stream'
+    }
+  }
 
   CSV(const char delim, const bool trim = false)
     : CSV("", delim, trim)
@@ -39,9 +46,13 @@ public:
   CSV(const CSV& r)
     : trim(r.trim),
       delim(r.delim),
-      cellCount(r.cellCount),
-      stream(r.stream.str())
-  { }
+      cellCount(r.cellCount)
+  {
+    const std::string s = r.stream.str();
+    if (s.size()) {
+      stream << s; // use 'stream' here instead of (*this)
+    }
+  }
 
   CSV& operator<<(const std::string& x) {
     if (trim) {
@@ -81,8 +92,10 @@ public:
 
   bool next(std::string& str) {
     if (std::getline(stream, str, delim)) {
-      cellCount++;
-      return true;
+      if (!trim || (str = trimStr(str)).size()) {
+        cellCount++;
+        return true;
+      }
     }
     return false;
   }
@@ -90,7 +103,7 @@ public:
 
 //-----------------------------------------------------------------------------
 inline CSV MSG(const char type) {
-  return CSV(std::string(type, 1), '|');
+  return CSV(std::string(1, type), '|');
 }
 
 } // namespace xbs

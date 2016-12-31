@@ -88,7 +88,7 @@ Board& Board::incTurns(const unsigned value) {
 //-----------------------------------------------------------------------------
 Board& Board::setSocket(TcpSocket&& value) {
   if (socket) {
-    Throw() << "Board(" << getName() << ").setSocket() socket already set";
+    Throw() << (*this) << ".setSocket() socket already set" << XX;
   }
   socket = std::move(value);
   return (*this);
@@ -98,7 +98,7 @@ Board& Board::setSocket(TcpSocket&& value) {
 Board& Board::stealSocketFrom(Board& other) {
   if (socket) {
     Throw() << (*this) << ".stealSocketFrom(" << other
-            << ") cannot steal socket when already open";
+            << ") cannot steal socket when already open" << XX;
   }
   socket = std::move(other.socket);
   return (*this);

@@ -35,9 +35,9 @@ void FileSysDBRecord::clear() {
 //-----------------------------------------------------------------------------
 void FileSysDBRecord::load() {
   if (recordID.empty()) {
-    Throw() << "Empty " << (*this) << " record ID";
+    Throw() << "Empty " << (*this) << " record ID" << XX;
   } else if (filePath.empty()) {
-    Throw() << "Empty " << (*this) << " file path";
+    Throw() << "Empty " << (*this) << " file path" << XX;
   }
 
   dirty = false;
@@ -47,7 +47,7 @@ void FileSysDBRecord::load() {
   FILE* fp = fopen(filePath.c_str(), "r+");
   if (!fp) {
     if (errno != ENOENT) {
-      Throw() << "Failed to open " << filePath << ": " << toError(errno);
+      Throw() << "Failed to open " << filePath << ": " << toError(errno) << XX;
     }
     return;
   }
@@ -98,7 +98,8 @@ void FileSysDBRecord::store(const bool force) {
   if ((dirty | force) && recordID.size() && filePath.size()) {
     FILE* fp = fopen(filePath.c_str(), "w");
     if (!fp) {
-      Throw() << "Failed to open '" << filePath << "': " << toError(errno);
+      Throw() << "Failed to open '" << filePath << "': " << toError(errno)
+              << XX;
     }
 
     for (auto it = fieldCache.begin(); it != fieldCache.end(); ++it) {
@@ -108,7 +109,7 @@ void FileSysDBRecord::store(const bool force) {
         for (unsigned i = 0; i < values.size(); ++i) {
           const std::string& value = values[i];
           if (fprintf(fp, "%s=%s\n", fld.c_str(), value.c_str()) <= 0) {
-            Throw() << "fprintf failed: " << toError(errno);
+            Throw() << "fprintf failed: " << toError(errno) << XX;
             fclose(fp);
             fp = nullptr;
           }
@@ -117,7 +118,7 @@ void FileSysDBRecord::store(const bool force) {
     }
 
     if (fflush(fp) != 0) {
-      Throw() << "fflush(" << (*this) << ") failed: " << toError(errno);
+      Throw() << "fflush(" << (*this) << ") failed: " << toError(errno) << XX;
       fclose(fp);
       fp = nullptr;
     }

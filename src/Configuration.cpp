@@ -218,12 +218,12 @@ void Configuration::loadFrom(const DBRecord& record) {
     if (ship.fromString(str)) {
       ships.push_back(ship);
     } else {
-      Throw() << "Invalid ship string: [" << str << ']';
+      Throw() << "Invalid ship string: [" << str << ']' << XX;
     }
   }
 
   if (!isValid()) {
-    Throw() << "Invalid configuration in "; // TODO << record;
+    Throw() << "Invalid configuration in " << record << XX;
   }
 }
 

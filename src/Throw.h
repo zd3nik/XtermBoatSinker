@@ -12,6 +12,9 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
+enum ExceptionTrigger { XX };
+
+//-----------------------------------------------------------------------------
 enum ThrowType {
   RuntimeError,
   LogicError,
@@ -26,6 +29,11 @@ enum ThrowType {
 
 //-----------------------------------------------------------------------------
 class Throw {
+private:
+  const ThrowType type;
+  std::stringstream ss;
+  bool thrown = false;
+
 public:
   explicit Throw(const ThrowType type = RuntimeError) : type(type) { }
 
@@ -35,6 +43,34 @@ public:
   Throw& operator=(const Throw&) = delete;
 
   ~Throw() {
+    // throwing exceptions from the descructor can cause undefined behavior
+    // always terminate Throw() with << XX to prevent this from happening
+    //   good: Throw() << "this is OK" << XX;
+    //    bad: Throw() << "this is missing XX terminator!";
+    if (!thrown) {
+      ss << " [WARNING: Thrown from destructor! Missing << XX somewhere]";
+      doThrow();
+    }
+  }
+
+  Throw& operator<<(const ExceptionTrigger&) {
+    doThrow();
+    return (*this);
+  }
+
+  Throw& operator<<(const Printable& x) {
+    return operator<<(x.toString());
+  }
+
+  template<typename T>
+  Throw& operator<<(const T& x) {
+    ss << x;
+    return (*this);
+  }
+
+private:
+  void doThrow() {
+    thrown = true;
     switch (type) {
     case LogicError:
       throw std::logic_error(ss.str());
@@ -56,20 +92,6 @@ public:
       throw std::runtime_error(ss.str());
     }
   }
-
-  template<typename T>
-  Throw& operator<<(const T& x) {
-    ss << x;
-    return (*this);
-  }
-
-  Throw& operator<<(const Printable& x) {
-    return operator<<(x.toString());
-  }
-
-private:
-  const ThrowType type;
-  std::stringstream ss;
 };
 
 } // namespace xbs

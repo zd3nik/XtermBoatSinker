@@ -14,16 +14,12 @@ namespace xbs
 CanonicalMode::CanonicalMode(const bool enabled)
   : ok(false)
 {
-  memset(&savedTermIOs, 0, sizeof(savedTermIOs));
-  if (tcgetattr(STDIN_FILENO, &savedTermIOs) < 0) {
-    Throw() << "failed to get termios: " << strerror(errno);
-  }
-
   termios ios;
   if (tcgetattr(STDIN_FILENO, &ios) < 0) {
-    Throw() << "tcgetattr failed: " << strerror(errno);
+    Throw() << "tcgetattr failed: " << strerror(errno) << XX;
   }
 
+  savedTermIOs = ios;
   if (enabled) {
     ios.c_lflag |= (ICANON | ECHO);
   } else {
@@ -31,7 +27,7 @@ CanonicalMode::CanonicalMode(const bool enabled)
   }
 
   if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
-    Throw() << "tcsetattr failed: " << strerror(errno);
+    Throw() << "tcsetattr failed: " << strerror(errno) << XX;
   }
 
   ok = true;

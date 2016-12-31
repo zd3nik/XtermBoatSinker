@@ -90,7 +90,7 @@ Board* TargetingComputer::getTargetBoard(const std::string& me,
 ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
   const std::string desc = board.getDescriptor();
   if (desc.empty() || (desc.size() != boardLen)) {
-    Throw() << "Incorrect board descriptor size: " << desc.size();
+    Throw() << "Incorrect board descriptor size: " << desc.size() << XX;
   }
 
   hitCount = board.hitCount();
@@ -119,7 +119,7 @@ ScoredCoordinate TargetingComputer::getTargetCoordinate(const Board& board) {
   }
 
   if (coords.empty()) {
-    Throw() << "Failed to select target coordinate!";
+    Throw() << "Failed to select target coordinate!" << XX;
   }
 
   return bestShotOn(board);
@@ -131,7 +131,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
                              double minSurfaceArea)
 {
   if (!config) {
-    Throw() << "Invalid board configuration";
+    Throw() << "Invalid board configuration" << XX;
   }
   if (!positions) {
     positions = DEFAULT_POSITION_COUNT;
@@ -157,13 +157,13 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
   FileSysDatabase db;
   DBRecord* rec = db.open(testDB).get(recordID, true);
   if (!rec) {
-    Throw() << "Failed to get " << recordID << " from " << db;
+    Throw() << "Failed to get " << recordID << " from " << db << XX;
   }
 
   Coordinate statusLine(1, 5);
   Board board(getName(), width, height);
   if (!Screen::get().contains(board.shift(South, (statusLine.getY() - 1)))) {
-    Throw() << "Board does not fit in terminal";
+    Throw() << "Board does not fit in terminal" << XX;
   }
   Screen::print() << board.getTopLeft() << ClearToScreenEnd;
   board.print(true);
@@ -181,15 +181,16 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
   for (unsigned i = 0; i < positions; ++i) {
     if (staticBoard.size()) {
       if (!board.updateDescriptor(staticBoard)) {
-        Throw() << "Invalid static board descriptor [" << staticBoard << ']';
+        Throw() << "Invalid static board descriptor [" << staticBoard << ']'
+                << XX;
       }
     } else if (!board.addRandomShips(config, minSurfaceArea)) {
-      Throw() << "Failed random boat placement";
+      Throw() << "Failed random boat placement" << XX;
     }
 
     Board targetBoard; // TODO copy (board);
     if (!targetBoard.updateDescriptor(board.maskedDescriptor())) {
-      Throw() << "Failed to mask boat area";
+      Throw() << "Failed to mask boat area" << XX;
     }
 
     parity = random(2);
@@ -203,7 +204,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
       Logger::debug() << "best shot = " << coord;
       const char id = board.shootSquare(coord);
       if (!id || Ship::isHit(id) || Ship::isMiss(id)) {
-        Throw() << "Invalid target coord: " << coord;
+        Throw() << "Invalid target coord: " << coord << XX;
       } else if (++totalShots == 0) {
         Throw(OverflowError) << "Shot count overflow";
       } else if (Ship::isValidID(id)) {
@@ -218,17 +219,16 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
         board.print(true);
         Screen::print() << EL << "(S)top watching, (Q)uit, [RET=continue] -> "
                         << Flush;
-        if (input.readln(STDIN_FILENO, 0) < 0) {
-          return;
-        }
-        const std::string str = input.getStr();
-        if (iStartsWith(str, 'Q')) {
-          return;
-        } else if (iStartsWith(str, 'S')) {
-          watch = false;
-          Screen::print() << board.getTopLeft() << ClearToScreenEnd;
-          board.print(true);
-          Screen::get().flush();
+        if (input.readln(STDIN_FILENO, 0)) {
+          const std::string str = input.getStr();
+          if (iStartsWith(str, 'Q')) {
+            return;
+          } else if (iStartsWith(str, 'S')) {
+            watch = false;
+            Screen::print() << board.getTopLeft() << ClearToScreenEnd;
+            board.print(true);
+            Screen::get().flush();
+          }
         }
       }
     }
@@ -254,7 +254,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
                   << " positions complete! time = " << timer << EL << Flush;
 
   if (!totalShots) {
-    Throw() << "No shots taken";
+    Throw() << "No shots taken" << XX;
   }
 
   double avg = (double(totalShots) / positions);

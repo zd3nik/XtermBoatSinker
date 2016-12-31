@@ -18,7 +18,7 @@ static std::unique_ptr<Screen> instance;
 static Rectangle GetScreenDimensions() {
   struct winsize max;
   if (ioctl(0, TIOCGWINSZ , &max) < 0) {
-    Throw() << "Failed to get screen dimensions: " << toError(errno);
+    Throw() << "Failed to get screen dimensions: " << toError(errno) << XX;
   }
 
   Coordinate topLeft(1, 1);
@@ -27,7 +27,7 @@ static Rectangle GetScreenDimensions() {
 
   if (!bottomRight) {
     Throw() << "Invalid screen dimensions: " << bottomRight.getX()
-            << 'x' << bottomRight.getY();
+            << 'x' << bottomRight.getY() << XX;
   }
 
   return Rectangle(topLeft, bottomRight);
@@ -128,7 +128,7 @@ Screen& Screen::flag(const ScreenFlag flag) {
 //-----------------------------------------------------------------------------
 Screen& Screen::flush() {
   if (fflush(stdout)) {
-    Throw() << "Screen flush failed: " << toError(errno);
+    Throw() << "Screen flush failed: " << toError(errno) << XX;
   }
   return (*this);
 }
@@ -136,7 +136,7 @@ Screen& Screen::flush() {
 //-----------------------------------------------------------------------------
 Screen& Screen::str(const char* x) {
   if (x && *x && (fprintf(stdout, "%s", x) <= 0)) {
-    Throw() << "Failed to print to screen: " << toError(errno);
+    Throw() << "Failed to print to screen: " << toError(errno) << XX;
   }
   return (*this);
 }
@@ -144,7 +144,7 @@ Screen& Screen::str(const char* x) {
 //-----------------------------------------------------------------------------
 Screen& Screen::ch(const char x) {
   if (x && (fputc(x, stdout) != x)) {
-    Throw() << "Failed to print to screen: " << toError(errno);
+    Throw() << "Failed to print to screen: " << toError(errno) << XX;
   }
   return (*this);
 }
