@@ -60,6 +60,7 @@ public:
   void finish();
   void removeBoard(const std::string& name);
   void saveResults(Database&);
+  void setBoardOrder(const std::vector<std::string>& order);
 
   std::vector<BoardPtr> getBoards() const {
     return std::vector<BoardPtr>(boards.begin(), boards.end());

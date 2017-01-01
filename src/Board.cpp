@@ -141,6 +141,9 @@ std::string Board::summary(const unsigned boardNum,
 {
   std::stringstream ss;
   ss << boardNum << ": " << (toMove ? '*' : ' ') << socket.getLabel();
+  if (socket) {
+    ss << " [" << socket.getAddress() << ']';
+  }
   if (status.size()) {
     ss << " (" << status << ')';
   }

@@ -62,15 +62,15 @@ private:
   bool closeSocket();
   bool getHostAddress();
   bool getHostPort();
-  bool getUserName();
+  bool getUserName(const bool gameStarted);
   bool isServerHandle(const int handle) const;
   bool isUserHandle(const int handle) const;
-  bool joinGame(bool& retry);
-  bool joinPrompt(const unsigned playersJoined);
+  bool joinGame(const bool gameStarted, bool& retry);
+  bool joinPrompt(const bool gameStarted, const unsigned playersJoined);
   bool manualSetup(Board&, std::vector<Ship>& shipsRemaining);
   bool openSocket();
   bool quitGame(Coordinate);
-  bool readGameInfo(unsigned& playersJoined);
+  bool readGameInfo(bool& gameStarted, unsigned& playersJoined);
   bool setupBoard();
   bool trySend(const Printable& p) { return trySend(p.toString()); }
   bool trySend(const std::string& msg);

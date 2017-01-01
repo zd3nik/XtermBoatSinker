@@ -209,7 +209,7 @@ bool Game::setNextTurn(const std::string& name) {
   if (!isStarted()) {
     Throw() << "Game.nextTurn(" << name << ") game is not started" << XX;
   }
-  if (!isFinished()) {
+  if (isFinished()) {
     Throw() << "Game.nextTurn(" << name << ") game is finished" << XX;
   }
 
@@ -326,6 +326,31 @@ void Game::saveResults(Database& db) {
     }
     board->saveTo(*player, (boards.size() - 1), first, last);
   }
+}
+
+//-----------------------------------------------------------------------------
+void Game::setBoardOrder(const std::vector<std::string>& order) {
+  if (isStarted()) {
+    Throw() << "Game.setBoardOrder() game has already started";
+  }
+
+  std::vector<BoardPtr> tmp;
+  tmp.reserve(boards.size());
+
+  for (auto& name : order) {
+    auto board = boardForPlayer(name, true);
+    if (!board) {
+      Throw() << "Game.setBoardOrder() board name '" << name << "' not found";
+    }
+    tmp.push_back(board);
+  }
+
+  if (tmp.size() != boards.size()) {
+    Throw() << "Game.setBoardOrder() given board list size (" << tmp.size()
+            << ") doesn't match board size (" << boards.size() << ')';
+  }
+
+  boards.assign(tmp.begin(), tmp.end());
 }
 
 //-----------------------------------------------------------------------------
