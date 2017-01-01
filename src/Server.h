@@ -65,9 +65,11 @@ private:
   Configuration newGameConfig();
 
   bool getGameTitle(std::string&);
+  bool handleUserInput(Coordinate);
   bool isServerHandle(const int) const;
   bool isUserHandle(const int) const;
   bool isValidPlayerName(const std::string&) const;
+  bool quitGame(Coordinate);
   bool sendBoard(Board& recipient, const Board&);
   bool sendGameInfo(Board&);
   bool sendYourBoard(Board&);
@@ -83,7 +85,6 @@ private:
   void clearScreen();
   void close();
   void handlePlayerInput(const int handle);
-  void handleUserInput(Coordinate);
   void joinGame(BoardPtr&);
   void leaveGame(Board&);
   void nextTurn();
@@ -91,7 +92,6 @@ private:
   void printGameInfo(Coordinate&);
   void printOptions(Coordinate&);
   void printPlayers(Coordinate&);
-  void quitGame(Coordinate);
   void rejoinGame(Board&);
   void removeNewBoard(const int);
   void removePlayer(Board&, const std::string& msg = "");

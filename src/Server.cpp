@@ -20,6 +20,7 @@ const Version SERVER_VERSION("2.0.x");
 const std::string ADDRESS_PREFIX("Adress: ");
 const std::string BOOTED("booted");
 const std::string COMM_ERROR("comm error");
+const std::string GAME_ABORTED("game aborted");
 const std::string GAME_FULL("game is full");
 const std::string GAME_STARETD("game is already started");
 const std::string INVALID_BOARD("invalid board");
@@ -112,25 +113,29 @@ bool Server::run() {
     Coordinate coord;
     Coordinate quietCoord;
 
-    while (!game.isFinished()) {
-      if (!quietMode || !quietCoord || !game.isStarted()) {
+    while (ok && !game.isFinished()) {
+      if (!quietMode || !quietCoord) {
         printGameInfo(coord.set(1, 1));
         printPlayers(coord);
         printOptions(coord);
       }
-      if (quietMode && !quietCoord) {
+      if (quietMode && !quietCoord && game.isStarted() && !game.isFinished()) {
         quietCoord.set(coord);
       }
       if (waitForInput()) {
-        handleUserInput(coord);
+        ok = handleUserInput(coord);
         quietCoord.clear();
       }
     }
 
     printGameInfo(coord.set(1, 1));
     printPlayers(coord);
-    sendGameResults();
-    saveResult();
+    if (!ok) {
+      sendToAll(GAME_ABORTED);
+    } else if (game.isFinished() && !game.isAborted()) {
+      sendGameResults();
+      saveResult();
+    }
   }
   catch (const std::exception& e) {
     Logger::printError() << e.what();
@@ -475,23 +480,24 @@ void Server::handlePlayerInput(const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::handleUserInput(Coordinate coord) {
+bool Server::handleUserInput(Coordinate coord) {
   char ch = 0;
   if (input.readKey(STDIN_FILENO, ch) == KeyChar) {
     switch (toupper(ch)) {
-    case 'A': blacklistAddress(coord); return;
-    case 'B': bootPlayer(coord);       return;
-    case 'C': clearBlacklist(coord);   return;
-    case 'K': skipBoard(coord);        return;
-    case 'M': sendMessage(coord);      return;
-    case 'P': blacklistPlayer(coord);  return;
-    case 'Q': quitGame(coord);         return;
-    case 'R': clearScreen();           return;
-    case 'S': startGame(coord);        return;
+    case 'A': blacklistAddress(coord); break;
+    case 'B': bootPlayer(coord);       break;
+    case 'C': clearBlacklist(coord);   break;
+    case 'K': skipBoard(coord);        break;
+    case 'M': sendMessage(coord);      break;
+    case 'P': blacklistPlayer(coord);  break;
+    case 'Q': return !quitGame(coord);
+    case 'R': clearScreen();           break;
+    case 'S': startGame(coord);        break;
     default:
       break;
     }
   }
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -642,11 +648,13 @@ void Server::printPlayers(Coordinate& coord) {
 }
 
 //-----------------------------------------------------------------------------
-void Server::quitGame(Coordinate coord) {
+bool Server::quitGame(Coordinate coord) {
   std::string s = prompt(coord, "Quit Game? [y/N] -> ");
   if (iStartsWith(s, 'Y')) {
     game.abort();
+    return true;
   }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
