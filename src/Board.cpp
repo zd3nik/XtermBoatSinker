@@ -550,7 +550,7 @@ bool Board::placeShip(std::string& desc, const Ship& ship,
   std::string tmp(desc);
   tmp[idx] = ship.getID();
 
-  for (unsigned i = 1; i <= ship.getLength(); ++i) {
+  for (unsigned i = 1; i < ship.getLength(); ++i) {
     idx = getShipIndex(coord.shift(dir));
     if ((idx >= tmp.size()) || (tmp[idx] != Ship::NONE)) {
       return false;

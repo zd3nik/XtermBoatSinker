@@ -77,8 +77,7 @@ static std::string getUserArg() {
 bool Client::init() {
   const CommandArgs& args = CommandArgs::getInstance();
 
-  Screen::get(true) << Clear << Coordinate(1, 1)
-                    << args.getProgramName() << " version " << getVersion()
+  Screen::get(true) << args.getProgramName() << " version " << getVersion()
                     << EL << Flush;
 
   if (args.indexOf("--help") > 0) {
@@ -239,7 +238,7 @@ bool Client::getUserName() {
   userName = getUserArg();
   while (true) {
     if (isEmpty(userName)) {
-      Screen::print() << EL << "Enter your username -> " << Flush;
+      Screen::print() << EL << "Enter your username [RET=quit] -> " << Flush;
       if (!input.readln(STDIN_FILENO)) {
         return false;
       } else if (input.getFieldCount() > 1) {
@@ -393,9 +392,8 @@ bool Client::manualSetup(Board& board, std::vector<Ship>& ships) {
     const char ch = getChar();
     switch (ch) {
     case 0:
-      return false;
     case 'D':
-      return true;
+      return ships.empty();
     case 'U':
       if (history.size()) {
         ships.insert(ships.begin(), history.back());
@@ -593,42 +591,72 @@ bool Client::setupBoard() {
     return false;
   }
 
+  CanonicalMode cmode(false);
+  UNUSED(cmode);
+
   // let user pick which board to use (with option to setup board #1 manually)
   std::vector<Ship> ships(config.begin(), config.end());
   while (true) {
-    Screen::print() << Coordinate(1, 1) << ClearToScreenEnd;
+    Coordinate coord(1, 1);
+    Screen::print() << coord << ClearToScreenEnd;
 
-    for (auto& board : boards) {
-      if (!board->print(false)) {
-        return false;
-      }
+    std::vector<Rectangle*> children;
+    for (auto& child : boards) {
+      children.push_back(child.get());
     }
 
-    Coordinate coord(boards.back()->getBottomRight());
-    Screen::print() << coord.south().setX(1) << ClearToScreenEnd
-                    << "(Q)uit, (R)andomize,"
-                    << " or Choose Board# [1=manual setup] -> " << Flush;
+    const bool fits = (Screen::get().arrangeChildren(children) &&
+                       Screen::get().contains(boards.back()->getBottomRight() +
+                                              South));
+    if (fits) {
+      for (auto& board : boards) {
+        if (board->print(false)) {
+          coord.setY(board->getBottomRight().getY()).south();
+        } else {
+          return false;
+        }
+      }
+    } else {
+      Screen::print() << coord << Red << "Boards don't fit terminal screen!"
+                      << DefaultColor;
+    }
+
+    Screen::print() << coord.south().setX(1) << ClearToScreenEnd << "(Q)uit";
+    if (fits) {
+      Screen::print() << ", (R)andomize, or Choose Board#";
+    }
+
+    Screen::print() << " [1=manual setup] -> " << Flush;
+    if (!waitForInput()) {
+      continue;
+    }
 
     const char ch = getChar();
     switch (ch) {
     case 0:
-    case 'Q':
       return false;
+    case 'Q':
+      if (quitGame(coord)) {
+        return false;
+      }
+      break;
     case 'R':
-      for (auto& board : boards) {
-        if (!board->addRandomShips(config, minSurfaceArea)) {
-          Logger::printError() << "failed to create random ship layout on "
-                               << board->getName() << ", MSA ratio = "
-                               << minSurfaceArea;
-          return false;
+      if (fits) {
+        for (unsigned i = 1; i < boards.size(); ++i) {
+          auto board = boards[i];
+          if (!board->addRandomShips(config, minSurfaceArea)) {
+            Logger::printError() << "failed to create random ship layout on "
+                                 << board->getName() << ", MSA ratio = "
+                                 << minSurfaceArea;
+            return false;
+          }
         }
       }
       break;
     case '1':
-      if (!manualSetup((*boards[0]), ships)) {
-        return false;
-      } else if (tmpBoard->updateDescriptor(boards[0]->getDescriptor()) &&
-                 tmpBoard->matchesConfig(config))
+      if (manualSetup((*boards[0]), ships) &&
+          tmpBoard->updateDescriptor(boards[0]->getDescriptor()) &&
+          tmpBoard->matchesConfig(config))
       {
         Screen::print() << coord << ClearToScreenEnd << Flush;
         yourBoard = std::move(tmpBoard);
@@ -636,7 +664,7 @@ bool Client::setupBoard() {
       }
       break;
     default:
-      if (isdigit(ch)) {
+      if (fits && isdigit(ch)) {
         const unsigned n = static_cast<unsigned>(ch - '1');
         if ((n <= boards.size()) &&
             tmpBoard->updateDescriptor(boards[n]->getDescriptor()) &&
