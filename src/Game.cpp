@@ -300,13 +300,23 @@ void Game::saveResults(Database& db) {
   }
 
   config.saveTo(*stats);
-  stats->incUInt("gameCount");
+
+  Milliseconds count = stats->incUInt("gameCount");
+  Milliseconds elapsed = elapsedTime();
+  Milliseconds totalMS = (stats->getUInt64("total.timeMS") + elapsed);
+  Milliseconds avgMS = count ? ((totalMS + count - 1) / count) : 0;
+
+  stats->setString("averageTime", Timer(Timer::now() - avgMS).toString());
+  stats->setString("total.time", Timer(Timer::now() - totalMS).toString());
+  stats->incUInt64("total.timeMS", elapsed);
   stats->incUInt("total.aborted", (aborted ? 1 : 0));
   stats->incUInt("total.turnCount", turnCount);
   stats->incUInt("total.playerCount", boards.size());
   stats->incUInt("total.hits", hits);
   stats->incUInt("total.ties", ties);
 
+  stats->setString("last.time", Timer(Timer::now() - elapsed).toString());
+  stats->setUInt64("last.timeMS", elapsed);
   stats->setBool("last.aborted", aborted);
   stats->setUInt("last.turnCount", turnCount);
   stats->setUInt("last.playerCount", boards.size());

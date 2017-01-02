@@ -64,40 +64,16 @@ public:
   void saveResults(Database&);
   void setBoardOrder(const std::vector<std::string>& order);
 
-  std::vector<BoardPtr> getBoards() const {
-    return std::vector<BoardPtr>(boards.begin(), boards.end());
-  }
+  const Configuration& getConfiguration() const { return config; }
+  std::string getTitle() const { return config.getName(); }
+  bool isAborted() const { return aborted; }
+  bool isFinished() const { return (aborted || finished); }
+  bool isStarted() const { return started; }
+  unsigned getBoardCount() const { return boards.size(); }
+  unsigned getTurnCount() const { return turnCount; }
 
-  std::vector<BoardPtr> boardsForAddress(const std::string& address) {
-    std::vector<BoardPtr> result;
-    std::copy_if(boards.begin(), boards.end(), std::back_inserter(result),
-      [&](const BoardPtr& b) { return (b->getAddress() == address); }
-    );
-    return std::move(result);
-  }
-
-  std::string getTitle() const {
-    return config.getName();
-  }
-
-  const Configuration& getConfiguration() const {
-    return config;
-  }
-
-  unsigned getBoardCount() const {
-    return boards.size();
-  }
-
-  bool isStarted() const {
-    return started;
-  }
-
-  bool isAborted() const {
-    return aborted;
-  }
-
-  bool isFinished() const {
-    return (aborted || finished);
+  Milliseconds elapsedTime() const {
+    return finished ? (finished - started) : aborted ? (aborted - started) : 0;
   }
 
   bool hasBoard(const std::string& name) {
@@ -108,8 +84,16 @@ public:
     return static_cast<bool>(boardForHandle(handle));
   }
 
-  unsigned getTurnCount() const {
-    return turnCount;
+  std::vector<BoardPtr> getBoards() const {
+    return std::vector<BoardPtr>(boards.begin(), boards.end());
+  }
+
+  std::vector<BoardPtr> boardsForAddress(const std::string& address) {
+    std::vector<BoardPtr> result;
+    std::copy_if(boards.begin(), boards.end(), std::back_inserter(result),
+      [&](const BoardPtr& b) { return (b->getAddress() == address); }
+    );
+    return std::move(result);
   }
 
 private:

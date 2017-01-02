@@ -534,6 +534,8 @@ void Server::joinGame(BoardPtr& joiner) {
     } else {
       removePlayer((*joiner), GAME_STARETD);
     }
+  } else if (game.hasBoard(playerName)) {
+    removePlayer((*joiner), NAME_IN_USE);
   } else if (!config.isValidShipDescriptor(shipDescriptor) ||
              !joiner->updateDescriptor(shipDescriptor))
   {
