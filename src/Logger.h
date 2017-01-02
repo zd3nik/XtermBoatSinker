@@ -44,11 +44,6 @@ public:
     return getInstance().log(DEBUG, "DEBUG: ");
   }
 
-  Logger(Logger&&) = delete;
-  Logger(const Logger&) = delete;
-  Logger& operator=(Logger&&) = delete;
-  Logger& operator=(const Logger&) = delete;
-
   ~Logger();
 
   Logger& setLogLevel(const LogLevel logLevel);
@@ -76,6 +71,11 @@ public:
 
 private:
   Logger();
+
+  Logger(Logger&&) = delete;
+  Logger(const Logger&) = delete;
+  Logger& operator=(Logger&&) = delete;
+  Logger& operator=(const Logger&) = delete;
 
   LogLevel logLevel;
   std::ostream* stream;

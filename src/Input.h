@@ -100,12 +100,14 @@ public:
   void addHandle(const int handle, const std::string& label = "");
   void removeHandle(const int handle);
   bool containsHandle(const int handle) const;
-  std::string getHandleLabel(const int handle) const;
   unsigned getHandleCount() const;
   unsigned getFieldCount() const;
-  int getInt(const unsigned index = 0, const int def = -1) const;
+
+  int       getInt(const unsigned index = 0, const int def = -1) const;
   unsigned getUInt(const unsigned index = 0, const unsigned def = 0) const;
   double getDouble(const unsigned index = 0, const double def = 0) const;
+
+  std::string getHandleLabel(const int handle) const;
   std::string getLine(const bool trim = true) const;
   std::string getStr(const unsigned index = 0,
                      const std::string& def = "",

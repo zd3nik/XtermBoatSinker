@@ -18,6 +18,10 @@ typedef Milliseconds Timestamp;
 //-----------------------------------------------------------------------------
 class Timer : public Printable
 {
+private:
+  Timestamp startTime;
+  Timestamp lastTick;
+
 public:
   enum Interval : Milliseconds {
     ONE_SECOND = 1000,
@@ -26,49 +30,35 @@ public:
     BAD_TIME   = 0x7FFFFFFFFFFFFFFFULL
   };
 
+  virtual std::string toString() const;
+
   static Timestamp now();
 
-  Timer();
-  Timer(const Timer&);
-  Timer(const Timestamp startTime);
+  Timer(const Timestamp startTime = now())
+    : startTime(startTime),
+      lastTick(startTime)
+  { }
 
-  Timer& operator=(const Timer&);
+  Timer(Timer&&) = default;
+  Timer(const Timer&) = default;
+  Timer& operator=(Timer&&) = default;
+  Timer& operator=(const Timer&) = default;
+
+  explicit operator bool() const { return (startTime != BAD_TIME); }
+  explicit operator Timestamp() const { return startTime; }
+
   Timer& operator+=(const Milliseconds);
   Timer& operator-=(const Milliseconds);
-
   Timer operator+(const Milliseconds) const;
   Timer operator-(const Milliseconds) const;
 
-  virtual std::string toString() const;
+  void start() { start(now()); }
+  void tock() { lastTick = now(); }
+  Milliseconds tick() const { return (now() - lastTick); }
+  Milliseconds elapsed() const { return (now() - startTime); }
 
-  void start() {
-    startTime = now();
-    lastTick = startTime;
-  }
-
-  void start(const Timestamp startTime) {
-    this->startTime = startTime;
-    this->lastTick = startTime;
-  }
-
-  void tock() {
-    lastTick = now();
-  }
-
-  Milliseconds tick() const {
-    return (now() - lastTick);
-  }
-
-  Milliseconds elapsed() const {
-    return (now() - startTime);
-  }
-
-  operator Timestamp() const {
-    return startTime;
-  }
-
-  explicit operator bool() const {
-    return (startTime != BAD_TIME);
+  void start(const Timestamp startTimestamp) {
+    lastTick = startTime = startTimestamp;
   }
 
   bool operator<(const Timer& other) const {
@@ -94,10 +84,6 @@ public:
   bool operator!=(const Timer& other) const {
     return (startTime != other.startTime);
   }
-
-private:
-  Timestamp startTime;
-  Timestamp lastTick;
 };
 
 } // namespace xbs

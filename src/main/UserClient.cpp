@@ -3,8 +3,8 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Platform.h"
-#include "CommandArgs.h"
 #include "Client.h"
+#include "CommandArgs.h"
 #include "Logger.h"
 #include "Screen.h"
 #include <csignal>

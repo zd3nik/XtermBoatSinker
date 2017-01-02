@@ -32,21 +32,11 @@ public:
   Message& operator=(Message&&) = default;
   Message& operator=(const Message&) = default;
 
-  std::string getFrom() const {
-    return from;
-  }
+  explicit operator bool() const { return (from.size() && message.size()); }
 
-  std::string getTo() const {
-    return to;
-  }
-
-  std::string getMessage() const {
-    return message;
-  }
-
-  bool isValid() const {
-    return (from.size() && message.size());
-  }
+  std::string getFrom() const { return from; }
+  std::string getTo() const { return to; }
+  std::string getMessage() const { return message; }
 
   void appendTo(std::vector<std::string>& messages,
                 const unsigned nameLen) const;

@@ -4,9 +4,9 @@
 //-----------------------------------------------------------------------------
 #include "Platform.h"
 #include "CommandArgs.h"
-#include "Server.h"
 #include "Logger.h"
 #include "Screen.h"
+#include "Server.h"
 #include <csignal>
 
 using namespace xbs;
@@ -30,11 +30,7 @@ int main(const int argc, const char* argv[]) {
       return 1;
     }
 
-    while (server.run()) {
-      if (!server.isRepeatOn()) {
-        break;
-      }
-    }
+    while (server.run() && server.isRepeatOn()) { }
     return 0;
   }
   catch (const std::exception& e) {

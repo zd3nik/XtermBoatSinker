@@ -823,7 +823,7 @@ unsigned Client::msgWindowHeight(Coordinate coord) const {
 
 //-----------------------------------------------------------------------------
 void Client::appendMessage(const Message& message) {
-  if (message.isValid()) {
+  if (message) {
     messages.push_back(message);
     message.appendTo(msgBuffer, msgHeaderLen());
   }

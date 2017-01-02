@@ -15,7 +15,7 @@ namespace xbs
 void Message::appendTo(std::vector<std::string>& messages,
                        const unsigned nameLen) const
 {
-  if (!isValid()) {
+  if (!(*this)) {
     return;
   }
 
