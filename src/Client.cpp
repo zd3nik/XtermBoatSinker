@@ -975,8 +975,7 @@ void Client::handleServerMessage() {
         break;
       }
     }
-    Throw() << "Received unexpected message type from server: '"
-            << input.getLine() << "'" << XX;
+    Throw() << "Unexpected server message: '" << input.getLine() << "'" << XX;
   }
 }
 

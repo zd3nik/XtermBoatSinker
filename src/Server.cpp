@@ -662,14 +662,14 @@ void Server::rejoinGame(Board& joiner) {
   removeNewBoard(joiner.handle());
   joiner.setStatus("");
 
-  // send confirmation and yourboard info to rejoining playyer
+  // send confirmation and yourboard info to rejoining player
   if (!send(joiner, MSG('J') << joiner.getName()) ||
       !sendYourBoard(joiner))
   {
     return;
   }
 
-  // send other player's names & boards to rejoining player
+  // send details about other players to rejoining player
   CSV startMsg = MSG('S');
   for (auto& board : game.getBoards()) {
     if (board->handle() != joiner.handle()) {
@@ -697,9 +697,7 @@ void Server::rejoinGame(Board& joiner) {
 
   // send rejoining player's board to everybody
   for (auto& recipient : game.getBoards()) {
-    if (recipient->isConnected() &&
-        (recipient->handle() != joiner.handle()))
-    {
+    if (recipient->isConnected()) {
       sendBoard((*recipient), joiner);
     }
   }
