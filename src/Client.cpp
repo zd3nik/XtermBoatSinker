@@ -987,7 +987,7 @@ void Client::hit() {
   const std::string square  = input.getStr(3);
 
   auto board = game.boardForPlayer(shooter, true);
-  if (board) {
+  if (!board) {
     Throw() << "Invalid shooter name in hit message from server: "
             << input.getLine() << XX;
   } else if (target.empty()) {

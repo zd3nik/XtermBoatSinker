@@ -22,15 +22,17 @@ private:
   Timestamp finished = 0;
   unsigned toMove = 0;
   unsigned turnCount = 0;
-  std::string title;
   Configuration config;
   std::vector<BoardPtr> boards;
 
 public:
   Game(const Configuration& config, const std::string& title = "")
-    : title(title),
-      config(config)
-  { }
+    : config(config)
+  {
+    if (title.size()) {
+      this->config.setName(title);
+    }
+  }
 
   Game() = default;
   Game(Game&&) = default;
@@ -75,7 +77,7 @@ public:
   }
 
   std::string getTitle() const {
-    return title;
+    return config.getName();
   }
 
   const Configuration& getConfiguration() const {

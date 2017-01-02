@@ -97,12 +97,12 @@ bool Server::run() {
     return false;
   }
 
-  std::string gameTitle;
-  if (!getGameTitle(gameTitle)) {
+  std::string title;
+  if (!getGameTitle(title)) {
     return false;
   }
 
-  game.clear().setConfiguration(config).setTitle(gameTitle);
+  game.clear().setConfiguration(config).setTitle(title);
   startListening(config.getMaxPlayers() + 2);
 
   bool ok = true;

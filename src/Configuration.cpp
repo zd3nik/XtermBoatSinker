@@ -124,8 +124,8 @@ bool Configuration::getShip(std::string& desc,
   const char id = desc[startIndex];
   desc[startIndex] = '*';
 
-  if ((id == '*') || (id == Ship::NONE)) {
-    return true; // ignore previously visited squares and empty squares
+  if ((id == '*') || (id == Ship::NONE) || (id == Ship::MISS)) {
+    return true; // ignore previously visited squares, empty squares, misses
   } else if (!Ship::isValidID(id) || length.count(id)) {
     return false; // invalid or duplicate ship id
   }

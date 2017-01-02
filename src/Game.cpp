@@ -19,7 +19,6 @@ Game& Game::clear() {
   finished = 0;
   toMove = 0;
   turnCount = 0;
-  title.clear();
   config.clear();
   boards.clear();
   return (*this);
@@ -52,7 +51,7 @@ Game& Game::setConfiguration(const Configuration& value) {
 
 //-----------------------------------------------------------------------------
 Game& Game::setTitle(const std::string& value) {
-  title = value;
+  config.setName(value);
   return (*this);
 }
 
@@ -148,7 +147,7 @@ bool Game::start(const bool randomize) {
     return false;
   }
 
-  Logger::info() << "starting game '" << title << "'";
+  Logger::info() << "starting game '" << getTitle() << "'";
 
   if (randomize) {
     std::random_shuffle(boards.begin(), boards.end());
@@ -291,12 +290,12 @@ void Game::saveResults(Database& db) {
   if (ties > 0) {
     ties--;
   } else {
-    Logger::error() << "Error calculating ties for game '" << title << "'";
+    Logger::error() << "Error calculating ties for game '" << getTitle() << "'";
   }
 
-  DBRecord* stats = db.get(("game." + title), true);
+  DBRecord* stats = db.get(("game." + getTitle()), true);
   if (!stats) {
-    Throw() << "Failed to get stats record for game title '" << title
+    Throw() << "Failed to get stats record for game title '" << getTitle()
             << "' from " << db << XX;
   }
 
@@ -355,7 +354,7 @@ void Game::setBoardOrder(const std::vector<std::string>& order) {
 
 //-----------------------------------------------------------------------------
 bool Game::isValid() const {
-  return (!isEmpty(title) && config &&
+  return (config &&
           (boards.size() >= config.getMinPlayers()) &&
           (boards.size() <= config.getMaxPlayers()));
 }
