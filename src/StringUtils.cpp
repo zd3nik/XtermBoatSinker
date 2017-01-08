@@ -9,82 +9,17 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-bool isEmpty(const std::string& str, const bool trimWhitespace) {
-  if (str.empty()) {
-    return true;
-  }
-  if (trimWhitespace) {
-    for (const char ch : str) {
-      if (!isspace(ch)) {
-        return false;
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
-//-----------------------------------------------------------------------------
-bool iEqual(const std::string& a, const std::string& b) {
-  const unsigned len = a.size();
-  if (b.size() != len) {
-    return false;
-  }
-  for (auto ai = a.begin(), bi = b.begin(); ai != a.end(); ++ai, ++bi) {
-    if (toupper(*ai) != toupper(*bi)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool iEqual(const std::string& a, const std::string& b, unsigned len) {
-  if ((a.size() < len) || (b.size() < len)) {
-    return false;
-  }
-  for (auto ai = a.begin(), bi = b.begin(); len-- > 0; ++ai, ++bi) {
-    if (toupper(*ai) != toupper(*bi)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool startsWith(const std::string& str, const char ch) {
-  return (str.size() && (str[0] == ch));
-}
-
-//-----------------------------------------------------------------------------
-bool startsWith(const std::string& str, const std::string& pattern) {
-  return (pattern.size() && (str.size() >= pattern.size()) &&
-          (str.substr(0, pattern.size()) == pattern));
-}
-
-//-----------------------------------------------------------------------------
-bool iStartsWith(const std::string& str, const char ch) {
-  return (str.size() && (toupper(str[0]) == toupper(ch)));
-}
-
-//-----------------------------------------------------------------------------
-bool iStartsWith(const std::string& str, const std::string& pattern) {
-  return (pattern.size() && (str.size() >= pattern.size()) &&
-          iEqual(str, pattern, pattern.size()));
-}
-
-//-----------------------------------------------------------------------------
-bool contains(const std::string& str, const char ch) {
+bool contains(const std::string& str, const char ch) noexcept {
   return (str.find(ch) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------
-bool contains(const std::string& str, const std::string& pattern) {
-  return (str.find(pattern.c_str()) != std::string::npos);
+bool contains(const std::string& str, const std::string& pattern) noexcept {
+  return (str.find(pattern) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------
-bool containsAny(const std::string& str, const std::string& pattern) {
+bool containsAny(const std::string& str, const std::string& pattern) noexcept {
   return (str.find_first_of(pattern) != std::string::npos);
 }
 
@@ -104,20 +39,87 @@ bool iContainsAny(const std::string& str, const std::string& pattern) {
 }
 
 //-----------------------------------------------------------------------------
-bool isNumber(const std::string& str) {
-  return str.empty()
-      ? false
-    : isdigit(str[0])
-      ? true
-    : (str.size() < 2)
-      ? false
-    : ((str[0] != '+') && (str[0] != '-'))
-      ? false
-    : isdigit(str[1]);
+bool iEqual(const std::string& a, const std::string& b) noexcept {
+  const unsigned len = a.size();
+  if (b.size() != len) {
+    return false;
+  }
+  for (auto ai = a.begin(), bi = b.begin(); ai != a.end(); ++ai, ++bi) {
+    if (toupper(*ai) != toupper(*bi)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 //-----------------------------------------------------------------------------
-bool isFloat(const std::string& str) {
+bool iEqual(const std::string& a, const std::string& b, unsigned len) noexcept {
+  if ((a.size() < len) || (b.size() < len)) {
+    return false;
+  }
+  for (auto ai = a.begin(), bi = b.begin(); len-- > 0; ++ai, ++bi) {
+    if (toupper(*ai) != toupper(*bi)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool isEmpty(const std::string& str, const bool trimWhitespace) noexcept {
+  if (str.empty()) {
+    return true;
+  }
+  if (trimWhitespace) {
+    for (const char ch : str) {
+      if (!isspace(ch)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool iStartsWith(const std::string& str, const char ch) noexcept {
+  return (str.size() && (toupper(str[0]) == toupper(ch)));
+}
+
+//-----------------------------------------------------------------------------
+bool iStartsWith(const std::string& str, const std::string& pattern) noexcept {
+  return (pattern.size() && (str.size() >= pattern.size()) &&
+          iEqual(str, pattern, pattern.size()));
+}
+
+//-----------------------------------------------------------------------------
+bool startsWith(const std::string& str, const char ch) noexcept {
+  return (str.size() && (str[0] == ch));
+}
+
+//-----------------------------------------------------------------------------
+bool startsWith(const std::string& str, const std::string& pattern) {
+  return (pattern.size() && (str.size() >= pattern.size()) &&
+          (str.substr(0, pattern.size()) == pattern));
+}
+
+//-----------------------------------------------------------------------------
+bool isNumber(const std::string& str) noexcept {
+  if (str.empty()) {
+    return false;
+  } else if (isdigit(str[0])) {
+    return true;
+  } else if (str.size() < 2) {
+    return false;
+  } else if ((str[0] != '+') && (str[0] != '-')) {
+    return false;
+  } else {
+    return isdigit(str[1]);
+  }
+}
+
+//-----------------------------------------------------------------------------
+bool isFloat(const std::string& str) noexcept {
   unsigned signs = 0;
   unsigned digits = 0;
   unsigned dots = 0;
@@ -140,7 +142,7 @@ bool isFloat(const std::string& str) {
 }
 
 //-----------------------------------------------------------------------------
-bool isInt(const std::string& str) {
+bool isInt(const std::string& str) noexcept {
   unsigned signs = 0;
   unsigned digits = 0;
   for (const char ch : str) {
@@ -160,7 +162,7 @@ bool isInt(const std::string& str) {
 }
 
 //-----------------------------------------------------------------------------
-bool isUInt(const std::string& str) {
+bool isUInt(const std::string& str) noexcept {
   unsigned signs = 0;
   unsigned digits = 0;
   for (const char ch : str) {
@@ -180,12 +182,12 @@ bool isUInt(const std::string& str) {
 }
 
 //-----------------------------------------------------------------------------
-int toInt(const std::string& str) {
+int toInt(const std::string& str) noexcept {
   return str.empty() ? 0 : atoi(str.c_str());
 }
 
 //-----------------------------------------------------------------------------
-unsigned toUInt(const std::string& str) {
+unsigned toUInt(const std::string& str) noexcept {
   unsigned result = 0;
   for (const char ch : str) {
     if (isdigit(ch)) {
@@ -203,7 +205,7 @@ unsigned toUInt(const std::string& str) {
 }
 
 //-----------------------------------------------------------------------------
-double toDouble(const std::string& str) {
+double toDouble(const std::string& str) noexcept {
   return str.empty() ? 0 : atof(str.c_str());
 }
 

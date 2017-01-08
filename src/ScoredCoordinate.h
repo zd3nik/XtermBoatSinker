@@ -7,60 +7,52 @@
 
 #include "Platform.h"
 #include "Coordinate.h"
+#include "StringUtils.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
 class ScoredCoordinate : public Coordinate {
+private:
+  unsigned score = 0;
+
 public:
-  ScoredCoordinate()
-    : Coordinate(),
-      score(0)
-  { }
+  virtual std::string toString() const {
+    return (Coordinate::toString() + toStr(score));
+  }
 
-  ScoredCoordinate(const double score, const unsigned x, const unsigned y)
-    : Coordinate(x, y),
-      score(score)
-  { }
-
-  ScoredCoordinate(const double score, const Coordinate& coord)
+  explicit ScoredCoordinate(const Coordinate& coord,
+                            const double score = 0) noexcept
     : Coordinate(coord),
       score(score)
   { }
 
-  ScoredCoordinate(const ScoredCoordinate& other)
-    : Coordinate(other),
-      score(other.score)
+  explicit ScoredCoordinate(const unsigned x,
+                            const unsigned y,
+                            const double score = 0) noexcept
+    : Coordinate(x, y),
+      score(score)
   { }
 
-  ScoredCoordinate& operator=(const ScoredCoordinate& other) {
-    Coordinate::operator=(other);
-    score = other.score;
-    return (*this);
-  }
+  ScoredCoordinate() noexcept = default;
+  ScoredCoordinate(ScoredCoordinate&&) noexcept = default;
+  ScoredCoordinate(const ScoredCoordinate&) noexcept = default;
+  ScoredCoordinate& operator=(ScoredCoordinate&&) noexcept = default;
+  ScoredCoordinate& operator=(const ScoredCoordinate&) noexcept = default;
 
-  ScoredCoordinate& setScore(const double score) {
+  ScoredCoordinate& setScore(const double score) noexcept {
     this->score = score;
     return (*this);
   }
 
-  double getScore() const {
+  double getScore() const noexcept {
     return score;
   }
 
-  bool operator<(const ScoredCoordinate& other) const {
+  bool operator<(const ScoredCoordinate& other) const noexcept {
     return (score < other.score);
   }
-
-  virtual std::string toString() const {
-    char sbuf[128];
-    snprintf(sbuf, sizeof(sbuf), "%s,%u", Coordinate::toString().c_str(), score);
-    return sbuf;
-  }
-
-private:
-  unsigned score;
 };
 
 } // namespace xbs

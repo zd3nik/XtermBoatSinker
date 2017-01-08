@@ -6,7 +6,6 @@
 #define XBS_THROW_H
 
 #include "Platform.h"
-#include "Printable.h"
 
 namespace xbs
 {
@@ -35,7 +34,9 @@ private:
   bool thrown = false;
 
 public:
-  explicit Throw(const ThrowType type = RuntimeError) : type(type) { }
+  explicit Throw(const ThrowType type = RuntimeError)
+    : type(type)
+  { }
 
   Throw(Throw&&) = delete;
   Throw(const Throw&) = delete;
@@ -56,10 +57,6 @@ public:
   Throw& operator<<(const ExceptionTrigger&) {
     doThrow();
     return (*this);
-  }
-
-  Throw& operator<<(const Printable& x) {
-    return operator<<(x.toString());
   }
 
   template<typename T>

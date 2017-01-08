@@ -22,33 +22,35 @@ enum Direction {
 class Movement
 {
 private:
-  const Direction direction;
-  const unsigned distance;
+  Direction direction;
+  unsigned distance;
 
 public:
-  Movement(const Direction direction, const unsigned distance)
+  explicit Movement(const Direction direction,
+                    const unsigned distance) noexcept
     : direction(direction),
       distance(distance)
   { }
 
-  Movement(Movement&&) = default;
-  Movement(const Movement&) = default;
-  Movement& operator=(Movement&&) = default;
-  Movement& operator=(const Movement&) = default;
+  Movement() = delete;
+  Movement(Movement&&) noexcept = default;
+  Movement(const Movement&) noexcept = default;
+  Movement& operator=(Movement&&) noexcept = default;
+  Movement& operator=(const Movement&) noexcept = default;
 
-  bool operator==(const Movement& other) const {
+  bool operator==(const Movement& other) const noexcept {
     return ((direction == other.direction) && (distance == other.distance));
   }
 
-  bool operator!=(const Movement& other) const {
+  bool operator!=(const Movement& other) const noexcept {
     return ((direction != other.direction) || (distance != other.distance));
   }
 
-  Direction getDirection() const {
+  Direction getDirection() const noexcept {
     return direction;
   }
 
-  unsigned getDistance() const {
+  unsigned getDistance() const noexcept {
     return distance;
   }
 };

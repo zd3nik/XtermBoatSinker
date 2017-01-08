@@ -15,17 +15,17 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class CSV : public Printable {
 private:
-  const bool trim;
-  const char delim;
+  bool trim;
+  char delim;
   unsigned cellCount;
   std::stringstream stream;
 
 public:
   virtual std::string toString() const { return stream.str(); }
 
-  CSV(const std::string& line = "",
-      const char delim = ',',
-      const bool trim = false)
+  explicit CSV(const std::string& line,
+               const char delim = ',',
+               const bool trim = false)
     : trim(trim),
       delim(delim),
       cellCount(0)
@@ -35,20 +35,37 @@ public:
     }
   }
 
-  CSV(const char delim, const bool trim = false)
+  explicit CSV(const char delim, const bool trim = false)
     : CSV("", delim, trim)
   { }
 
-  CSV(const CSV& r)
-    : trim(r.trim),
-      delim(r.delim),
-      cellCount(r.cellCount)
+  CSV(const CSV& other)
+    : trim(other.trim),
+      delim(other.delim),
+      cellCount(other.cellCount)
   {
-    const std::string s = r.stream.str();
+    const std::string s = other.stream.str();
     if (s.size()) {
       stream << s; // use 'stream' here instead of (*this)
     }
   }
+
+  CSV& operator=(const CSV& other) {
+    trim = other.trim;
+    delim = other.delim;
+    cellCount = other.cellCount;
+
+    const std::string s = other.stream.str();
+    if (s.size()) {
+      stream << s; // use 'stream' here instead of (*this)
+    }
+
+    return (*this);
+  }
+
+  CSV() = default;
+  CSV(CSV&&) noexcept = default;
+  CSV& operator=(CSV&&) noexcept = default;
 
   CSV& operator<<(const std::string& x) {
     if (trim) {

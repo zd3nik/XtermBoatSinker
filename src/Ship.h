@@ -7,6 +7,7 @@
 
 #include "Platform.h"
 #include "Printable.h"
+#include "StringUtils.h"
 
 namespace xbs
 {
@@ -29,87 +30,86 @@ public:
     HIT = 'X'
   };
 
-  static bool isValidID(const char id) {
+  virtual std::string toString() const {
+    return (*this) ? (id + toStr(length)) : "";
+  }
+
+  static bool isValidID(const char id) noexcept {
     return ((id >= MIN_ID) && (id <= MAX_ID));
   }
 
-  static bool isShip(const char id) {
+  static bool isShip(const char id) noexcept {
     return ((id == HIT) || isValidID(toupper(id)));
   }
 
-  static bool isHit(const char id) {
+  static bool isHit(const char id) noexcept {
     return (isShip(id) && !isValidID(id));
   }
 
-  static bool isMiss(const char id) {
+  static bool isMiss(const char id) noexcept {
     return (id == MISS);
   }
 
-  static bool isValidLength(const unsigned length) {
+  static bool isValidLength(const unsigned length) noexcept {
     return ((length >= MIN_LENGTH) && (length <= MAX_LENGTH));
   }
 
-  static char mask(const char id) {
+  static char mask(const char id) noexcept {
     return isValidID(id) ? NONE : isValidID(toupper(id)) ? HIT : id;
   }
 
-  static char hit(const char id) {
+  static char hit(const char id) noexcept {
     return isValidID(id) ? tolower(id) : id;
   }
 
-  static char unHit(char& id) {
+  static char unHit(char& id) noexcept {
     if (isHit(id)) {
       return toupper(id);
     }
     return id;
   }
 
-  Ship(const char id, const unsigned length)
+  explicit Ship(const char id, const unsigned length) noexcept
     : id(toupper(id)),
       length(length)
   { }
 
-  Ship() = default;
-  Ship(Ship&&) = default;
-  Ship(const Ship&) = default;
-  Ship& operator=(Ship&&) = default;
-  Ship& operator=(const Ship&) = default;
+  Ship() noexcept = default;
+  Ship(Ship&&) noexcept = default;
+  Ship(const Ship&) noexcept = default;
+  Ship& operator=(Ship&&) noexcept = default;
+  Ship& operator=(const Ship&) noexcept = default;
 
-  virtual std::string toString() const {
-    std::stringstream ss;
-    if (*this) {
-      ss << id << length;
-    }
-    return ss.str();
+  explicit operator bool() const noexcept {
+    return (isValidID(id) && isValidLength(length));
+  }
+
+  char getID() const noexcept {
+    return id;
+  }
+
+  unsigned getLength() const noexcept {
+    return length;
+  }
+
+  bool operator==(const Ship& other) const noexcept {
+    return ((id == other.id) && (length == other.length));
   }
 
   bool fromString(const std::string& str) {
     id = 0;
     length = 0;
-    if ((str.size() > 1) && isValidID(str[0]) && isdigit(str[1])) {
-      int len = atoi(str.c_str() + 1);
-      if (len > 0) {
-        id = str[0];
-        length = (unsigned)len;
+    if ((str.size() > 1) && isValidID(str[0])) {
+      const std::string lenStr = str.substr(1);
+      if (isUInt(lenStr)) {
+        unsigned len = toUInt(lenStr);
+        if (len > 0) {
+          id = str[0];
+          length = len;
+        }
       }
     }
-    return operator bool();
-  }
-
-  bool operator==(const Ship& other) const {
-    return ((id == other.id) && (length == other.length));
-  }
-
-  explicit operator bool() const {
-    return (isValidID(id) && isValidLength(length));
-  }
-
-  char getID() const {
-    return id;
-  }
-
-  unsigned getLength() const {
-    return length;
+    return static_cast<bool>(*this);
   }
 };
 

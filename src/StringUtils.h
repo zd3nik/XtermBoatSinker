@@ -12,30 +12,30 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-extern bool isEmpty(const std::string& str, const bool trimWhitespace = true);
-extern bool iEqual(const std::string&, const std::string&);
-extern bool iEqual(const std::string&, const std::string&, unsigned len);
-extern bool startsWith(const std::string& str, const char ch);
-extern bool startsWith(const std::string& str, const std::string& pattern);
-extern bool iStartsWith(const std::string& str, const char ch);
-extern bool iStartsWith(const std::string& str, const std::string& pattern);
-extern bool contains(const std::string& str, const char ch);
-extern bool contains(const std::string& str, const std::string& pattern);
-extern bool containsAny(const std::string& str, const std::string& pattern);
+extern bool contains(const std::string& str, const char ch) noexcept;
+extern bool contains(const std::string& str, const std::string& pattern) noexcept;
+extern bool containsAny(const std::string& str, const std::string& pattern) noexcept;
 extern bool iContains(const std::string& str, const char ch);
-extern bool iContians(const std::string& str, const std::string& pattern);
-extern bool iContiansAny(const std::string& str, const std::string& pattern);
-extern bool isNumber(const std::string&);
-extern bool isFloat(const std::string&);
-extern bool isInt(const std::string&);
-extern bool isUInt(const std::string&);
-extern int toInt(const std::string&);
-extern unsigned toUInt(const std::string&);
-extern double toDouble(const std::string&);
+extern bool iContains(const std::string& str, const std::string& pattern);
+extern bool iContainsAny(const std::string& str, const std::string& pattern);
+extern bool iEqual(const std::string&, const std::string&) noexcept;
+extern bool iEqual(const std::string&, const std::string&, unsigned len) noexcept;
+extern bool isEmpty(const std::string&, const bool trimWhitespace = true) noexcept;
+extern bool iStartsWith(const std::string& str, const char ch) noexcept;
+extern bool iStartsWith(const std::string& str, const std::string& pattern) noexcept;
+extern bool startsWith(const std::string& str, const char ch) noexcept;
+extern bool startsWith(const std::string& str, const std::string& pattern);
+extern bool isNumber(const std::string&) noexcept;
+extern bool isFloat(const std::string&) noexcept;
+extern bool isInt(const std::string&) noexcept;
+extern bool isUInt(const std::string&) noexcept;
+extern int toInt(const std::string&) noexcept;
+extern unsigned toUInt(const std::string&) noexcept;
+extern double toDouble(const std::string&) noexcept;
 extern std::string toUpper(std::string);
 extern std::string toLower(std::string);
 extern std::string toError(const int errorNumber);
-extern std::string trimStr(const std::string& str);
+extern std::string trimStr(const std::string&);
 extern std::string replace(const std::string& str,
                            const std::string& pattern,
                            const std::string& replacement);

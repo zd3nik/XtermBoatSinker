@@ -17,12 +17,12 @@ class LogStream
 {
 private:
   std::ostream* stream = nullptr;
-  const bool print = false;
+  bool print = false;
 
 public:
-  LogStream(std::ostream* stream,
-            const char* hdr = nullptr,
-            const bool print = false)
+  explicit LogStream(std::ostream* stream,
+                     const char* hdr = nullptr,
+                     const bool print = false)
     : stream(stream),
       print(print && (stream != &(std::cout)))
   {
@@ -36,13 +36,13 @@ public:
     }
   }
 
-  LogStream() = default;
-  LogStream(LogStream&&) = default;
+  LogStream() noexcept = default;
+  LogStream(LogStream&&) noexcept = default;
   LogStream(const LogStream&) = delete;
-  LogStream& operator=(LogStream&&) = default;
+  LogStream& operator=(LogStream&&) noexcept = default;
   LogStream& operator=(const LogStream&) = delete;
 
-  virtual ~LogStream()  {
+  ~LogStream() {
     if (stream) {
       (*stream) << std::endl;
       stream->flush();
