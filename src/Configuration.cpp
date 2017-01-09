@@ -25,38 +25,6 @@ Configuration Configuration::getDefaultConfiguration() {
 }
 
 //-----------------------------------------------------------------------------
-Configuration& Configuration::setName(const std::string& name) {
-  this->name = name;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Configuration& Configuration::setMinPlayers(const unsigned minPlayers) {
-  this->minPlayers = minPlayers;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Configuration& Configuration::setMaxPlayers(const unsigned maxPlayers) {
-  this->maxPlayers = maxPlayers;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Configuration& Configuration::setBoardSize(const unsigned width,
-                                           const unsigned height)
-{
-  shipArea = Rectangle(Coordinate(1, 1), Coordinate(width, height));
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Configuration& Configuration::clearShips() {
-  ships.clear();
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
 Configuration& Configuration::addShip(const Ship& newShip) {
   if (newShip) {
     ships.push_back(newShip);
@@ -71,7 +39,91 @@ Configuration& Configuration::addShip(const Ship& newShip) {
 }
 
 //-----------------------------------------------------------------------------
-void Configuration::clear() {
+Configuration& Configuration::clearShips() noexcept {
+  ships.clear();
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Configuration& Configuration::setBoardSize(const unsigned width,
+                                           const unsigned height) noexcept
+{
+  shipArea = Rectangle(Coordinate(1, 1), Coordinate(width, height));
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Configuration& Configuration::setMaxPlayers(const unsigned maxPlayers) noexcept {
+  this->maxPlayers = maxPlayers;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Configuration& Configuration::setMinPlayers(const unsigned minPlayers) noexcept {
+  this->minPlayers = minPlayers;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Configuration& Configuration::setName(const std::string& name) {
+  this->name = name;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+bool Configuration::isValidShipDescriptor(const std::string& descriptor) const {
+  if (!isValid() || (descriptor.size() != shipArea.getSize())) {
+    return false;
+  }
+
+  std::string desc(descriptor);
+  std::map<char, unsigned> length;
+  for (unsigned i = 0; i < desc.size(); ++i) {
+    if (!getShip(desc, i, length)) {
+      return false;
+    }
+  }
+
+  if (length.size() != ships.size()) {
+    return false;
+  }
+
+  for (const Ship& ship : ships) {
+    auto it = length.find(ship.getID());
+    if ((it == length.end()) || (it->second != ship.getLength())) {
+      return false;
+    } else {
+      length.erase(it);
+    }
+  }
+
+  return length.empty();
+}
+
+//-----------------------------------------------------------------------------
+Ship Configuration::getLongestShip() const noexcept {
+  Ship longest;
+  for (const Ship& ship : ships) {
+    if (!longest || (ship.getLength() > longest.getLength())) {
+      longest = ship;
+    }
+  }
+  return longest;
+}
+
+//-----------------------------------------------------------------------------
+Ship Configuration::getShortestShip() const noexcept {
+  Ship shortest;
+  for (const Ship& ship : ships) {
+    if (!shortest || (ship.getLength() < shortest.getLength())) {
+      shortest = ship;
+    }
+  }
+  return shortest;
+}
+
+//-----------------------------------------------------------------------------
+void Configuration::clear() noexcept {
   name.clear();
   minPlayers = 0;
   maxPlayers = 0;
@@ -82,12 +134,45 @@ void Configuration::clear() {
 }
 
 //-----------------------------------------------------------------------------
-bool Configuration::isValid() const {
-  return (name.size() && ships.size() && shipArea &&
-          (minPlayers > 1) && (maxPlayers >= minPlayers) &&
-          (shipArea.getWidth() <= (Ship::MAX_ID - Ship::MIN_ID)) &&
-          (shipArea.getHeight() <= (Ship::MAX_ID - Ship::MIN_ID)) &&
-          ((pointGoal + maxSurfaceArea) <= shipArea.getSize()));
+void Configuration::loadFrom(const DBRecord& record) {
+  clear();
+
+  name = record.getString("name");
+  minPlayers = record.getUInt("minPlayers");
+  maxPlayers = record.getUInt("maxPlayers");
+  pointGoal = record.getUInt("pointGoal");
+
+  unsigned w = record.getUInt("width");
+  unsigned h = record.getUInt("height");
+  shipArea.set(Coordinate(1, 1), Coordinate(w, h));
+
+  for (std::string str : record.getStrings("ship")) {
+    Ship ship;
+    if (ship.fromString(str)) {
+      ships.push_back(ship);
+    } else {
+      Throw() << "Invalid ship string: [" << str << ']' << XX;
+    }
+  }
+
+  if (!isValid()) {
+    Throw() << "Invalid configuration in " << record << XX;
+  }
+}
+
+//-----------------------------------------------------------------------------
+void Configuration::saveTo(DBRecord& record) const {
+  record.setString("name", name);
+  record.setUInt("minPlayers", minPlayers);
+  record.setUInt("maxPlayers", maxPlayers);
+  record.setUInt("pointGoal", pointGoal);
+  record.setUInt("width", shipArea.getWidth());
+  record.setUInt("height", shipArea.getHeight());
+
+  record.clear("ship");
+  for (const Ship& ship : ships) {
+    record.addString("ship", ship.toString());
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -109,6 +194,15 @@ void Configuration::print(Coordinate& coord) const {
   }
 
   Screen::print() << coord.south().setX(1);
+}
+
+//-----------------------------------------------------------------------------
+bool Configuration::isValid() const noexcept {
+  return (name.size() && ships.size() && shipArea &&
+          (minPlayers > 1) && (maxPlayers >= minPlayers) &&
+          (shipArea.getWidth() <= (Ship::MAX_ID - Ship::MIN_ID)) &&
+          (shipArea.getHeight() <= (Ship::MAX_ID - Ship::MIN_ID)) &&
+          ((pointGoal + maxSurfaceArea) <= shipArea.getSize()));
 }
 
 //-----------------------------------------------------------------------------
@@ -153,100 +247,6 @@ bool Configuration::getShip(std::string& desc,
   }
 
   return (length[id] > 1);
-}
-
-//-----------------------------------------------------------------------------
-bool Configuration::isValidShipDescriptor(const std::string& descriptor) const {
-  if (!isValid() || (descriptor.size() != shipArea.getSize())) {
-    return false;
-  }
-
-  std::string desc(descriptor);
-  std::map<char, unsigned> length;
-  for (unsigned i = 0; i < desc.size(); ++i) {
-    if (!getShip(desc, i, length)) {
-      return false;
-    }
-  }
-
-  if (length.size() != ships.size()) {
-    return false;
-  }
-
-  for (const Ship& ship : ships) {
-    auto it = length.find(ship.getID());
-    if ((it == length.end()) || (it->second != ship.getLength())) {
-      return false;
-    } else {
-      length.erase(it);
-    }
-  }
-
-  return length.empty();
-}
-
-//-----------------------------------------------------------------------------
-void Configuration::saveTo(DBRecord& record) {
-  record.setString("name", name);
-  record.setUInt("minPlayers", minPlayers);
-  record.setUInt("maxPlayers", maxPlayers);
-  record.setUInt("pointGoal", pointGoal);
-  record.setUInt("width", shipArea.getWidth());
-  record.setUInt("height", shipArea.getHeight());
-
-  record.clear("ship");
-  for (const Ship& ship : ships) {
-    record.addString("ship", ship.toString());
-  }
-}
-
-//-----------------------------------------------------------------------------
-void Configuration::loadFrom(const DBRecord& record) {
-  clear();
-
-  name = record.getString("name");
-  minPlayers = record.getUInt("minPlayers");
-  maxPlayers = record.getUInt("maxPlayers");
-  pointGoal = record.getUInt("pointGoal");
-
-  unsigned w = record.getUInt("width");
-  unsigned h = record.getUInt("height");
-  shipArea.set(Coordinate(1, 1), Coordinate(w, h));
-
-  for (std::string str : record.getStrings("ship")) {
-    Ship ship;
-    if (ship.fromString(str)) {
-      ships.push_back(ship);
-    } else {
-      Throw() << "Invalid ship string: [" << str << ']' << XX;
-    }
-  }
-
-  if (!isValid()) {
-    Throw() << "Invalid configuration in " << record << XX;
-  }
-}
-
-//-----------------------------------------------------------------------------
-Ship Configuration::getLongestShip() const {
-  Ship longest;
-  for (const Ship& ship : ships) {
-    if (!longest || (ship.getLength() > longest.getLength())) {
-      longest = ship;
-    }
-  }
-  return longest;
-}
-
-//-----------------------------------------------------------------------------
-Ship Configuration::getShortestShip() const {
-  Ship shortest;
-  for (const Ship& ship : ships) {
-    if (!shortest || (ship.getLength() < shortest.getLength())) {
-      shortest = ship;
-    }
-  }
-  return shortest;
 }
 
 } // namespace xbs

@@ -21,7 +21,9 @@ private:
   int handle = -1;
   enum Mode { Unknown, Client, Server, Remote } mode = Unknown;
 
-  TcpSocket(const std::string& address, const int port, const int handle)
+  explicit TcpSocket(const std::string& address,
+                     const int port,
+                     const int handle)
     : address(address),
       port(port),
       handle(handle),
@@ -30,63 +32,39 @@ private:
 
 public:
   virtual std::string toString() const;
-  virtual ~TcpSocket() { close(); }
+  virtual ~TcpSocket() noexcept { close(); }
 
-  static bool isValidPort(const int port) {
+  static bool isValidPort(const int port) noexcept {
     return ((port > 0) && (port <= 0x7FFF));
   }
+
+  TcpSocket(TcpSocket&& other) noexcept;
+  TcpSocket& operator=(TcpSocket&& other) noexcept;
 
   TcpSocket() = default;
   TcpSocket(const TcpSocket&) = delete;
   TcpSocket& operator=(const TcpSocket&) = delete;
 
-  TcpSocket(TcpSocket&& other)
-    : label(std::move(other.label)),
-      address(std::move(other.address)),
-      port(other.port),
-      handle(other.handle),
-      mode(other.mode)
-  {
-    other.port   = -1;
-    other.handle = -1;
-    other.mode   = Unknown;
-  }
+  explicit operator bool() const noexcept { return isOpen(); }
 
-  TcpSocket& operator=(TcpSocket&& other) {
-    if (this != &other) {
-      close();
-      label        = std::move(other.label);
-      address      = std::move(other.address);
-      port         = other.port;
-      handle       = other.handle;
-      mode         = other.mode;
-      other.port   = -1;
-      other.handle = -1;
-      other.mode   = Unknown;
-    }
-    return (*this);
-  }
-
-  explicit operator bool() const { return isOpen(); }
-
-  bool isOpen() const { return (handle >= 0); }
-  int getHandle() const { return handle; }
-  int getPort() const { return port; }
-  Mode getMode() const { return mode; }
+  bool isOpen() const noexcept { return (handle >= 0); }
+  bool send(const Printable& p) const { return send(p.toString()); }
+  int getHandle() const noexcept { return handle; }
+  int getPort() const noexcept { return port; }
+  Mode getMode() const noexcept { return mode; }
   std::string getAddress() const { return address; }
   std::string getLabel() const { return label; }
-
-  void close();
   void setLabel(const std::string& value) { label = value; }
+
   bool send(const std::string&) const;
-  bool send(const Printable& p) const { return send(p.toString()); }
+  void close() noexcept;
   TcpSocket accept() const;
   TcpSocket& connect(const std::string& hostAddress, const int port);
   TcpSocket& listen(const std::string& bindAddress,
                     const int port,
                     const int backlog = 10);
 
-  bool operator==(const TcpSocket& other) const {
+  bool operator==(const TcpSocket& other) const noexcept {
     return ((handle >= 0) && (handle == other.handle));
   }
 

@@ -340,7 +340,7 @@ void Game::saveResults(Database& db) {
 //-----------------------------------------------------------------------------
 void Game::setBoardOrder(const std::vector<std::string>& order) {
   if (isStarted()) {
-    Throw() << "Game.setBoardOrder() game has already started";
+    Throw() << "Game.setBoardOrder() game has already started" << XX;
   }
 
   std::vector<BoardPtr> tmp;
@@ -349,14 +349,15 @@ void Game::setBoardOrder(const std::vector<std::string>& order) {
   for (auto& name : order) {
     auto board = boardForPlayer(name, true);
     if (!board) {
-      Throw() << "Game.setBoardOrder() board name '" << name << "' not found";
+      Throw() << "Game.setBoardOrder() board name '" << name << "' not found"
+              << XX;
     }
     tmp.push_back(board);
   }
 
   if (tmp.size() != boards.size()) {
     Throw() << "Game.setBoardOrder() given board list size (" << tmp.size()
-            << ") doesn't match board size (" << boards.size() << ')';
+            << ") doesn't match board size (" << boards.size() << ')' << XX;
   }
 
   boards.assign(tmp.begin(), tmp.end());

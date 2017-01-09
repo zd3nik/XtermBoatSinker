@@ -174,7 +174,7 @@ Configuration Server::newGameConfig() {
   if (str.size()) {
     unsigned val = toUInt(str);
     if (val < 2) {
-      Throw(InvalidArgument) << "Invalid --min value: " << str;
+      Throw(InvalidArgument) << "Invalid --min value: " << str << XX;
     } else {
       config.setMaxPlayers(val);
     }
@@ -184,7 +184,7 @@ Configuration Server::newGameConfig() {
   if (str.size()) {
     unsigned val = toUInt(str);
     if ((val < 2) || (config.getMinPlayers() > val)) {
-      Throw(InvalidArgument) << "Invalid --max value: " << str;
+      Throw(InvalidArgument) << "Invalid --max value: " << str << XX;
     } else {
       config.setMaxPlayers(val);
     }
@@ -194,7 +194,7 @@ Configuration Server::newGameConfig() {
   if (str.size()) {
     unsigned val = toUInt(str);
     if (val < 8) {
-      Throw(InvalidArgument) << "Invalid --width value: " << str;
+      Throw(InvalidArgument) << "Invalid --width value: " << str << XX;
     } else {
       config.setBoardSize(val, config.getBoardHeight());
     }
@@ -204,7 +204,7 @@ Configuration Server::newGameConfig() {
   if (str.size()) {
     unsigned val = toUInt(str);
     if (val < 8) {
-      Throw(InvalidArgument) << "Invalid --height value: " << str;
+      Throw(InvalidArgument) << "Invalid --height value: " << str << XX;
     } else {
       config.setBoardSize(config.getBoardWidth(), val);
     }
@@ -299,10 +299,6 @@ bool Server::sendYourBoard(Board& recipient) {
 bool Server::send(Board& recipient, const std::string& msg,
                   const bool removeOnFailure)
 {
-  if (msg.size() >= Input::BUFFER_SIZE) {
-    Throw() << "message exceeds buffer size (" << msg.size() << ','
-            << msg << ")" << XX;
-  }
   if (!recipient.send(msg)) {
     if (removeOnFailure) {
       removePlayer(recipient, COMM_ERROR);

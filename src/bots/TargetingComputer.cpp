@@ -206,7 +206,7 @@ void TargetingComputer::test(std::string testDB, std::string staticBoard,
       if (!id || Ship::isHit(id) || Ship::isMiss(id)) {
         Throw() << "Invalid target coord: " << coord << XX;
       } else if (++totalShots == 0) {
-        Throw(OverflowError) << "Shot count overflow";
+        Throw(OverflowError) << "Shot count overflow" << XX;
       } else if (Ship::isValidID(id)) {
         targetBoard.setSquare(coord, Ship::HIT);
         hits++;

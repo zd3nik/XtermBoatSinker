@@ -6,9 +6,9 @@
 #define XBS_CONFIGURATION_H
 
 #include "Platform.h"
-#include "Ship.h"
-#include "Rectangle.h"
 #include "DBRecord.h"
+#include "Rectangle.h"
+#include "Ship.h"
 
 namespace xbs
 {
@@ -28,75 +28,50 @@ private:
 public:
   static Configuration getDefaultConfiguration();
 
-  Configuration& setName(const std::string& name);
-  Configuration& setMinPlayers(const unsigned minPlayers);
-  Configuration& setMaxPlayers(const unsigned maxPlayers);
-  Configuration& setBoardSize(const unsigned width, const unsigned height);
-  Configuration& clearShips();
-  Configuration& addShip(const Ship&);
+  Configuration() = default;
+  Configuration(Configuration&&) = default;
+  Configuration(const Configuration&) = default;
+  Configuration& operator=(Configuration&&) = default;
+  Configuration& operator=(const Configuration&) = default;
 
-  void clear();
-  void saveTo(DBRecord&);
+  explicit operator bool() const noexcept { return isValid(); }
+
+  Rectangle getShipArea() const noexcept { return shipArea; }
+  Ship getShip(const unsigned index) const noexcept { return ships.at(index); }
+  std::string getName() const { return name; }
+  unsigned getBoardHeight() const noexcept { return shipArea.getHeight(); }
+  unsigned getBoardWidth() const noexcept { return shipArea.getWidth(); }
+  unsigned getMaxPlayers() const noexcept { return maxPlayers; }
+  unsigned getMaxSurfaceArea() const noexcept { return maxSurfaceArea; }
+  unsigned getMinPlayers() const noexcept { return minPlayers; }
+  unsigned getPointGoal() const noexcept { return pointGoal; }
+  unsigned getShipCount() const noexcept { return ships.size(); }
+
+  Configuration& addShip(const Ship&);
+  Configuration& clearShips() noexcept;
+  Configuration& setBoardSize(const unsigned w, const unsigned h) noexcept;
+  Configuration& setMaxPlayers(const unsigned maxPlayers) noexcept;
+  Configuration& setMinPlayers(const unsigned minPlayers) noexcept;
+  Configuration& setName(const std::string& name);
+
+  bool isValidShipDescriptor(const std::string& descriptor) const;
+  Ship getLongestShip() const noexcept;
+  Ship getShortestShip() const noexcept;
+  void clear() noexcept;
   void loadFrom(const DBRecord&);
   void print(Coordinate& coord) const;
-  bool isValidShipDescriptor(const std::string& descriptor) const;
-  Ship getLongestShip() const;
-  Ship getShortestShip() const;
+  void saveTo(DBRecord&) const;
 
-  explicit operator bool() const {
-    return isValid();
-  }
-
-  std::string getName() const {
-    return name;
-  }
-
-  unsigned getMinPlayers() const {
-    return minPlayers;
-  }
-
-  unsigned getMaxPlayers() const {
-    return maxPlayers;
-  }
-
-  unsigned getPointGoal() const {
-    return pointGoal;
-  }
-
-  unsigned getMaxSurfaceArea() const {
-    return maxSurfaceArea;
-  }
-
-  unsigned getBoardWidth() const {
-    return shipArea.getWidth();
-  }
-
-  unsigned getBoardHeight() const {
-    return shipArea.getHeight();
-  }
-
-  Rectangle getShipArea() const {
-    return shipArea;
-  }
-
-  unsigned getShipCount() const {
-    return ships.size();
-  }
-
-  Ship getShip(const unsigned index) const {
-    return ships.at(index);
-  }
-
-  std::vector<Ship>::const_iterator begin() const {
+  std::vector<Ship>::const_iterator begin() const noexcept {
     return ships.begin();
   }
 
-  std::vector<Ship>::const_iterator end() const {
+  std::vector<Ship>::const_iterator end() const noexcept {
     return ships.end();
   }
 
 private:
-  bool isValid() const;
+  bool isValid() const noexcept;
   bool getShip(std::string& desc,
                const unsigned startIndex,
                std::map<char, unsigned>& shipLengthMap) const;

@@ -58,60 +58,6 @@ Board& Board::stealConnectionFrom(Board&& other) {
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::setToMove(const bool toMove) {
-  this->toMove = toMove;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::setScore(const unsigned value) {
-  score = value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::setSkips(const unsigned value) {
-  skips= value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::setTurns(const unsigned value) {
-  turns = value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::incScore(const unsigned value) {
-  score += value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::incSkips(const unsigned value) {
-  skips += value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::incTurns(const unsigned value) {
-  turns += value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::setName(const std::string& value) {
-  socket.setLabel(value);
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Board& Board::setStatus(const std::string& value) {
-  status = value;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
 Board& Board::addHitTaunt(const std::string& value) {
   hitTaunts.push_back(value);
   return (*this);
@@ -124,35 +70,69 @@ Board& Board::addMissTaunt(const std::string& value) {
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::clearHitTaunts() {
+Board& Board::clearHitTaunts() noexcept {
   hitTaunts.clear();
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-Board& Board::clearMissTaunts() {
+Board& Board::clearMissTaunts() noexcept {
   missTaunts.clear();
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-std::string Board::summary(const unsigned boardNum,
-                           const bool gameStarted) const
-{
-  std::stringstream ss;
-  ss << boardNum << ": " << (toMove ? '*' : ' ') << socket.getLabel();
-  if (socket) {
-    ss << " [" << socket.getAddress() << ']';
-  }
-  if (status.size()) {
-    ss << " (" << status << ')';
-  }
-  if (gameStarted) {
-    ss << ", Score = " << score << ", Skips = " << skips
-       << ", Turns = " << turns << ", Hit = " << hitCount() << " of "
-       << shipPointCount();
-  }
-  return ss.str();
+Board& Board::incScore(const unsigned value) noexcept {
+  score += value;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::incSkips(const unsigned value) noexcept {
+  skips += value;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::incTurns(const unsigned value) noexcept {
+  turns += value;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::setName(const std::string& value) {
+  socket.setLabel(value);
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::setScore(const unsigned value) noexcept {
+  score = value;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::setSkips(const unsigned value) noexcept {
+  skips= value;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::setStatus(const std::string& value) {
+  status = value;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::setToMove(const bool toMove) noexcept {
+  this->toMove = toMove;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Board& Board::setTurns(const unsigned value) noexcept {
+  turns = value;
+  return (*this);
 }
 
 //-----------------------------------------------------------------------------
@@ -185,8 +165,29 @@ std::string Board::nextMissTaunt() const {
 }
 
 //-----------------------------------------------------------------------------
+std::string Board::summary(const unsigned boardNum,
+                           const bool gameStarted) const
+{
+  std::stringstream ss;
+  ss << boardNum << ": " << (toMove ? '*' : ' ') << socket.getLabel();
+  if (socket) {
+    ss << " [" << socket.getAddress() << ']';
+  }
+  if (status.size()) {
+    ss << " (" << status << ')';
+  }
+  if (gameStarted) {
+    ss << ", Score = " << score << ", Skips = " << skips
+       << ", Turns = " << turns << ", Hit = " << hitCount() << " of "
+       << shipPointCount();
+  }
+  return ss.str();
+}
+
+//-----------------------------------------------------------------------------
 std::vector<Coordinate> Board::shipAreaCoordinates() const {
   std::vector<Coordinate> coords;
+  coords.reserve(shipArea.getSize());
   for (unsigned i = 0, n = shipArea.getSize(); i < n; ++i) {
     coords.push_back(getShipCoord(i));
   }
@@ -194,42 +195,7 @@ std::vector<Coordinate> Board::shipAreaCoordinates() const {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::isDead() const {
-  return (!socket || (hitCount() >= shipPointCount()));
-}
-
-//-----------------------------------------------------------------------------
-bool Board::hasHitTaunts() const {
-  return !hitTaunts.empty();
-}
-
-//-----------------------------------------------------------------------------
-bool Board::hasMissTaunts() const {
-  return !missTaunts.empty();
-}
-
-//-----------------------------------------------------------------------------
-bool Board::onEdge(const Coordinate& coord) const {
-  return ((coord.getX() == 1) || (coord.getX() == (shipArea.getWidth())) ||
-          (coord.getY() == 1) || (coord.getY() == (shipArea.getHeight())));
-}
-
-//-----------------------------------------------------------------------------
-bool Board::matchesConfig(const Configuration& config) const {
-  return (isValid() && config.isValidShipDescriptor(descriptor));
-}
-
-//-----------------------------------------------------------------------------
-bool Board::updateDescriptor(const std::string& desc) {
-  if (desc.empty() || !isValid() || (desc.size() != descriptor.size())) {
-    return false;
-  }
-  descriptor = desc;
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Board::addHitsAndMisses(const std::string& desc) {
+bool Board::addHitsAndMisses(const std::string& desc) noexcept {
   if (desc.empty() || !isValid() || (desc.size() != descriptor.size())) {
     return false;
   }
@@ -295,15 +261,19 @@ bool Board::addShip(const Ship& ship, Coordinate coord, const Direction dir) {
 }
 
 //-----------------------------------------------------------------------------
-bool Board::removeShip(const Ship& ship) {
-  unsigned count = 0;
-  for (char& id : descriptor) {
-    if (id == ship.getID()) {
-      id = Ship::NONE;
-      ++count;
-    }
-  }
-  return (count > 0);
+bool Board::isDead() const noexcept {
+  return (!socket || (hitCount() >= shipPointCount()));
+}
+
+//-----------------------------------------------------------------------------
+bool Board::matchesConfig(const Configuration& config) const {
+  return (isValid() && config.isValidShipDescriptor(descriptor));
+}
+
+//-----------------------------------------------------------------------------
+bool Board::onEdge(const Coordinate& coord) const noexcept {
+  return ((coord.getX() == 1) || (coord.getX() == (shipArea.getWidth())) ||
+          (coord.getY() == 1) || (coord.getY() == (shipArea.getHeight())));
 }
 
 //-----------------------------------------------------------------------------
@@ -359,13 +329,34 @@ bool Board::print(const bool masked, const Configuration* config) const {
 }
 
 //-----------------------------------------------------------------------------
-char Board::getSquare(const Coordinate& coord) const {
+bool Board::removeShip(const Ship& ship) noexcept {
+  unsigned count = 0;
+  for (char& id : descriptor) {
+    if (id == ship.getID()) {
+      id = Ship::NONE;
+      ++count;
+    }
+  }
+  return (count > 0);
+}
+
+//-----------------------------------------------------------------------------
+bool Board::updateDescriptor(const std::string& desc) {
+  if (desc.empty() || !isValid() || (desc.size() != descriptor.size())) {
+    return false;
+  }
+  descriptor = desc;
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+char Board::getSquare(const Coordinate& coord) const noexcept {
   const unsigned i = getShipIndex(coord);
   return (i < descriptor.size()) ? descriptor[i] : 0;
 }
 
 //-----------------------------------------------------------------------------
-char Board::setSquare(const Coordinate& coord, const char newValue) {
+char Board::setSquare(const Coordinate& coord, const char newValue) noexcept {
   const unsigned i = getShipIndex(coord);
   if (i < descriptor.size()) {
     const char previousValue = descriptor[i];
@@ -376,7 +367,7 @@ char Board::setSquare(const Coordinate& coord, const char newValue) {
 }
 
 //-----------------------------------------------------------------------------
-char Board::shootSquare(const Coordinate& coord) {
+char Board::shootSquare(const Coordinate& coord) noexcept {
   unsigned i = getShipIndex(coord);
   if (i >= descriptor.size()) {
     return 0;
@@ -391,7 +382,45 @@ char Board::shootSquare(const Coordinate& coord) {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::hitCount() const {
+unsigned Board::adjacentFree(const Coordinate& coord) const noexcept {
+  return ((getSquare(coord + North) == Ship::NONE) +
+          (getSquare(coord + South) == Ship::NONE) +
+          (getSquare(coord + East) == Ship::NONE) +
+          (getSquare(coord + West) == Ship::NONE));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::adjacentHits(const Coordinate& coord) const noexcept {
+  return ((getSquare(coord + North) == Ship::HIT) +
+          (getSquare(coord + South) == Ship::HIT) +
+          (getSquare(coord + East) == Ship::HIT) +
+          (getSquare(coord + West) == Ship::HIT));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::distToEdge(Coordinate coord,
+                           const Direction dir) const noexcept
+{
+  unsigned count = 0;
+  while (getSquare(coord.shift(dir))) {
+    ++count;
+  }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::freeCount(Coordinate coord,
+                          const Direction dir) const noexcept
+{
+  unsigned count = 0;
+  while (getSquare(coord.shift(dir)) == Ship::NONE) {
+    ++count;
+  }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::hitCount() const noexcept {
   unsigned count = 0;
   for (const char ch : descriptor) {
     if (Ship::isHit(ch)) {
@@ -402,7 +431,32 @@ unsigned Board::hitCount() const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::missCount() const {
+unsigned Board::hitCount(Coordinate coord, const Direction dir) const noexcept {
+  unsigned count = 0;
+  while (Ship::isHit(getSquare(coord.shift(dir)))) {
+    ++count;
+  }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::horizontalHits(const Coordinate& coord) const noexcept {
+  return (getSquare(coord) == Ship::HIT)
+    ? (1 + hitCount(coord,Direction::East) + hitCount(coord,Direction::West))
+    : 0;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::maxInlineHits(const Coordinate& coord) const noexcept {
+  unsigned north = hitCount(coord, Direction::North);
+  unsigned south = hitCount(coord, Direction::South);
+  unsigned east  = hitCount(coord, Direction::East);
+  unsigned west  = hitCount(coord, Direction::West);
+  return std::max(north, std::max(south, std::max(east, west)));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::missCount() const noexcept {
   unsigned count = 0;
   for (const char ch : descriptor) {
     if (Ship::isMiss(ch)) {
@@ -413,7 +467,7 @@ unsigned Board::missCount() const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::shipPointCount() const {
+unsigned Board::shipPointCount() const noexcept {
   unsigned count = 0;
   for (const char ch : descriptor) {
     if (Ship::isShip(ch)) {
@@ -424,76 +478,18 @@ unsigned Board::shipPointCount() const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::adjacentFree(const Coordinate& coord) const {
-  return ((getSquare(coord + North) == Ship::NONE) +
-          (getSquare(coord + South) == Ship::NONE) +
-          (getSquare(coord + East) == Ship::NONE) +
-          (getSquare(coord + West) == Ship::NONE));
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::adjacentHits(const Coordinate& coord) const {
-  return ((getSquare(coord + North) == Ship::HIT) +
-          (getSquare(coord + South) == Ship::HIT) +
-          (getSquare(coord + East) == Ship::HIT) +
-          (getSquare(coord + West) == Ship::HIT));
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::maxInlineHits(const Coordinate& coord) const {
-  unsigned north = hitCount(coord, Direction::North);
-  unsigned south = hitCount(coord, Direction::South);
-  unsigned east  = hitCount(coord, Direction::East);
-  unsigned west  = hitCount(coord, Direction::West);
-  return std::max(north, std::max(south, std::max(east, west)));
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::horizontalHits(const Coordinate& coord) const {
-  return (getSquare(coord) == Ship::HIT)
-    ? (1 + hitCount(coord,Direction::East) + hitCount(coord,Direction::West))
-    : 0;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::verticalHits(const Coordinate& coord) const {
+unsigned Board::verticalHits(const Coordinate& coord) const noexcept {
   return (getSquare(coord) == Ship::HIT)
     ? (1 + hitCount(coord,Direction::North) + hitCount(coord,Direction::South))
     : 0;
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::freeCount(Coordinate coord, const Direction dir) const {
-  unsigned count = 0;
-  while (getSquare(coord.shift(dir)) == Ship::NONE) {
-    ++count;
-  }
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::hitCount(Coordinate coord, const Direction dir) const {
-  unsigned count = 0;
-  while (Ship::isHit(getSquare(coord.shift(dir)))) {
-    ++count;
-  }
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-unsigned Board::distToEdge(Coordinate coord, const Direction dir) const {
-  unsigned count = 0;
-  while (getSquare(coord.shift(dir))) {
-    ++count;
-  }
-  return count;
-}
-
-//-----------------------------------------------------------------------------
-void Board::addStatsTo(DBRecord& stats, const bool first, const bool last)
-const {
-  std::string prefix("player." + socket.getLabel());
-
+void Board::addStatsTo(DBRecord& stats,
+                       const bool first,
+                       const bool last) const
+{
+  const std::string prefix("player." + socket.getLabel());
   stats.incUInt((prefix + ".total.firstPlace"), (first ? 1 : 0));
   stats.incUInt((prefix + ".total.lastPlace"), (last ? 1 : 0));
   stats.setBool((prefix + ".last.firstPlace"), first);
@@ -507,11 +503,13 @@ const {
 }
 
 //-----------------------------------------------------------------------------
-void Board::saveTo(DBRecord& rec, const unsigned opponents,
-                   const bool first, const bool last) const
+void Board::saveTo(DBRecord& rec,
+                   const unsigned opponents,
+                   const bool first,
+                   const bool last) const
 {
-  unsigned hits = hitCount();
-  unsigned misses = missCount();
+  const unsigned hits = hitCount();
+  const unsigned misses = missCount();
 
   rec.setString("playerName", socket.getLabel());
   rec.setString("lastAddress", socket.getAddress());
@@ -538,8 +536,10 @@ void Board::saveTo(DBRecord& rec, const unsigned opponents,
 }
 
 //-----------------------------------------------------------------------------
-bool Board::placeShip(std::string& desc, const Ship& ship,
-                      Coordinate coord, const Direction dir)
+bool Board::placeShip(std::string& desc,
+                      const Ship& ship,
+                      Coordinate coord,
+                      const Direction dir)
 {
   if (!ship || !coord || (desc.size() != shipArea.getSize())) {
     return false;

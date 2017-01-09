@@ -8,14 +8,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-std::string Rectangle::toString() const {
-  std::stringstream ss;
-  ss << getWidth() << 'x' << getHeight() << " Rectangle";
-  return ss.str();
-}
-
-//-----------------------------------------------------------------------------
-Coordinate Rectangle::toCoord(const unsigned index) const {
+Coordinate Rectangle::toCoord(const unsigned index) const noexcept {
   if (isValid()) {
     Coordinate coord(((index % width) + 1), ((index / height) + 1));
     if (contains(coord)) {
@@ -26,14 +19,14 @@ Coordinate Rectangle::toCoord(const unsigned index) const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Rectangle::toIndex(const Coordinate& coord) const {
+unsigned Rectangle::toIndex(const Coordinate& coord) const noexcept {
   return contains(coord)
       ? ((coord.getX() - 1) + (width * (coord.getY() - 1)))
       : ~0U;
 }
 
 //-----------------------------------------------------------------------------
-bool Rectangle::arrangeChildren(std::vector<Rectangle*>& children) const {
+bool Rectangle::arrangeChildren(std::vector<Rectangle*>& children) const noexcept {
   Coordinate topLeft(begin);
   Coordinate bottomRight;
   unsigned height = 1;
@@ -67,19 +60,6 @@ bool Rectangle::arrangeChildren(std::vector<Rectangle*>& children) const {
   }
 
   return true;
-}
-
-//-----------------------------------------------------------------------------
-bool Rectangle::moveCoordinate(Coordinate& coord, const Movement& m) const {
-  return (contains(coord) && contains(coord.shift(m)));
-}
-
-//-----------------------------------------------------------------------------
-bool Rectangle::moveCoordinate(Coordinate& coord,
-                               const Direction direction,
-                               const unsigned distance) const
-{
-  return (contains(coord) && contains(coord.shift(direction, distance)));
 }
 
 } // namespace xbs

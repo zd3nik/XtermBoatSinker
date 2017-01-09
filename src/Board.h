@@ -16,19 +16,19 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-// The Board class is a Container which represents a printable rectangle
+// The Board class is a Rectangle which represents a printable rectangle
 // that shows the player name, ship area, coordinate names around the
 // ship area, and one blank line bellow the ship area.
 //
 //     +-----------------------+
-//     | * PlayerName          | <- outer rectangle is Board container
+//     | * PlayerName          | <- outer rectangle is the Board
 //     |   A B C D E F G H I J |    topLeft is absolute screen position
 //     | 1 +-----------------+ |    used for printing to screen
 //     | 2 |                 | |
 //     | 3 |                 | |
 //     | 4 |                 | |
 //     | 5 | Inner Rectangle | |
-//     | 6 |  is Ship Area   | | <- inner rectangle is the ship area
+//     | 6 |  is Ship Area   | | <- inner rectangle is the Ship Area
 //     | 7 |                 | |    topLeft is always (1,1)
 //     | 8 |                 | |    used for aiming not for printing
 //     | 9 |                 | |
@@ -82,87 +82,87 @@ public:
   Board& operator=(Board&&) = default;
   Board& operator=(const Board&) = delete;
 
-  explicit operator bool() const { return isValid(); }
+  explicit operator bool() const noexcept { return isValid(); }
 
-  int handle() const { return socket.getHandle(); }
-  bool isConnected() const  { return socket.isOpen(); }
-  bool isToMove() const { return toMove; }
-  unsigned getScore() const { return score; }
-  unsigned getSkips() const { return skips; }
-  unsigned getTurns() const { return turns; }
-  Rectangle getShipArea() const { return shipArea; }
-  std::string getName() const { return socket.getLabel(); }
+  Rectangle getShipArea() const noexcept { return shipArea; }
   std::string getAddress() const { return socket.getAddress(); }
   std::string getDescriptor() const { return descriptor; }
+  std::string getName() const { return socket.getLabel(); }
   std::string getStatus() const { return status; }
   std::vector<std::string> getHitTaunts() const { return hitTaunts; }
   std::vector<std::string> getMissTaunts() const { return missTaunts; }
-  void disconnect() { socket.close(); }
+  bool hasHitTaunts() const noexcept { return !hitTaunts.empty(); }
+  bool hasMissTaunts() const noexcept { return !missTaunts.empty(); }
+  bool isConnected() const noexcept { return socket.isOpen(); }
+  bool isToMove() const noexcept { return toMove; }
+  bool send(const std::string& msg) const { return socket.send(msg); }
+  int handle() const noexcept { return socket.getHandle(); }
+  unsigned getScore() const noexcept { return score; }
+  unsigned getSkips() const noexcept { return skips; }
+  unsigned getTurns() const noexcept { return turns; }
+  void disconnect() noexcept { socket.close(); }
 
-  Board& stealConnectionFrom(Board&&);
-  Board& setToMove(const bool);
-  Board& setScore(const unsigned);
-  Board& setSkips(const unsigned);
-  Board& setTurns(const unsigned);
-  Board& incScore(const unsigned = 1);
-  Board& incSkips(const unsigned = 1);
-  Board& incTurns(const unsigned = 1);
-  Board& setName(const std::string&);
-  Board& setStatus(const std::string&);
   Board& addHitTaunt(const std::string&);
   Board& addMissTaunt(const std::string&);
-  Board& clearHitTaunts();
-  Board& clearMissTaunts();
+  Board& clearHitTaunts() noexcept;
+  Board& clearMissTaunts() noexcept;
+  Board& incScore(const unsigned = 1) noexcept;
+  Board& incSkips(const unsigned = 1) noexcept;
+  Board& incTurns(const unsigned = 1) noexcept;
+  Board& setName(const std::string&);
+  Board& setScore(const unsigned) noexcept;
+  Board& setSkips(const unsigned) noexcept;
+  Board& setStatus(const std::string&);
+  Board& setToMove(const bool) noexcept;
+  Board& setTurns(const unsigned) noexcept;
+  Board& stealConnectionFrom(Board&&);
 
-  std::string summary(const unsigned boardNum, const bool gameStarted) const;
   std::string maskedDescriptor() const;
   std::string nextHitTaunt() const;
   std::string nextMissTaunt() const;
+  std::string summary(const unsigned boardNum, const bool gameStarted) const;
   std::vector<Coordinate> shipAreaCoordinates() const;
 
-  bool isDead() const;
-  bool hasHitTaunts() const;
-  bool hasMissTaunts() const;
-  bool onEdge(const Coordinate&) const;
-  bool matchesConfig(const Configuration&) const;
-  bool updateDescriptor(const std::string& newDescriptor);
-  bool addHitsAndMisses(const std::string& descriptor);
+  bool addHitsAndMisses(const std::string& descriptor) noexcept;
   bool addRandomShips(const Configuration&, const double minSurfaceArea);
   bool addShip(const Ship&, Coordinate, const Direction);
-  bool removeShip(const Ship&);
+  bool isDead() const noexcept;
+  bool matchesConfig(const Configuration&) const;
+  bool onEdge(const Coordinate&) const noexcept;
   bool print(const bool masked, const Configuration* = nullptr) const;
-  bool send(const std::string& msg) { return socket.send(msg); }
+  bool removeShip(const Ship&) noexcept;
+  bool updateDescriptor(const std::string& newDescriptor);
 
-  char getSquare(const Coordinate&) const;
-  char setSquare(const Coordinate&, const char newValue);
-  char shootSquare(const Coordinate&);
+  char getSquare(const Coordinate&) const noexcept;
+  char setSquare(const Coordinate&, const char newValue) noexcept;
+  char shootSquare(const Coordinate&) noexcept;
 
-  unsigned hitCount() const;
-  unsigned missCount() const;
-  unsigned shipPointCount() const;
-  unsigned adjacentFree(const Coordinate&) const;
-  unsigned adjacentHits(const Coordinate&) const;
-  unsigned maxInlineHits(const Coordinate&) const;
-  unsigned horizontalHits(const Coordinate&) const;
-  unsigned verticalHits(const Coordinate&) const;
-  unsigned freeCount(Coordinate, const Direction) const;
-  unsigned hitCount(Coordinate, const Direction) const;
-  unsigned distToEdge(Coordinate, const Direction) const;
+  unsigned adjacentFree(const Coordinate&) const noexcept;
+  unsigned adjacentHits(const Coordinate&) const noexcept;
+  unsigned distToEdge(Coordinate, const Direction) const noexcept;
+  unsigned freeCount(Coordinate, const Direction) const noexcept;
+  unsigned hitCount() const noexcept;
+  unsigned hitCount(Coordinate, const Direction) const noexcept;
+  unsigned horizontalHits(const Coordinate&) const noexcept;
+  unsigned maxInlineHits(const Coordinate&) const noexcept;
+  unsigned missCount() const noexcept;
+  unsigned shipPointCount() const noexcept;
+  unsigned verticalHits(const Coordinate&) const noexcept;
 
   void addStatsTo(DBRecord&, const bool first, const bool last) const;
   void saveTo(DBRecord&, const unsigned opponents,
               const bool first, const bool last) const;
 
-  Coordinate getShipCoord(const unsigned index) const {
+  Coordinate getShipCoord(const unsigned index) const noexcept {
     return shipArea.toCoord(index);
   }
 
-  unsigned getShipIndex(const Coordinate& coord) const {
+  unsigned getShipIndex(const Coordinate& coord) const noexcept {
     return shipArea.toIndex(coord);
   }
 
 private:
-  bool isValid() const {
+  bool isValid() const noexcept {
     return (Rectangle::isValid() &&
             (shipArea.getSize() > 0) &&
             (descriptor.size() == shipArea.getSize()));

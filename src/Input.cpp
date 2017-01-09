@@ -157,7 +157,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
 //-----------------------------------------------------------------------------
 unsigned Input::readln(const int fd, const char delimeter) {
   if (fd < 0) {
-    Throw(InvalidArgument) << "Input readln() invalid handle: " << fd;
+    Throw(InvalidArgument) << "Input readln() invalid handle: " << fd << XX;
   }
 
   line[0] = 0;
@@ -308,7 +308,7 @@ void Input::bufferData(const int fd) {
       len[fd] = n;
       break;
     } else {
-      Throw(OverflowError) << "Input buffer overflow!";
+      Throw(OverflowError) << "Input buffer overflow!" << XX;
     }
   }
 }
