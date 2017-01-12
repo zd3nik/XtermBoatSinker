@@ -24,7 +24,7 @@ private:
 public:
   virtual std::string toString() const { return str; }
 
-  Version(const std::string& = "");
+  Version(const std::string&);
   Version(const unsigned majorNum,
           const std::string& other = "");
   Version(const unsigned majorNum,
@@ -35,25 +35,26 @@ public:
           const unsigned buildNum,
           const std::string& other = "");
 
+  Version() = default;
   Version(Version&&) = default;
   Version(const Version&) = default;
   Version& operator=(Version&&) = default;
   Version& operator=(const Version&) = default;
   Version& operator=(const std::string&);
 
-  explicit operator bool() const { return str.size(); }
+  explicit operator bool() const noexcept { return str.size(); }
 
-  unsigned getMajor() const { return majorNum; }
-  unsigned getMinor() const { return minorNum; }
-  unsigned getBuild() const { return buildNum; }
+  unsigned getMajor() const noexcept { return majorNum; }
+  unsigned getMinor() const noexcept { return minorNum; }
+  unsigned getBuild() const noexcept { return buildNum; }
   std::string getOther() const { return other; }
 
-  bool operator<(const Version&) const;
-  bool operator>(const Version&) const;
-  bool operator==(const Version&) const;
-  bool operator<=(const Version& v) const { return !(operator>(v)); }
-  bool operator>=(const Version& v) const { return !(operator<(v)); }
-  bool operator!=(const Version& v) const { return !(operator==(v)); }
+  bool operator<(const Version&) const noexcept;
+  bool operator>(const Version&) const noexcept;
+  bool operator==(const Version&) const noexcept;
+  bool operator<=(const Version& v) const noexcept { return !(operator>(v)); }
+  bool operator>=(const Version& v) const noexcept { return !(operator<(v)); }
+  bool operator!=(const Version& v) const noexcept { return !(operator==(v)); }
 };
 
 } // namespace xbs

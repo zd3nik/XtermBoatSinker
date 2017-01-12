@@ -35,6 +35,9 @@ Version::Version(const std::string& value)
       }
     }
     points = 3;
+    if (other.size()) {
+      other += '.';
+    }
     other += cell;
   }
 
@@ -80,24 +83,29 @@ Version& Version::operator=(const std::string& value) {
 }
 
 //-----------------------------------------------------------------------------
-bool Version::operator<(const Version& v) const {
+bool Version::operator<(const Version& v) const noexcept {
   return ((majorNum < v.majorNum) ||
           ((majorNum == v.majorNum) && (minorNum < v.minorNum)) ||
           ((majorNum == v.majorNum) && (minorNum == v.minorNum) &&
-           (buildNum < v.buildNum)));
+           (buildNum < v.buildNum)) ||
+          ((majorNum == v.majorNum) && (minorNum == v.minorNum) &&
+           (buildNum == v.buildNum) && (iCompare(other, v.other) < 0)));
 }
 
 //-----------------------------------------------------------------------------
-bool Version::operator>(const Version& v) const {
+bool Version::operator>(const Version& v) const noexcept {
   return ((majorNum > v.majorNum) ||
           ((majorNum == v.majorNum) && (minorNum > v.minorNum)) ||
           ((majorNum == v.majorNum) && (minorNum == v.minorNum) &&
-           (buildNum > v.buildNum)));
+           (buildNum > v.buildNum)) ||
+          ((majorNum == v.majorNum) && (minorNum == v.minorNum) &&
+           (buildNum == v.buildNum) && (iCompare(other, v.other) > 0)));
 }
 
 //-----------------------------------------------------------------------------
-bool Version::operator==(const Version& v) const {
-  return (str == v.str);
+bool Version::operator==(const Version& v) const noexcept {
+  return ((majorNum == v.majorNum) && (minorNum == v.minorNum) &&
+          (buildNum == v.buildNum) && (iEqual(other, v.other)));
 }
 
 } // namespace xbs

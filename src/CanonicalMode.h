@@ -19,7 +19,7 @@ class CanonicalMode {
 public:
   CanonicalMode(const bool enabled);
 
-  ~CanonicalMode();
+  ~CanonicalMode() noexcept;
 
   CanonicalMode(CanonicalMode&&) = delete;
   CanonicalMode(const CanonicalMode&) = delete;

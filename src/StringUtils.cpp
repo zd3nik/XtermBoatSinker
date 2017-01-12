@@ -182,6 +182,22 @@ bool isUInt(const std::string& str) noexcept {
 }
 
 //-----------------------------------------------------------------------------
+int iCompare(const std::string& a, const std::string& b) noexcept {
+  for (auto ai = a.begin(), bi = b.begin();
+       (ai != a.end()) && (bi != b.end()); ++ai, ++bi)
+  {
+    const char ac = toupper(*ai);
+    const char bc = toupper(*bi);
+    if (ac < bc) {
+      return -1;
+    } else if (ac > bc) {
+      return 1;
+    }
+  }
+  return (a.size() < b.size()) ? -1 : (a.size() > b.size());
+}
+
+//-----------------------------------------------------------------------------
 int toInt(const std::string& str) noexcept {
   return str.empty() ? 0 : atoi(str.c_str());
 }

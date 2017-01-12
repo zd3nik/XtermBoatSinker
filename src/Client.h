@@ -38,10 +38,10 @@ private:
 
 public:
   static Version getVersion();
-  static bool isCompatibleWith(const Version& serverVersion);
+  static bool isCompatibleWith(const Version& serverVersion) noexcept;
 
   Client() { input.addHandle(STDIN_FILENO); }
-  ~Client() { closeSocket(); }
+  ~Client() noexcept { closeSocket(); }
 
   Client(Client&&) = delete;
   Client(const Client&) = delete;
@@ -59,7 +59,7 @@ private:
   std::string prompt(Coordinate, const std::string& question,
                      const char fieldDelimeter = 0);
 
-  bool closeSocket();
+  bool closeSocket() noexcept;
   bool getHostAddress();
   bool getHostPort();
   bool getUserName(const bool gameStarted);

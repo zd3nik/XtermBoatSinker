@@ -28,7 +28,7 @@ Version Client::getVersion() {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::isCompatibleWith(const Version& ver) {
+bool Client::isCompatibleWith(const Version& ver) noexcept {
   return ((ver >= MIN_SERVER_VERSION) && (ver <= MAX_SERVER_VERSION));
 }
 
@@ -194,11 +194,15 @@ std::string Client::prompt(Coordinate coord,
 }
 
 //-----------------------------------------------------------------------------
-bool Client::closeSocket() {
+bool Client::closeSocket() noexcept {
   host.clear();
   port = -1;
   if (socket) {
-    input.removeHandle(socket.getHandle());
+    try {
+      input.removeHandle(socket.getHandle());
+    } catch (...) {
+      ASSERT(false);
+    }
     socket.close();
   }
   return true;

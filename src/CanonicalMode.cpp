@@ -4,8 +4,8 @@
 //-----------------------------------------------------------------------------
 #include "CanonicalMode.h"
 #include "Logger.h"
+#include "StringUtils.h"
 #include "Throw.h"
-#include <cstring>
 
 namespace xbs
 {
@@ -16,7 +16,7 @@ CanonicalMode::CanonicalMode(const bool enabled)
 {
   termios ios;
   if (tcgetattr(STDIN_FILENO, &ios) < 0) {
-    Throw() << "tcgetattr failed: " << strerror(errno) << XX;
+    Throw() << "tcgetattr failed: " << toError(errno) << XX;
   }
 
   savedTermIOs = ios;
@@ -27,17 +27,21 @@ CanonicalMode::CanonicalMode(const bool enabled)
   }
 
   if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
-    Throw() << "tcsetattr failed: " << strerror(errno) << XX;
+    Throw() << "tcsetattr failed: " << toError(errno) << XX;
   }
 
   ok = true;
 }
 
 //-----------------------------------------------------------------------------
-CanonicalMode::~CanonicalMode() {
+CanonicalMode::~CanonicalMode() noexcept {
   if (ok) {
     if (tcsetattr(STDIN_FILENO, TCSANOW, &savedTermIOs) < 0) {
-      Logger::error() << "failed to restore termios: " << strerror(errno);
+      try {
+        Logger::error() << "failed to restore termios: " << toError(errno);
+      } catch (...) {
+        ASSERT(false);
+      }
     }
   }
 }

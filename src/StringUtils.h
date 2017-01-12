@@ -29,6 +29,7 @@ extern bool isNumber(const std::string&) noexcept;
 extern bool isFloat(const std::string&) noexcept;
 extern bool isInt(const std::string&) noexcept;
 extern bool isUInt(const std::string&) noexcept;
+extern int iCompare(const std::string&, const std::string&) noexcept;
 extern int toInt(const std::string&) noexcept;
 extern unsigned toUInt(const std::string&) noexcept;
 extern double toDouble(const std::string&) noexcept;
