@@ -23,7 +23,7 @@ private:
 
   explicit TcpSocket(const std::string& address,
                      const int port,
-                     const int handle)
+                     const int handle) noexcept
     : address(address),
       port(port),
       handle(handle),
@@ -38,11 +38,10 @@ public:
     return ((port > 0) && (port <= 0x7FFF));
   }
 
-  TcpSocket(TcpSocket&& other) noexcept;
-  TcpSocket& operator=(TcpSocket&& other) noexcept;
-
   TcpSocket() = default;
+  TcpSocket(TcpSocket&& other) noexcept;
   TcpSocket(const TcpSocket&) = delete;
+  TcpSocket& operator=(TcpSocket&& other) noexcept;
   TcpSocket& operator=(const TcpSocket&) = delete;
 
   explicit operator bool() const noexcept { return isOpen(); }

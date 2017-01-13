@@ -36,12 +36,12 @@ public:
   static Version getVersion();
 
   Server() { input.addHandle(STDIN_FILENO); }
-  ~Server() { close(); }
-
   Server(Server&&) = delete;
   Server(const Server&) = delete;
   Server& operator=(Server&&) = delete;
   Server& operator=(const Server&) = delete;
+
+  ~Server() { close(); }
 
   void showHelp();
   bool init();

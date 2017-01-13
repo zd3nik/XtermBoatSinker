@@ -269,12 +269,12 @@ bool Client::getUserName(const bool gameStarted) {
 }
 
 //-----------------------------------------------------------------------------
-bool Client::isServerHandle(const int handle) const {
+bool Client::isServerHandle(const int handle) const noexcept {
   return ((handle >= 0) && (handle == socket.getHandle()));
 }
 
 //-----------------------------------------------------------------------------
-bool Client::isUserHandle(const int handle) const {
+bool Client::isUserHandle(const int handle) const noexcept {
   return ((handle >= 0) && (handle == STDIN_FILENO));
 }
 
@@ -694,9 +694,6 @@ bool Client::setupBoard() {
 
 //-----------------------------------------------------------------------------
 bool Client::trySend(const std::string& msg) {
-  if ((msg.size() + 1) >= Input::BUFFER_SIZE) {
-    Throw() << "message exceeds buffer size (" << msg << ')' << XX;
-  }
   return socket.send(msg);
 }
 
@@ -809,7 +806,7 @@ char Client::getKey(Coordinate coord) {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Client::msgHeaderLen() const {
+unsigned Client::msgHeaderLen() const noexcept {
   return (game.getConfiguration().getBoardWidth() - 2);
 }
 
@@ -910,7 +907,7 @@ void Client::clearScreen() {
 }
 
 //-----------------------------------------------------------------------------
-void Client::close() {
+void Client::close() noexcept {
   closeSocket();
   scrollToEnd();
 
@@ -1106,7 +1103,7 @@ void Client::removePlayer() {
 }
 
 //-----------------------------------------------------------------------------
-void Client::scrollDown() {
+void Client::scrollDown() noexcept {
   if (msgEnd < msgBuffer.size()) {
     msgEnd++;
   }
@@ -1116,17 +1113,17 @@ void Client::scrollDown() {
 }
 
 //-----------------------------------------------------------------------------
-void Client::scrollHome() {
+void Client::scrollHome() noexcept {
   msgEnd = 0;
 }
 
 //-----------------------------------------------------------------------------
-void Client::scrollToEnd() {
+void Client::scrollToEnd() noexcept {
   msgEnd = ~0U;
 }
 
 //-----------------------------------------------------------------------------
-void Client::scrollUp() {
+void Client::scrollUp() noexcept {
   if ((msgEnd > 0) && (msgBuffer.size() > 0)) {
     if (msgEnd >= msgBuffer.size()) {
       msgEnd = (msgBuffer.size() - 1);

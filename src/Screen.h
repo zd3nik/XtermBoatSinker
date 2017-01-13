@@ -153,14 +153,15 @@ public:
   }
 
 private:
-  Screen(const Rectangle& container)
-    : Rectangle(container)
-  { }
-
+  Screen() = delete;
   Screen(Screen&&) = delete;
   Screen(const Screen&) = delete;
   Screen& operator=(Screen&&) = delete;
   Screen& operator=(const Screen&) = delete;
+
+  explicit Screen(const Rectangle& container)
+    : Rectangle(container)
+  { }
 };
 
 } // namespace xbs

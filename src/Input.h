@@ -41,10 +41,7 @@ public:
     BUFFER_SIZE = 4096
   };
 
-  Input()
-    : line(BUFFER_SIZE, 0)
-  { }
-
+  Input() : line(BUFFER_SIZE, 0) { }
   Input(Input&&) = delete;
   Input(const Input&) = delete;
   Input& operator=(Input&&) = delete;
@@ -100,8 +97,8 @@ public:
   void addHandle(const int handle, const std::string& label = "");
   void removeHandle(const int handle);
   bool containsHandle(const int handle) const;
-  unsigned getHandleCount() const;
-  unsigned getFieldCount() const;
+  unsigned getHandleCount() const noexcept;
+  unsigned getFieldCount() const noexcept;
 
   int       getInt(const unsigned index = 0, const int def = -1) const;
   unsigned getUInt(const unsigned index = 0, const unsigned def = 0) const;

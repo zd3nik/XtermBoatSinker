@@ -26,7 +26,13 @@ private:
   std::vector<BoardPtr> boards;
 
 public:
-  Game(const Configuration& config, const std::string& title = "")
+  Game() = default;
+  Game(Game&&) = delete;
+  Game(const Game&) = delete;
+  Game& operator=(Game&&) = delete;
+  Game& operator=(const Game&) = delete;
+
+  explicit Game(const Configuration& config, const std::string& title = "")
     : config(config)
   {
     if (title.size()) {
@@ -34,16 +40,10 @@ public:
     }
   }
 
-  Game() = default;
-  Game(Game&&) = default;
-  Game(const Game&) = default;
-  Game& operator=(Game&&) = default;
-  Game& operator=(const Game&) = default;
-
-  explicit operator bool() const { return isValid(); }
+  explicit operator bool() const noexcept { return isValid(); }
 
   Game& addBoard(const BoardPtr&);
-  Game& clear();
+  Game& clear() noexcept;
   Game& setConfiguration(const Configuration&);
   Game& setTitle(const std::string&);
 
@@ -57,22 +57,22 @@ public:
   bool setNextTurn(const std::string& name);
   bool start(const bool randomizeBoardOrder = false);
 
-  void abort();
+  void abort() noexcept;
   void disconnectBoard(const std::string& name, const std::string& msg);
-  void finish();
+  void finish() noexcept;
   void removeBoard(const std::string& name);
   void saveResults(Database&);
   void setBoardOrder(const std::vector<std::string>& order);
 
-  const Configuration& getConfiguration() const { return config; }
   std::string getTitle() const { return config.getName(); }
-  bool isAborted() const { return aborted; }
-  bool isFinished() const { return (aborted || finished); }
-  bool isStarted() const { return started; }
-  unsigned getBoardCount() const { return boards.size(); }
-  unsigned getTurnCount() const { return turnCount; }
+  const Configuration& getConfiguration() const noexcept { return config; }
+  bool isAborted() const noexcept { return aborted; }
+  bool isFinished() const noexcept { return (aborted || finished); }
+  bool isStarted() const noexcept { return started; }
+  unsigned getBoardCount() const noexcept { return boards.size(); }
+  unsigned getTurnCount() const noexcept { return turnCount; }
 
-  Milliseconds elapsedTime() const {
+  Milliseconds elapsedTime() const noexcept {
     return finished ? (finished - started) : aborted ? (aborted - started) : 0;
   }
 
@@ -97,8 +97,8 @@ public:
   }
 
 private:
-  bool isValid() const;
-  void updateBoardToMove();
+  bool isValid() const noexcept;
+  void updateBoardToMove() noexcept;
 };
 
 } // namespace xbs

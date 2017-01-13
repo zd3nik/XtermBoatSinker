@@ -71,7 +71,6 @@ public:
 
 private:
   Logger();
-
   Logger(Logger&&) = delete;
   Logger(const Logger&) = delete;
   Logger& operator=(Logger&&) = delete;

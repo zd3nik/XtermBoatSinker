@@ -27,6 +27,12 @@ public:
     return (toStr(getWidth()) + 'x' + toStr(getHeight()) + " Rectangle");
   }
 
+  Rectangle() noexcept = default;
+  Rectangle(Rectangle&&) noexcept = default;
+  Rectangle(const Rectangle&) noexcept = default;
+  Rectangle& operator=(Rectangle&&) noexcept = default;
+  Rectangle& operator=(const Rectangle&) noexcept = default;
+
   explicit Rectangle(const Coordinate& topLeft,
                      const Coordinate& bottomRight) noexcept
     : begin(topLeft),
@@ -44,12 +50,6 @@ public:
     height = (begin && end) ? (end.getY() - begin.getY() + 1) : 0;
     return (*this);
   }
-
-  Rectangle() noexcept = default;
-  Rectangle(Rectangle&&) noexcept = default;
-  Rectangle(const Rectangle&) noexcept = default;
-  Rectangle& operator=(Rectangle&&) noexcept = default;
-  Rectangle& operator=(const Rectangle&) noexcept = default;
 
   explicit operator bool() const noexcept { return isValid();  }
 

@@ -41,7 +41,7 @@ CommandArgs::CommandArgs(const int argc, const char** argv) {
 }
 
 //-----------------------------------------------------------------------------
-int CommandArgs::indexOf(const std::string& arg) const {
+int CommandArgs::indexOf(const std::string& arg) const noexcept {
   if (arg.size()) {
     for (size_t idx = 0; idx < args.size(); ++idx) {
       if (arg == args[idx]) {
@@ -53,7 +53,8 @@ int CommandArgs::indexOf(const std::string& arg) const {
 }
 
 //-----------------------------------------------------------------------------
-int CommandArgs::indexOf(const std::initializer_list<std::string>& list) const {
+int CommandArgs::indexOf(const std::initializer_list<std::string>& list)
+const noexcept {
   for (const std::string& arg : list) {
     const int idx = indexOf(arg);
     if (idx >= 0) {

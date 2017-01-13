@@ -13,7 +13,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-Game& Game::clear() {
+Game& Game::clear() noexcept {
   started = 0;
   aborted = 0;
   finished = 0;
@@ -255,14 +255,14 @@ void Game::removeBoard(const std::string& name) {
 }
 
 //-----------------------------------------------------------------------------
-void Game::abort() {
+void Game::abort() noexcept {
   if (!aborted) {
     aborted = Timer::now();
   }
 }
 
 //-----------------------------------------------------------------------------
-void Game::finish() {
+void Game::finish() noexcept {
   if (!finished) {
     finished = Timer::now();
   }
@@ -364,14 +364,14 @@ void Game::setBoardOrder(const std::vector<std::string>& order) {
 }
 
 //-----------------------------------------------------------------------------
-bool Game::isValid() const {
+bool Game::isValid() const noexcept {
   return (config &&
           (boards.size() >= config.getMinPlayers()) &&
           (boards.size() <= config.getMaxPlayers()));
 }
 
 //-----------------------------------------------------------------------------
-void Game::updateBoardToMove() {
+void Game::updateBoardToMove() noexcept {
   for (unsigned i = 0; i < boards.size(); ++i) {
     boards[i]->setToMove(i == toMove);
   }

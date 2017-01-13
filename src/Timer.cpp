@@ -25,7 +25,7 @@ std::string Timer::toString() const {
 }
 
 //-----------------------------------------------------------------------------
-Timestamp Timer::now() {
+Timestamp Timer::now() noexcept {
   timeval tv;
   if (gettimeofday(&tv, nullptr) < 0) {
     return BAD_TIME;
@@ -34,26 +34,26 @@ Timestamp Timer::now() {
 }
 
 //-----------------------------------------------------------------------------
-Timer& Timer::operator+=(const Milliseconds ms) {
+Timer& Timer::operator+=(const Milliseconds ms) noexcept {
   startTime += ms;
   lastTick = startTime;
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-Timer& Timer::operator-=(const Milliseconds ms) {
+Timer& Timer::operator-=(const Milliseconds ms) noexcept {
   startTime -= ms;
   lastTick = startTime;
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-Timer Timer::operator+(const Milliseconds ms) const {
+Timer Timer::operator+(const Milliseconds ms) const noexcept {
   return Timer(startTime + ms);
 }
 
 //-----------------------------------------------------------------------------
-Timer Timer::operator-(const Milliseconds ms) const {
+Timer Timer::operator-(const Milliseconds ms) const noexcept {
   return Timer(startTime - ms);
 }
 

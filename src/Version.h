@@ -24,23 +24,23 @@ private:
 public:
   virtual std::string toString() const { return str; }
 
-  Version(const std::string&);
-  Version(const unsigned majorNum,
-          const std::string& other = "");
-  Version(const unsigned majorNum,
-          const unsigned minorNum,
-          const std::string& other = "");
-  Version(const unsigned majorNum,
-          const unsigned minorNum,
-          const unsigned buildNum,
-          const std::string& other = "");
-
   Version() = default;
-  Version(Version&&) = default;
+  Version(Version&&) noexcept = default;
   Version(const Version&) = default;
-  Version& operator=(Version&&) = default;
+  Version& operator=(Version&&) noexcept = default;
   Version& operator=(const Version&) = default;
   Version& operator=(const std::string&);
+
+  explicit Version(const std::string&);
+  explicit Version(const unsigned majorNum,
+                   const std::string& other = "");
+  explicit Version(const unsigned majorNum,
+                   const unsigned minorNum,
+                   const std::string& other = "");
+  explicit Version(const unsigned majorNum,
+                   const unsigned minorNum,
+                   const unsigned buildNum,
+                   const std::string& other = "");
 
   explicit operator bool() const noexcept { return str.size(); }
 

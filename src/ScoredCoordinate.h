@@ -22,6 +22,12 @@ public:
     return (Coordinate::toString() + toStr(score));
   }
 
+  ScoredCoordinate() noexcept = default;
+  ScoredCoordinate(ScoredCoordinate&&) noexcept = default;
+  ScoredCoordinate(const ScoredCoordinate&) noexcept = default;
+  ScoredCoordinate& operator=(ScoredCoordinate&&) noexcept = default;
+  ScoredCoordinate& operator=(const ScoredCoordinate&) noexcept = default;
+
   explicit ScoredCoordinate(const Coordinate& coord,
                             const double score = 0) noexcept
     : Coordinate(coord),
@@ -34,12 +40,6 @@ public:
     : Coordinate(x, y),
       score(score)
   { }
-
-  ScoredCoordinate() noexcept = default;
-  ScoredCoordinate(ScoredCoordinate&&) noexcept = default;
-  ScoredCoordinate(const ScoredCoordinate&) noexcept = default;
-  ScoredCoordinate& operator=(ScoredCoordinate&&) noexcept = default;
-  ScoredCoordinate& operator=(const ScoredCoordinate&) noexcept = default;
 
   ScoredCoordinate& setScore(const double score) noexcept {
     this->score = score;

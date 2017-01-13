@@ -32,56 +32,56 @@ public:
 
   virtual std::string toString() const;
 
-  static Timestamp now();
+  static Timestamp now() noexcept;
 
-  Timer(const Timestamp startTime = now())
+  Timer(Timer&&) noexcept = default;
+  Timer(const Timer&) noexcept = default;
+  Timer& operator=(Timer&&) noexcept = default;
+  Timer& operator=(const Timer&) noexcept = default;
+
+  Timer(const Timestamp startTime = now()) noexcept
     : startTime(startTime),
       lastTick(startTime)
   { }
 
-  Timer(Timer&&) = default;
-  Timer(const Timer&) = default;
-  Timer& operator=(Timer&&) = default;
-  Timer& operator=(const Timer&) = default;
+  explicit operator bool() const noexcept { return (startTime != BAD_TIME); }
+  explicit operator Timestamp() const noexcept { return startTime; }
 
-  explicit operator bool() const { return (startTime != BAD_TIME); }
-  explicit operator Timestamp() const { return startTime; }
+  Timer& operator+=(const Milliseconds) noexcept;
+  Timer& operator-=(const Milliseconds) noexcept;
+  Timer operator+(const Milliseconds) const noexcept;
+  Timer operator-(const Milliseconds) const noexcept;
 
-  Timer& operator+=(const Milliseconds);
-  Timer& operator-=(const Milliseconds);
-  Timer operator+(const Milliseconds) const;
-  Timer operator-(const Milliseconds) const;
+  void start() noexcept{ start(now()); }
+  void tock() noexcept { lastTick = now(); }
+  Milliseconds tick() const noexcept { return (now() - lastTick); }
+  Milliseconds elapsed() const noexcept { return (now() - startTime); }
 
-  void start() { start(now()); }
-  void tock() { lastTick = now(); }
-  Milliseconds tick() const { return (now() - lastTick); }
-  Milliseconds elapsed() const { return (now() - startTime); }
-
-  void start(const Timestamp startTimestamp) {
+  void start(const Timestamp startTimestamp) noexcept {
     lastTick = startTime = startTimestamp;
   }
 
-  bool operator<(const Timer& other) const {
+  bool operator<(const Timer& other) const noexcept {
     return (startTime < other.startTime);
   }
 
-  bool operator>(const Timer& other) const {
+  bool operator>(const Timer& other) const noexcept {
     return (startTime > other.startTime);
   }
 
-  bool operator<=(const Timer& other) const {
+  bool operator<=(const Timer& other) const noexcept {
     return (startTime <= other.startTime);
   }
 
-  bool operator>=(const Timer& other) const {
+  bool operator>=(const Timer& other) const noexcept {
     return (startTime >= other.startTime);
   }
 
-  bool operator==(const Timer& other) const {
+  bool operator==(const Timer& other) const noexcept {
     return (startTime == other.startTime);
   }
 
-  bool operator!=(const Timer& other) const {
+  bool operator!=(const Timer& other) const noexcept {
     return (startTime != other.startTime);
   }
 };

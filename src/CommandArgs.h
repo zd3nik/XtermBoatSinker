@@ -17,14 +17,14 @@ public:
   static void initialize(const int argc, const char* argv[]);  
   static const CommandArgs& getInstance();
 
-  int indexOf(const std::string&) const;
-  int indexOf(const std::initializer_list<std::string>&) const;
+  int indexOf(const std::string&) const noexcept;
+  int indexOf(const std::initializer_list<std::string>&) const noexcept;
   bool match(const int idx, const std::string&) const;
   bool match(const int idx, const std::initializer_list<std::string>&) const;
   std::string getValueOf(const std::string&) const;
   std::string getValueOf(const std::initializer_list<std::string>&) const;
 
-  int getCount() const {
+  int getCount() const noexcept {
     return static_cast<int>(args.size());
   }
 
@@ -43,8 +43,7 @@ public:
   }
 
 private:
-  CommandArgs(const int argc, const char** argv);
-
+  explicit CommandArgs(const int argc, const char** argv);
   CommandArgs(CommandArgs&&) = delete;
   CommandArgs(const CommandArgs&) = delete;
   CommandArgs& operator=(CommandArgs&&) = delete;

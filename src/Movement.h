@@ -26,17 +26,17 @@ private:
   unsigned distance;
 
 public:
-  explicit Movement(const Direction direction,
-                    const unsigned distance) noexcept
-    : direction(direction),
-      distance(distance)
-  { }
-
   Movement() = delete;
   Movement(Movement&&) noexcept = default;
   Movement(const Movement&) noexcept = default;
   Movement& operator=(Movement&&) noexcept = default;
   Movement& operator=(const Movement&) noexcept = default;
+
+  explicit Movement(const Direction direction,
+                    const unsigned distance) noexcept
+    : direction(direction),
+      distance(distance)
+  { }
 
   bool operator==(const Movement& other) const noexcept {
     return ((direction == other.direction) && (distance == other.distance));

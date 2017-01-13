@@ -249,12 +249,12 @@ std::string Input::getHandleLabel(const int handle) const {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Input::getHandleCount() const {
+unsigned Input::getHandleCount() const noexcept {
   return handles.size();
 }
 
 //-----------------------------------------------------------------------------
-unsigned Input::getFieldCount() const {
+unsigned Input::getFieldCount() const noexcept {
   return fields.size();
 }
 

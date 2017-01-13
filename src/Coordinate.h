@@ -29,16 +29,16 @@ public:
     }
   }
 
-  explicit Coordinate(const unsigned x, const unsigned y) noexcept
-    : x(x),
-      y(y)
-  { }
-
   Coordinate() noexcept = default;
   Coordinate(Coordinate&&) noexcept = default;
   Coordinate(const Coordinate&) noexcept = default;
   Coordinate& operator=(Coordinate&&) noexcept = default;
   Coordinate& operator=(const Coordinate&) noexcept = default;
+
+  explicit Coordinate(const unsigned x, const unsigned y) noexcept
+    : x(x),
+      y(y)
+  { }
 
   explicit operator bool() const noexcept { return (x && y); }
 

@@ -20,6 +20,12 @@ private:
   bool print = false;
 
 public:
+  LogStream() noexcept = default;
+  LogStream(LogStream&&) noexcept = default;
+  LogStream(const LogStream&) = delete;
+  LogStream& operator=(LogStream&&) noexcept = default;
+  LogStream& operator=(const LogStream&) = delete;
+
   explicit LogStream(std::ostream* stream,
                      const char* hdr = nullptr,
                      const bool print = false)
@@ -35,12 +41,6 @@ public:
       }
     }
   }
-
-  LogStream() noexcept = default;
-  LogStream(LogStream&&) noexcept = default;
-  LogStream(const LogStream&) = delete;
-  LogStream& operator=(LogStream&&) noexcept = default;
-  LogStream& operator=(const LogStream&) = delete;
 
   ~LogStream() {
     if (stream) {

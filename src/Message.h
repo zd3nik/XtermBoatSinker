@@ -18,19 +18,19 @@ private:
   std::string message;
 
 public:
-  Message(const std::string& from,
-          const std::string& to,
-          const std::string& message)
+  Message() = default;
+  Message(Message&&) noexcept = default;
+  Message(const Message&) = default;
+  Message& operator=(Message&&) noexcept = default;
+  Message& operator=(const Message&) = default;
+
+  explicit Message(const std::string& from,
+                   const std::string& to,
+                   const std::string& message)
     : from(from),
       to(to),
       message(message)
   { }
-
-  Message() = default;
-  Message(Message&&) = default;
-  Message(const Message&) = default;
-  Message& operator=(Message&&) = default;
-  Message& operator=(const Message&) = default;
 
   explicit operator bool() const { return (from.size() && message.size()); }
 

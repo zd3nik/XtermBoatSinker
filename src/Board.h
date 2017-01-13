@@ -65,22 +65,22 @@ public:
   static std::string toString(const std::string& descriptor,
                               const unsigned width);
 
-  Board(const std::string& name,
-        const unsigned shipAreaWidth,
-        const unsigned shipAreaHeight,
-        TcpSocket&& = TcpSocket());
+  Board() = default;
+  Board(Board&&) = delete;
+  Board(const Board&) = delete;
+  Board& operator=(Board&&) = delete;
+  Board& operator=(const Board&) = delete;
 
-  Board(const std::string& name,
-        const Configuration& c,
-        TcpSocket&& sock = TcpSocket())
+  explicit Board(const std::string& name,
+                 const unsigned shipAreaWidth,
+                 const unsigned shipAreaHeight,
+                 TcpSocket&& = TcpSocket());
+
+  explicit Board(const std::string& name,
+                 const Configuration& c,
+                 TcpSocket&& sock = TcpSocket())
     : Board(name, c.getBoardWidth(), c.getBoardHeight(), std::move(sock))
   { }
-
-  Board() = default;
-  Board(Board&&) = default;
-  Board(const Board&) = delete;
-  Board& operator=(Board&&) = default;
-  Board& operator=(const Board&) = delete;
 
   explicit operator bool() const noexcept { return isValid(); }
 

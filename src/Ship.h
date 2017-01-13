@@ -69,16 +69,16 @@ public:
     return id;
   }
 
-  explicit Ship(const char id, const unsigned length) noexcept
-    : id(toupper(id)),
-      length(length)
-  { }
-
   Ship() noexcept = default;
   Ship(Ship&&) noexcept = default;
   Ship(const Ship&) noexcept = default;
   Ship& operator=(Ship&&) noexcept = default;
   Ship& operator=(const Ship&) noexcept = default;
+
+  explicit Ship(const char id, const unsigned length) noexcept
+    : id(toupper(id)),
+      length(length)
+  { }
 
   explicit operator bool() const noexcept {
     return (isValidID(id) && isValidLength(length));

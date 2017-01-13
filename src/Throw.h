@@ -34,14 +34,14 @@ private:
   bool thrown = false;
 
 public:
-  explicit Throw(const ThrowType type = RuntimeError)
-    : type(type)
-  { }
-
   Throw(Throw&&) = delete;
   Throw(const Throw&) = delete;
   Throw& operator=(Throw&&) = delete;
   Throw& operator=(const Throw&) = delete;
+
+  explicit Throw(const ThrowType type = RuntimeError)
+    : type(type)
+  { }
 
   ~Throw() {
     // throwing exceptions from the descructor can cause undefined behavior

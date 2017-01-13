@@ -17,14 +17,13 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class CanonicalMode {
 public:
-  CanonicalMode(const bool enabled);
-
-  ~CanonicalMode() noexcept;
-
+  explicit CanonicalMode(const bool enabled);
   CanonicalMode(CanonicalMode&&) = delete;
   CanonicalMode(const CanonicalMode&) = delete;
   CanonicalMode& operator=(CanonicalMode&&) = delete;
   CanonicalMode& operator=(const CanonicalMode&) = delete;
+
+  ~CanonicalMode() noexcept;
 
 private:
   bool ok;

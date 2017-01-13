@@ -41,12 +41,12 @@ public:
   static bool isCompatibleWith(const Version& serverVersion) noexcept;
 
   Client() { input.addHandle(STDIN_FILENO); }
-  ~Client() noexcept { closeSocket(); }
-
   Client(Client&&) = delete;
   Client(const Client&) = delete;
   Client& operator=(Client&&) = delete;
   Client& operator=(const Client&) = delete;
+
+  ~Client() noexcept { closeSocket(); }
 
   void showHelp();
   bool init();
@@ -63,8 +63,8 @@ private:
   bool getHostAddress();
   bool getHostPort();
   bool getUserName(const bool gameStarted);
-  bool isServerHandle(const int handle) const;
-  bool isUserHandle(const int handle) const;
+  bool isServerHandle(const int handle) const noexcept;
+  bool isUserHandle(const int handle) const noexcept;
   bool joinGame(const bool gameStarted, bool& retry);
   bool joinPrompt(const bool gameStarted, const unsigned playersJoined);
   bool manualSetup(Board&, std::vector<Ship>& shipsRemaining);
@@ -80,7 +80,7 @@ private:
   char getChar();
   char getKey(Coordinate);
 
-  unsigned msgHeaderLen() const;
+  unsigned msgHeaderLen() const noexcept;
   unsigned msgWindowHeight(Coordinate) const;
 
   void appendMessage(const Message&);
@@ -92,7 +92,7 @@ private:
   void addPlayer();
   void clearMessages(Coordinate);
   void clearScreen();
-  void close();
+  void close() noexcept;
   void endGame();
   void handleServerMessage();
   void hit();
@@ -104,10 +104,10 @@ private:
   void printWaitOptions(Coordinate);
   void redrawScreen();
   void removePlayer();
-  void scrollDown();
-  void scrollHome();
-  void scrollToEnd();
-  void scrollUp();
+  void scrollDown() noexcept;
+  void scrollHome() noexcept;
+  void scrollToEnd() noexcept;
+  void scrollUp() noexcept;
   void send(const Printable& p) { send(p.toString()); }
   void send(const std::string& msg);
   void sendMessage(Coordinate);

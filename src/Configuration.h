@@ -28,12 +28,6 @@ private:
 public:
   static Configuration getDefaultConfiguration();
 
-  Configuration() = default;
-  Configuration(Configuration&&) = default;
-  Configuration(const Configuration&) = default;
-  Configuration& operator=(Configuration&&) = default;
-  Configuration& operator=(const Configuration&) = default;
-
   explicit operator bool() const noexcept { return isValid(); }
 
   Rectangle getShipArea() const noexcept { return shipArea; }
