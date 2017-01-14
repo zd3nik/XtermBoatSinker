@@ -7,7 +7,6 @@
 #include "Logger.h"
 #include "StringUtils.h"
 #include "Throw.h"
-#include <cstring> // TODO remove this
 
 namespace xbs
 {
@@ -44,103 +43,68 @@ void FileSysDBRecord::load() {
   Logger::debug() << "Loading '" << filePath << "' as record ID '"
                   << recordID << "'";
 
-  FILE* fp = fopen(filePath.c_str(), "r+");
-  if (!fp) {
-    if (errno != ENOENT) {
-      Throw() << "Failed to open " << filePath << ": " << toError(errno) << XX;
-    }
+  std::ifstream file(filePath.c_str());
+  if (!file) {
+    Logger::info() << "File '" << filePath << "' does not exist";
     return;
   }
 
-  try {
-    char sbuf[BUFFER_SIZE];
-    while (fgets(sbuf, sizeof(sbuf), fp)) {
-      const char* begin = sbuf;
-      while ((*begin) && isspace(*begin)) ++begin;
-      if (!(*begin) || ((*begin) == '#')) {
-        continue;
-      }
+  unsigned line = 0;
+  std::string str;
 
-      const char* equal = strchr(begin, '=');
-      const char* end = equal;
-      while ((end > begin) && isspace(end[-1])) --end;
-      if (end <= begin) {
-        continue;
-      }
-
-      std::string fld(begin, 0, (equal - begin));
-      if (fld.empty()) {
-        continue;
-      }
-
-      std::string val(equal);
-      auto it = fieldCache.find(fld);
-      if (it == fieldCache.end()) {
-        it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
-      }
-      it->second.push_back(val);
-
-      Logger::debug() << "Loaded field: '" << fld << "'='" << val << "'";
+  while (std::getline(file, str)) {
+    line++;
+    str = trimStr(str);
+    if (str.empty()) {
+      continue;
     }
-  }
-  catch (...) {
-    fclose(fp);
-    fp = nullptr;
-    throw;
-  }
 
-  fclose(fp);
-  fp = nullptr;
+    const auto p = str.find_first_of('=');
+    std::string fld = trimStr(str.substr(0, p));
+    if (fld.empty()) {
+      Logger::error() << filePath << '@' << line << ": " << str;
+      continue;
+    } else if (startsWith(fld, '#')) {
+      continue;
+    }
+
+    std::string val = (p != std::string::npos) ? trimStr(str.substr(p+1)) : "";
+    auto it = fieldCache.find(fld);
+    if (it == fieldCache.end()) {
+      it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
+    }
+    it->second.push_back(val);
+
+    Logger::debug() << "Loaded " << filePath << '@' << line << ": '" << fld
+                    << "'='" << val << "'";
+  }
 }
 
 //-----------------------------------------------------------------------------
 void FileSysDBRecord::store(const bool force) {
   if ((dirty | force) && recordID.size() && filePath.size()) {
-    FILE* fp = fopen(filePath.c_str(), "w");
-    if (!fp) {
+    std::ofstream file(filePath.c_str());
+    if (!file) {
       Throw() << "Failed to open '" << filePath << "': " << toError(errno)
               << XX;
     }
 
     for (auto it = fieldCache.begin(); it != fieldCache.end(); ++it) {
-      const std::string& fld = it->first;
-      const StringVector& values = it->second;
-      if (fld.size()) {
-        for (unsigned i = 0; i < values.size(); ++i) {
-          const std::string& value = values[i];
-          if (fprintf(fp, "%s=%s\n", fld.c_str(), value.c_str()) <= 0) {
-            Throw() << "fprintf failed: " << toError(errno) << XX;
-            fclose(fp);
-            fp = nullptr;
-          }
-        }
+      for (const auto& value : it->second) {
+        file << it->first << '=' << value << '\n';
       }
     }
 
-    if (fflush(fp) != 0) {
-      Throw() << "fflush(" << (*this) << ") failed: " << toError(errno) << XX;
-      fclose(fp);
-      fp = nullptr;
+    if (!file.flush()) {
+      Throw() << "flush(" << (*this) << ") failed: " << toError(errno) << XX;
     }
-
-    fclose(fp);
-    fp = nullptr;
   }
   dirty = false;
 }
 
 //-----------------------------------------------------------------------------
-std::string FileSysDBRecord::getID() const {
-  return recordID;
-}
-
-//-----------------------------------------------------------------------------
-std::string FileSysDBRecord::getFilePath() const {
-  return filePath;
-}
-
-//-----------------------------------------------------------------------------
-void FileSysDBRecord::clear(const std::string& fld) {
+void FileSysDBRecord::clear(const std::string& fieldName) {
+  const std::string fld = validate(fieldName);
   auto it = fieldCache.find(fld);
   if (it != fieldCache.end()) {
     fieldCache.erase(it);
@@ -149,8 +113,8 @@ void FileSysDBRecord::clear(const std::string& fld) {
 }
 
 //-----------------------------------------------------------------------------
-std::vector<std::string> FileSysDBRecord::getStrings(const std::string& fld)
-const {
+StringVector FileSysDBRecord::getStrings(const std::string& fieldName) const {
+  const std::string fld = validate(fieldName);
   auto it = fieldCache.find(fld);
   if (it != fieldCache.end()) {
     return it->second;
@@ -159,7 +123,8 @@ const {
 }
 
 //-----------------------------------------------------------------------------
-std::string FileSysDBRecord::getString(const std::string& fld) const {
+std::string FileSysDBRecord::getString(const std::string& fieldName) const {
+  const std::string fld = validate(fieldName);
   auto it = fieldCache.find(fld);
   if ((it != fieldCache.end()) && (it->second.size())) {
     return it->second.front();
@@ -168,65 +133,69 @@ std::string FileSysDBRecord::getString(const std::string& fld) const {
 }
 
 //-----------------------------------------------------------------------------
-bool FileSysDBRecord::setString(const std::string& fld,
+void FileSysDBRecord::setString(const std::string& fieldName,
                                 const std::string& val)
 {
-  if (strchr(val.c_str(), '\n')) {
-    Logger::error() << "Newline characters not supported";
-  } else if (fld.size()) {
-    auto it = fieldCache.find(fld);
-    if (it != fieldCache.end()) {
-      it->second.clear();
-    } else {
-      it = fieldCache.insert(fieldCache.end(),
-                             std::make_pair(fld, StringVector()));
-    }
-    it->second.push_back(val);
-    dirty = true;
-    return true;
+  const std::string fld = validate(fieldName, val);
+  auto it = fieldCache.find(fld);
+  if (it != fieldCache.end()) {
+    it->second.clear();
+  } else {
+    it = fieldCache.insert(fieldCache.end(),
+                           std::make_pair(fld, StringVector()));
   }
-  return false;
+  it->second.push_back(val);
+  dirty = true;
 }
 
 //-----------------------------------------------------------------------------
-int FileSysDBRecord::addString(const std::string& fld,
+unsigned FileSysDBRecord::addString(const std::string& fieldName,
                                const std::string& val)
 {
-  if (strchr(val.c_str(), '\n')) {
-    Logger::error() << "Newline characters not supported";
-  } else if (fld.size()) {
-    auto it = fieldCache.find(fld);
-    if (it == fieldCache.end()) {
-      it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
-    }
-    it->second.push_back(val);
-    dirty = true;
-    return it->second.size();
+  const std::string fld = validate(fieldName, val);
+  auto it = fieldCache.find(fld);
+  if (it == fieldCache.end()) {
+    it = fieldCache.insert(it, std::make_pair(fld, StringVector()));
   }
-  return -1;
+  it->second.push_back(val);
+  dirty = true;
+  return it->second.size();
 }
 
 //-----------------------------------------------------------------------------
-int FileSysDBRecord::addStrings(const std::string& fld,
-                                const std::vector<std::string>& values)
+unsigned FileSysDBRecord::addStrings(const std::string& fieldName,
+                                     const StringVector& values)
 {
-  if (fld.size()) {
-    auto it = fieldCache.find(fld);
-    if (it == fieldCache.end()) {
-      it = fieldCache.insert(it, std::make_pair(fld, values));
-    } else {
-      for (unsigned i = 0; i < values.size(); ++i) {
-        if (strchr(values[i].c_str(), '\n')) {
-          Logger::error() << "Newline characters not supported";
-        } else {
-          it->second.push_back(values[i]);
-        }
+  const std::string fld = validate(fieldName);
+  auto it = fieldCache.find(fld);
+  if (it == fieldCache.end()) {
+    it = fieldCache.insert(it, std::make_pair(fld, values));
+  } else {
+    for (const auto& value : values) {
+      if (contains(value, '\n')) {
+        Throw(InvalidArgument) << "Newlines not supported in field values" << XX;
+      } else {
+        it->second.push_back(value);
       }
     }
-    dirty = true;
-    return it->second.size();
   }
-  return -1;
+  dirty = true;
+  return it->second.size();
+}
+
+//-----------------------------------------------------------------------------
+std::string FileSysDBRecord::validate(const std::string& fieldName,
+                                      const std::string& val) const
+{
+  const std::string fld = trimStr(fieldName);
+  if (fld.empty()) {
+    Throw(InvalidArgument) << "Empty field names not supported" << XX;
+  } else if (contains(fld, '\n')) {
+    Throw(InvalidArgument) << "Newlines not supported in field names" << XX;
+  } else if (contains(val, '\n')) {
+    Throw(InvalidArgument) << "Newlines not supported in field values" << XX;
+  }
+  return fld;
 }
 
 } // namespace xbs

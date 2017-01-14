@@ -104,6 +104,28 @@ bool startsWith(const std::string& str, const std::string& pattern) {
 }
 
 //-----------------------------------------------------------------------------
+bool iEndsWith(const std::string& str, const char ch) noexcept {
+  return (str.size() && (toupper(str[str.size() - 1]) == toupper(ch)));
+}
+
+//-----------------------------------------------------------------------------
+bool iEndsWith(const std::string& str, const std::string& pattern) {
+  return (pattern.size() && (str.size() >= pattern.size()) &&
+          iEqual(str.substr(str.size() - pattern.size()), pattern));
+}
+
+//-----------------------------------------------------------------------------
+bool endsWith(const std::string& str, const char ch) noexcept {
+  return (str.size() && (str[str.size() - 1] == ch));
+}
+
+//-----------------------------------------------------------------------------
+bool endsWith(const std::string& str, const std::string& pattern) {
+  return (pattern.size() && (str.size() >= pattern.size()) &&
+          (str.substr(str.size() - pattern.size()) == pattern));
+}
+
+//-----------------------------------------------------------------------------
 bool isNumber(const std::string& str) noexcept {
   if (str.empty()) {
     return false;
@@ -221,8 +243,34 @@ unsigned toUInt(const std::string& str) noexcept {
 }
 
 //-----------------------------------------------------------------------------
+u_int64_t toUInt64(const std::string& str) noexcept {
+  u_int64_t result = 0;
+  for (const char ch : str) {
+    if (isdigit(ch)) {
+      u_int64_t tmp = ((10 * result) + (ch - '0'));
+      if (tmp >= result) {
+        result = tmp;
+      } else {
+        return 0;
+      }
+    } else {
+      return 0;
+    }
+  }
+  return result;
+}
+
+//-----------------------------------------------------------------------------
 double toDouble(const std::string& str) noexcept {
   return str.empty() ? 0 : atof(str.c_str());
+}
+
+//-----------------------------------------------------------------------------
+bool toBool(const std::string& str) noexcept {
+  return (iEqual(str, "true") ||
+          iEqual(str, "yes") ||
+          iEqual(str, "y") ||
+          (toUInt64(str) != 0));
 }
 
 //-----------------------------------------------------------------------------

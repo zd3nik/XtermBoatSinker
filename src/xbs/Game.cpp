@@ -293,7 +293,7 @@ void Game::saveResults(Database& db) {
     Logger::error() << "Error calculating ties for game '" << getTitle() << "'";
   }
 
-  DBRecord* stats = db.get(("game." + getTitle()), true);
+  std::shared_ptr<DBRecord> stats = db.get(("game." + getTitle()), true);
   if (!stats) {
     Throw() << "Failed to get stats record for game title '" << getTitle()
             << "' from " << db << XX;
@@ -328,7 +328,8 @@ void Game::saveResults(Database& db) {
     const bool last = (board->getScore() == lowScore);
     board->addStatsTo(*stats, first, last);
 
-    DBRecord* player = db.get(("player." + board->getName()), true);
+    std::string recordID = ("player." + board->getName());
+    std::shared_ptr<DBRecord> player = db.get(recordID, true);
     if (!player) {
       Throw() << "Failed to get record for player '" << board->getName()
               << "' from " << db << XX;

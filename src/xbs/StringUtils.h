@@ -25,6 +25,10 @@ extern bool iStartsWith(const std::string& str, const char ch) noexcept;
 extern bool iStartsWith(const std::string& str, const std::string& pattern) noexcept;
 extern bool startsWith(const std::string& str, const char ch) noexcept;
 extern bool startsWith(const std::string& str, const std::string& pattern);
+extern bool iEndsWith(const std::string& str, const char ch) noexcept;
+extern bool iEndsWith(const std::string& str, const std::string& pattern);
+extern bool endsWith(const std::string& str, const char ch) noexcept;
+extern bool endsWith(const std::string& str, const std::string& pattern);
 extern bool isNumber(const std::string&) noexcept;
 extern bool isFloat(const std::string&) noexcept;
 extern bool isInt(const std::string&) noexcept;
@@ -32,7 +36,9 @@ extern bool isUInt(const std::string&) noexcept;
 extern int iCompare(const std::string&, const std::string&) noexcept;
 extern int toInt(const std::string&) noexcept;
 extern unsigned toUInt(const std::string&) noexcept;
+extern u_int64_t toUInt64(const std::string&) noexcept;
 extern double toDouble(const std::string&) noexcept;
+extern bool toBool(const std::string&) noexcept;
 extern std::string toUpper(std::string);
 extern std::string toLower(std::string);
 extern std::string toError(const int errorNumber);
@@ -67,6 +73,12 @@ inline std::string toStr<std::string>(const std::string& x) {
 template<>
 inline std::string toStr<std::vector<char>>(const std::vector<char>& x) {
   return std::string(x.begin(), x.end());
+}
+
+//-----------------------------------------------------------------------------
+template<>
+inline std::string toStr<bool>(const bool& x) {
+  return x ? "true" : "false";
 }
 
 //-----------------------------------------------------------------------------

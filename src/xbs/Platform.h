@@ -9,9 +9,6 @@
 #error "Windows platforms not supported"
 #endif
 
-// some C++ compilers require this definition for cinttypes to define PRIu64 etc
-#define _STDC_FORMAT_MACROS 1
-
 #include <unistd.h>
 #include <cinttypes>
 #include <cassert>
