@@ -8,8 +8,8 @@
 #include "Platform.h"
 #include "Board.h"
 #include "Configuration.h"
-#include "Database.h"
 #include "Timer.h"
+#include "db/Database.h"
 
 namespace xbs
 {

@@ -3,11 +3,11 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Game.h"
-#include "DBRecord.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "StringUtils.h"
 #include "Throw.h"
+#include "db/DBRecord.h"
 
 namespace xbs
 {

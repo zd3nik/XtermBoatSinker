@@ -6,9 +6,9 @@
 #define XBS_CONFIGURATION_H
 
 #include "Platform.h"
-#include "DBRecord.h"
 #include "Rectangle.h"
 #include "Ship.h"
+#include "db/DBRecord.h"
 
 namespace xbs
 {

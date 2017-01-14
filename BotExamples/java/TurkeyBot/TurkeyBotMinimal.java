@@ -84,8 +84,6 @@ public class TurkeyBotMinimal {
     return ((index >= 0) && (index < args.length)) ? Integer.parseInt(args[index]) : defaultValue;
   }
 
-  public boolean isConnected() { return (socket != null); }
-
   public void login() throws IOException {
     connect();
     if (!recv().startsWith("G|")) {

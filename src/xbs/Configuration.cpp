@@ -3,7 +3,6 @@
 // Copyright (c) 2016 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Configuration.h"
-#include "DBRecord.h"
 #include "Screen.h"
 #include "Throw.h"
 

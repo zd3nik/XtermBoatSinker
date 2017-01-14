@@ -5,12 +5,12 @@
 #include "Server.h"
 #include "CanonicalMode.h"
 #include "CommandArgs.h"
-#include "FileSysDatabase.h"
-#include "FileSysDBRecord.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "StringUtils.h"
 #include "Throw.h"
+#include "db/FileSysDatabase.h"
+#include "db/FileSysDBRecord.h"
 
 namespace xbs
 {

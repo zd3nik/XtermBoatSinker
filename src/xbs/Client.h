@@ -8,12 +8,12 @@
 #include "Platform.h"
 #include "Board.h"
 #include "CSV.h"
-#include "FileSysDBRecord.h"
 #include "Game.h"
 #include "Input.h"
 #include "Message.h"
 #include "TcpSocket.h"
 #include "Version.h"
+#include "db/FileSysDBRecord.h"
 
 namespace xbs
 {

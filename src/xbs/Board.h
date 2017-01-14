@@ -7,10 +7,10 @@
 
 #include "Platform.h"
 #include "Configuration.h"
-#include "DBRecord.h"
 #include "Rectangle.h"
 #include "Ship.h"
 #include "TcpSocket.h"
+#include "db/DBRecord.h"
 
 namespace xbs
 {
