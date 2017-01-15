@@ -34,6 +34,10 @@
 #endif
 
 namespace xbs {
+  inline void initRandom() noexcept {
+    srand(static_cast<unsigned>(time(nullptr) * getpid()));
+  }
+
   inline unsigned random(const unsigned bound) noexcept {
     return (((static_cast<unsigned>(rand() >> 3)) & 0x7FFFU) % bound);
   }

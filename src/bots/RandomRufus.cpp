@@ -77,6 +77,7 @@ ScoredCoordinate RandomRufus::bestShotOn(const Board& board) {
 //-----------------------------------------------------------------------------
 int main(const int argc, const char* argv[]) {
   try {
+    xbs::initRandom();
     xbs::CommandArgs::initialize(argc, argv);
     xbs::RandomRufus().run();
   } catch (const std::exception& e) {
