@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // CommandArgs.cpp
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "CommandArgs.h"
 #include "StringUtils.h"

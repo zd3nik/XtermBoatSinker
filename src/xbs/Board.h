@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Board.h
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #ifndef XBS_BOARD_H
 #define XBS_BOARD_H
@@ -128,25 +128,37 @@ public:
   bool addShip(const Ship&, Coordinate, const Direction);
   bool isDead() const noexcept;
   bool matchesConfig(const Configuration&) const;
+  bool onEdge(const unsigned idx) const noexcept;
   bool onEdge(const Coordinate&) const noexcept;
   bool print(const bool masked, const Configuration* = nullptr) const;
   bool removeShip(const Ship&) noexcept;
   bool updateDescriptor(const std::string& newDescriptor);
 
+  char getSquare(const unsigned idx) const noexcept;
   char getSquare(const Coordinate&) const noexcept;
+  char setSquare(const unsigned idx, const char newValue) noexcept;
   char setSquare(const Coordinate&, const char newValue) noexcept;
+  char shootSquare(const unsigned idx) noexcept;
   char shootSquare(const Coordinate&) noexcept;
 
+  unsigned adjacentFree(const unsigned idx) const noexcept;
   unsigned adjacentFree(const Coordinate&) const noexcept;
+  unsigned adjacentHits(const unsigned idx) const noexcept;
   unsigned adjacentHits(const Coordinate&) const noexcept;
+  unsigned distToEdge(const unsigned idx, const Direction) const noexcept;
   unsigned distToEdge(Coordinate, const Direction) const noexcept;
+  unsigned freeCount(const unsigned idx, const Direction) const noexcept;
   unsigned freeCount(Coordinate, const Direction) const noexcept;
   unsigned hitCount() const noexcept;
+  unsigned hitCount(const unsigned idx, const Direction) const noexcept;
   unsigned hitCount(Coordinate, const Direction) const noexcept;
+  unsigned horizontalHits(const unsigned idx) const noexcept;
   unsigned horizontalHits(const Coordinate&) const noexcept;
+  unsigned maxInlineHits(const unsigned idx) const noexcept;
   unsigned maxInlineHits(const Coordinate&) const noexcept;
   unsigned missCount() const noexcept;
   unsigned shipPointCount() const noexcept;
+  unsigned verticalHits(const unsigned idx) const noexcept;
   unsigned verticalHits(const Coordinate&) const noexcept;
 
   void addStatsTo(DBRecord&, const bool first, const bool last) const;

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Board.cpp
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Board.h"
 #include "Logger.h"
@@ -271,6 +271,11 @@ bool Board::matchesConfig(const Configuration& config) const {
 }
 
 //-----------------------------------------------------------------------------
+bool Board::onEdge(const unsigned i) const noexcept {
+  return onEdge(toCoord(i));
+}
+
+//-----------------------------------------------------------------------------
 bool Board::onEdge(const Coordinate& coord) const noexcept {
   return ((coord.getX() == 1) || (coord.getX() == (shipArea.getWidth())) ||
           (coord.getY() == 1) || (coord.getY() == (shipArea.getHeight())));
@@ -350,14 +355,17 @@ bool Board::updateDescriptor(const std::string& desc) {
 }
 
 //-----------------------------------------------------------------------------
-char Board::getSquare(const Coordinate& coord) const noexcept {
-  const unsigned i = getShipIndex(coord);
+char Board::getSquare(const unsigned i) const noexcept {
   return (i < descriptor.size()) ? descriptor[i] : 0;
 }
 
 //-----------------------------------------------------------------------------
-char Board::setSquare(const Coordinate& coord, const char newValue) noexcept {
-  const unsigned i = getShipIndex(coord);
+char Board::getSquare(const Coordinate& coord) const noexcept {
+ return getSquare(getShipIndex(coord));
+}
+
+//-----------------------------------------------------------------------------
+char Board::setSquare(const unsigned i, const char newValue) noexcept {
   if (i < descriptor.size()) {
     const char previousValue = descriptor[i];
     descriptor[i] = newValue;
@@ -367,8 +375,12 @@ char Board::setSquare(const Coordinate& coord, const char newValue) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-char Board::shootSquare(const Coordinate& coord) noexcept {
-  unsigned i = getShipIndex(coord);
+char Board::setSquare(const Coordinate& coord, const char newValue) noexcept {
+  return setSquare(getShipIndex(coord), newValue);
+}
+
+//-----------------------------------------------------------------------------
+char Board::shootSquare(const unsigned i) noexcept {
   if (i >= descriptor.size()) {
     return 0;
   }
@@ -382,11 +394,26 @@ char Board::shootSquare(const Coordinate& coord) noexcept {
 }
 
 //-----------------------------------------------------------------------------
+char Board::shootSquare(const Coordinate& coord) noexcept {
+  return shootSquare(getShipIndex(coord));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::adjacentFree(const unsigned i) const noexcept {
+  return adjacentFree(toCoord(i));
+}
+
+//-----------------------------------------------------------------------------
 unsigned Board::adjacentFree(const Coordinate& coord) const noexcept {
   return ((getSquare(coord + North) == Ship::NONE) +
           (getSquare(coord + South) == Ship::NONE) +
           (getSquare(coord + East) == Ship::NONE) +
           (getSquare(coord + West) == Ship::NONE));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::adjacentHits(const unsigned i) const noexcept {
+  return adjacentHits(toCoord(i));
 }
 
 //-----------------------------------------------------------------------------
@@ -398,6 +425,13 @@ unsigned Board::adjacentHits(const Coordinate& coord) const noexcept {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Board::distToEdge(const unsigned i,
+                           const Direction dir) const noexcept
+{
+  return distToEdge(toCoord(i), dir);
+}
+
+//-----------------------------------------------------------------------------
 unsigned Board::distToEdge(Coordinate coord,
                            const Direction dir) const noexcept
 {
@@ -406,6 +440,13 @@ unsigned Board::distToEdge(Coordinate coord,
     ++count;
   }
   return count;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::freeCount(const unsigned i,
+                          const Direction dir) const noexcept
+{
+  return freeCount(toCoord(i), dir);
 }
 
 //-----------------------------------------------------------------------------
@@ -431,6 +472,11 @@ unsigned Board::hitCount() const noexcept {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Board::hitCount(const unsigned i, const Direction dir) const noexcept {
+  return hitCount(toCoord(i), dir);
+}
+
+//-----------------------------------------------------------------------------
 unsigned Board::hitCount(Coordinate coord, const Direction dir) const noexcept {
   unsigned count = 0;
   while (Ship::isHit(getSquare(coord.shift(dir)))) {
@@ -440,10 +486,20 @@ unsigned Board::hitCount(Coordinate coord, const Direction dir) const noexcept {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Board::horizontalHits(const unsigned i) const noexcept {
+  return horizontalHits(toCoord(i));
+}
+
+//-----------------------------------------------------------------------------
 unsigned Board::horizontalHits(const Coordinate& coord) const noexcept {
   return (getSquare(coord) == Ship::HIT)
-    ? (1 + hitCount(coord,Direction::East) + hitCount(coord,Direction::West))
+    ? (1 + hitCount(coord, Direction::East) + hitCount(coord, Direction::West))
     : 0;
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::maxInlineHits(const unsigned i) const noexcept {
+  return maxInlineHits(toCoord(i));
 }
 
 //-----------------------------------------------------------------------------
@@ -478,9 +534,14 @@ unsigned Board::shipPointCount() const noexcept {
 }
 
 //-----------------------------------------------------------------------------
-unsigned Board::verticalHits(const Coordinate& coord) const noexcept {
-  return (getSquare(coord) == Ship::HIT)
-    ? (1 + hitCount(coord,Direction::North) + hitCount(coord,Direction::South))
+unsigned Board::verticalHits(const unsigned i) const noexcept {
+  return verticalHits(toCoord(i));
+}
+
+//-----------------------------------------------------------------------------
+unsigned Board::verticalHits(const Coordinate& c) const noexcept {
+  return (getSquare(c) == Ship::HIT)
+    ? (1 + hitCount(c, Direction::North) + hitCount(c, Direction::South))
     : 0;
 }
 

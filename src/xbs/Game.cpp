@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Game.cpp
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Game.h"
 #include "Logger.h"

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Server.cpp
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Server.h"
 #include "CanonicalMode.h"
@@ -77,14 +77,14 @@ bool Server::init() {
   Screen::get() << args.getProgramName() << " version " << getVersion()
                 << EL << Flush;
 
-  if (args.indexOf("--help") > 0) {
+  if (args.indexOf("--help") >= 0) {
     showHelp();
     return false;
   }
 
-  quietMode = (args.indexOf({"-q", "--quiet"}) > 0);
-  autoStart = (args.indexOf({"-a", "--auto-start"}) > 0);
-  repeat    = (args.indexOf({"-r", "--repeat"}) > 0);
+  quietMode = (args.indexOf({"-q", "--quiet"}) >= 0);
+  autoStart = (args.indexOf({"-a", "--auto-start"}) >= 0);
+  repeat    = (args.indexOf({"-r", "--repeat"}) >= 0);
 
   game.clear();
   return true;

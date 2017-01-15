@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Version.h
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Version.h"
 #include "CSV.h"

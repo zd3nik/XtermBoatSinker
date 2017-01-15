@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Client.cpp
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Client.h"
 #include "CanonicalMode.h"
@@ -80,7 +80,7 @@ bool Client::init() {
   Screen::get(true) << args.getProgramName() << " version " << getVersion()
                     << EL << Flush;
 
-  if (args.indexOf("--help") > 0) {
+  if (args.indexOf("--help") >= 0) {
     showHelp();
     return false;
   }

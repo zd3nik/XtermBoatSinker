@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // Message.h
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #ifndef XBS_MESSAGE_H
 #define XBS_MESSAGE_H

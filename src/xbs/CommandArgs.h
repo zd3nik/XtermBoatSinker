@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // CommandArgs.h
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #ifndef XBS_COMMANDARGS_H
 #define XBS_COMMANDARGS_H

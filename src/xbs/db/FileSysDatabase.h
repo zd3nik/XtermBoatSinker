@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // FileSysDatabase.h
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #ifndef XBS_FILE_SYS_DATABASE_H
 #define XBS_FILE_SYS_DATABASE_H

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // StringUtils.cpp
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "StringUtils.h"
 #include <cstring>
@@ -220,12 +220,49 @@ int iCompare(const std::string& a, const std::string& b) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-int toInt(const std::string& str) noexcept {
-  return str.empty() ? 0 : atoi(str.c_str());
+int toInt(const std::string& str, const int def) noexcept {
+  if (str.empty()) {
+    return def;
+  }
+  int sign = 0;
+  int result = 0;
+  for (const char ch : str) {
+    if (ch == '-') {
+      if (sign) {
+        return def;
+      } else {
+        sign = -1;
+      }
+    } else if (ch == '+') {
+      if (sign) {
+        return def;
+      } else {
+        sign = 1;
+      }
+    } else {
+      if (!sign) {
+        sign = 1;
+      }
+      if (isdigit(ch)) {
+        int tmp = ((10 * result) + (ch - '0'));
+        if (tmp >= result) {
+          result = tmp;
+        } else {
+          return def;
+        }
+      } else {
+        return def;
+      }
+    }
+  }
+  return (sign * result);
 }
 
 //-----------------------------------------------------------------------------
-unsigned toUInt(const std::string& str) noexcept {
+unsigned toUInt(const std::string& str, const unsigned def) noexcept {
+  if (str.empty()) {
+    return def;
+  }
   unsigned result = 0;
   for (const char ch : str) {
     if (isdigit(ch)) {
@@ -233,17 +270,20 @@ unsigned toUInt(const std::string& str) noexcept {
       if (tmp >= result) {
         result = tmp;
       } else {
-        return 0;
+        return def;
       }
     } else {
-      return 0;
+      return def;
     }
   }
   return result;
 }
 
 //-----------------------------------------------------------------------------
-u_int64_t toUInt64(const std::string& str) noexcept {
+u_int64_t toUInt64(const std::string& str, const u_int64_t def) noexcept {
+  if (str.empty()) {
+    return def;
+  }
   u_int64_t result = 0;
   for (const char ch : str) {
     if (isdigit(ch)) {
@@ -251,26 +291,26 @@ u_int64_t toUInt64(const std::string& str) noexcept {
       if (tmp >= result) {
         result = tmp;
       } else {
-        return 0;
+        return def;
       }
     } else {
-      return 0;
+      return def;
     }
   }
   return result;
 }
 
 //-----------------------------------------------------------------------------
-double toDouble(const std::string& str) noexcept {
-  return str.empty() ? 0 : atof(str.c_str());
+double toDouble(const std::string& str, const double def) noexcept {
+  return isFloat(str) ? atof(str.c_str()) : def;
 }
 
 //-----------------------------------------------------------------------------
-bool toBool(const std::string& str) noexcept {
+bool toBool(const std::string& str, const bool def) noexcept {
   return (iEqual(str, "true") ||
           iEqual(str, "yes") ||
           iEqual(str, "y") ||
-          (toUInt64(str) != 0));
+          (isInt(str) ? (toInt(str) != 0) : def));
 }
 
 //-----------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // ServerMain.cpp
-// Copyright (c) 2016 Shawn Chidester, All rights reserved
+// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Platform.h"
 #include "CommandArgs.h"
