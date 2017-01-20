@@ -19,8 +19,11 @@ protected:
   bool parity = random(2);
 
 public:
-  virtual std::string getDefaultName() const { return "Rufus"; }
-  virtual Version getVersion() const { return Version(2); }
+  RandomRufus()
+    : TargetingComputer("RandomRufus")
+  { }
+
+  virtual Version getVersion() const { return Version("2.0.x"); }
   virtual std::string getBestShot(Coordinate&);
 
 protected:

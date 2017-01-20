@@ -5,6 +5,7 @@
 #include "RandomRufus.h"
 #include "CommandArgs.h"
 #include "Throw.h"
+#include "Screen.h"
 #include <cmath>
 
 namespace xbs
@@ -23,7 +24,7 @@ std::string RandomRufus::getBestShot(Coordinate& shotCoord) {
 
   std::random_shuffle(boards.begin(), boards.end());
   for (auto& board : boards) {
-    if (board && (board->getName() != name)) {
+    if (board && (board->getName() != getPlayerName())) {
       ScoredCoordinate coord(bestShotOn(*board));
       if (coord && (!bestBoard || (coord.getScore() > bestCoord.getScore()))) {
         bestBoard = board;

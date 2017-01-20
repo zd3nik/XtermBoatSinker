@@ -17,19 +17,57 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-TargetingComputer::TargetingComputer() {
+TargetingComputer::TargetingComputer(const std::string& botName)
+  : botName(botName)
+{
   const CommandArgs& args = CommandArgs::getInstance();
   minSurfaceArea = toDouble(args.getValueOf("--msa"));
-  debugMode = (args.indexOf("--debugBot") >= 0);
-  name = args.getValueOf({"-u", "--user"});
+  debugMode = (args.indexOf("--debug") >= 0);
+
+  const std::string name = args.getValueOf({"-n", "--name"});
+  if (name.size()) {
+    setPlayerName(name);
+  } else {
+    setPlayerName(botName);
+  }
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::help() {
+  const CommandArgs& args = CommandArgs::getInstance();
+  Screen::print()
+      << getBotName() << " version " << getVersion() << EL
+      << EL
+      << "usage: " << args.getProgramName() << " [OPTIONS]" << EL
+      << EL
+      << "GENERAL OPTIONS:" << EL
+      << "  -h, --help                Show help and exit" << EL
+      << "  -n, --name <name>         Use given name instead of " << getBotName() << EL
+      << "  -l, --log-level <level>   Set log level: DEBUG, INFO, WARN, ERROR " << EL
+      << "  -f, --log-file <file>     Write log messages to given file" << EL
+      << "  --debug                   Enable debug mode" << EL
+      << EL
+      << "BOARD OPTIONS:" << EL
+      << "  -s, --static-board <brd>  Use given board instead of random generation" << EL
+      << "  --msa <ratio>             Use given min-surface-area ratio instead of 0" << EL
+      << "                              MSA is used in random board generation" << EL
+      << EL
+      << "TEST OPTIONS:" << EL
+      << "  -t, --test                Run tests and exit" << EL
+      << "  -p, --positions <count>   Set position count for --test mode" << EL
+      << "  -x, --width <value>       Set board width for --test mode" << EL
+      << "  -y, --height <value>      Set board height for --test mode" << EL
+      << "  -d, --test-db <dir>       Set database dir for --test mode" << EL
+      << "  -w, --watch               Watch every shot during --test mode" << EL
+      << EL << Flush;
 }
 
 //-----------------------------------------------------------------------------
 void TargetingComputer::run() {
   const xbs::CommandArgs& args = xbs::CommandArgs::getInstance();
-  if (args.indexOf("--help") >= 0) {
+  if (args.indexOf({"-h", "--help"}) >= 0) {
     help();
-  } else if (args.indexOf("--test") >= 0) {
+  } else if (args.indexOf({"-t", "--test"}) >= 0) {
     test();
   } else {
     play();
@@ -38,16 +76,22 @@ void TargetingComputer::run() {
 
 //-----------------------------------------------------------------------------
 void TargetingComputer::newGame(const Configuration& gameConfig) {
-  if (trimStr(name).empty()) {
-    name = getDefaultName();
-  }
-
   config = gameConfig;
   boardMap.clear();
 
   myBoard.reset(new Board("me", config));
-  if (!myBoard->addRandomShips(config, minSurfaceArea)) {
-    Throw() << "Failed to add ships to " << name << " board";
+  if (staticBoard.size()) {
+    if (!myBoard->updateDescriptor(staticBoard) ||
+        !myBoard->matchesConfig(config))
+    {
+      Throw() << "Invalid " << getPlayerName() << " board descriptor: '"
+              << staticBoard << "'" << XX;
+    }
+  } else {
+    if (!myBoard->addRandomShips(config, minSurfaceArea)) {
+      Throw() << "Failed to generate random ship placement for "
+              << getPlayerName() << " board" << XX;
+    }
   }
 }
 
@@ -61,9 +105,16 @@ void TargetingComputer::updateBoard(const std::string& player,
                                     const std::string& boardDescriptor)
 {
   boardMap[player]->updateDescriptor(boardDescriptor);
-  if ((player == name) && !myBoard->addHitsAndMisses(boardDescriptor)) {
-    Throw() << "Failed to update " << name << " hits/misses" << XX;
+  if ((player == getPlayerName()) &&
+      !myBoard->addHitsAndMisses(boardDescriptor))
+  {
+    Throw() << "Failed to update " << player << " hits/misses" << XX;
   }
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::play() {
+  Throw() << "TargetingComputer::play() not implemented" << XX; // TODO
 }
 
 //-----------------------------------------------------------------------------
@@ -71,19 +122,19 @@ void TargetingComputer::test() {
   const CommandArgs& args = CommandArgs::getInstance();
 
   //const std::string staticBoard = args.getValueOf({"-s", "--static-board"});
-  const unsigned positions = toUInt(args.getValueOf("--positions"), 100000);
-  const unsigned height = toUInt(args.getValueOf("--height"));
-  const unsigned width = toUInt(args.getValueOf("--width"));
-  //const bool watch = toBool(args.getValueOf("--watch"));
+  const unsigned positions = toUInt(args.getValueOf({"-p", "--positions"}), 100000);
+  const unsigned height = toUInt(args.getValueOf({"-y", "--height"}));
+  const unsigned width = toUInt(args.getValueOf({"-x", "--width"}));
+  //const bool watch = toBool(args.getValueOf({"-w", "--watch"}));
 
-  std::string testDB = args.getValueOf("--test-db");
+  std::string testDB = args.getValueOf({"-d", "--test-db"});
   if (testDB.empty()) {
     testDB = "testDB";
   }
 
   Configuration testConfig = Configuration::getDefaultConfiguration();
   if (width && height) {
-    config.setBoardSize(width, height);
+    testConfig.setBoardSize(width, height);
   }
   if (!testConfig) {
     Throw() << "Invalid test board configuration" << XX;
@@ -100,7 +151,7 @@ void TargetingComputer::test() {
   Coordinate statusLine(1, 1);
   Screen::get(true).clear();
   Screen::print() << statusLine
-                  << "Testing " << getDefaultName()
+                  << "Testing " << getBotName()
                   << " version " << getVersion()
                   << " using " << positions << " test positions,"
                   << " msa " << minSurfaceArea
@@ -111,7 +162,7 @@ void TargetingComputer::test() {
   Screen::print() << statusLine.south(2)
                   << Flush;
 
-  Board board(getDefaultName(), testConfig);
+  Board board(getPlayerName(), testConfig);
   if (!Screen::get().contains(board.shift(South, (statusLine.getY() - 1)))) {
     Throw() << "Board does not fit in terminal" << XX;
   }
@@ -134,7 +185,7 @@ void TargetingComputer::test() {
 //        Throw() << "Invalid static board descriptor [" << staticBoard << ']'
 //                << XX;
 //      }
-//    } else if (!board.addRandomShips(config, minSurfaceArea)) {
+//    } else if (!board.addRandomShips(testConfig, minSurfaceArea)) {
 //      Throw() << "Failed random boat placement" << XX;
 //    }
 
@@ -149,7 +200,7 @@ void TargetingComputer::test() {
 
 //    unsigned hits = 0;
 //    unsigned shots = 0;
-//    while (hits < config.getPointGoal()) {
+//    while (hits < testConfig.getPointGoal()) {
 //      ScoredCoordinate coord = getTargetCoordinate(targetBoard);
 //      Logger::debug() << "best shot = " << coord;
 //      const char id = board.shootSquare(coord);
@@ -223,8 +274,8 @@ void TargetingComputer::test() {
 
 //    // TODO add last test date
 //    rec->incUInt("testsRun");
-//    rec->setUInt("board.width", config.getBoardWidth());
-//    rec->setUInt("board.height", config.getBoardHeight());
+//    rec->setUInt("board.width", testConfig.getBoardWidth());
+//    rec->setUInt("board.height", testConfig.getBoardHeight());
 //    rec->incUInt("total.positionCount", positions);
 //    rec->setUInt("last.positionCount", positions);
 //    rec->setUInt("total.minSurfaceArea", msa);
@@ -251,7 +302,7 @@ std::string TargetingComputer::getTestRecordID(const Configuration& c) const {
   return ("test." +
           toStr(c.getBoardWidth()) + "x" +
           toStr(c.getBoardHeight()) + "." +
-          getDefaultName() + "-" +
+          getPlayerName() + "-" +
           getVersion().toString());
 }
 
