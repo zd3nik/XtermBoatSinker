@@ -36,7 +36,6 @@ public:
   virtual void run();
   virtual void newGame(const Configuration&);
   virtual void playerJoined(const std::string& player);
-  virtual void setPlayerName(const std::string& player) { playerName = player; }
   virtual void updateBoard(const std::string& player,
                            const std::string& boardDescriptor);
 
@@ -56,10 +55,10 @@ public:
   }
 
 protected:
+  virtual void setPlayerName(const std::string& player) { playerName = player; }
   virtual void help();
   virtual void test();
   virtual void play();
-  virtual std::string getTestRecordID(const Configuration&) const;
 };
 
 } // namespace xbs

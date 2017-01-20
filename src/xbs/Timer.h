@@ -12,7 +12,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-typedef long long Milliseconds;
+typedef int64_t Milliseconds;
 typedef Milliseconds Timestamp;
 
 //-----------------------------------------------------------------------------
