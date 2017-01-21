@@ -99,13 +99,11 @@ Screen& Screen::cursor(const Coordinate& coord) {
 
 //-----------------------------------------------------------------------------
 Screen& Screen::cursor(const unsigned x, const unsigned y) {
-  char sbuf[32];
   if (!contains(x, y)) {
     Logger::error() << "invalid screen coordinates: " << x << ',' << y;
     return (*this);
   }
-  snprintf(sbuf, sizeof(sbuf), "\033[%u;%uH", y, x);
-  return str(sbuf);
+  return str("\033[" + toStr(y) + ';' + toStr(x) + 'H');
 }
 
 //-----------------------------------------------------------------------------
@@ -134,8 +132,8 @@ Screen& Screen::flush() {
 }
 
 //-----------------------------------------------------------------------------
-Screen& Screen::str(const char* x) {
-  if (x && *x && (fprintf(stdout, "%s", x) <= 0)) {
+Screen& Screen::str(const std::string& x) {
+  if (fwrite(x.c_str(), x.size(), 1, stdout) != 1) {
     Throw() << "Failed to print to screen: " << toError(errno) << XX;
   }
   return (*this);

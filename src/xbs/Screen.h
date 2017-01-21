@@ -56,100 +56,25 @@ public:
   Screen& cursor(const unsigned x, const unsigned y);
   Screen& flag(const ScreenFlag);
   Screen& flush();
-  Screen& str(const char*);
+  Screen& str(const std::string&);
 
-  Screen& operator<<(const ScreenColor x) {
-    return color(x);
-  }
-
-  Screen& operator<<(const ScreenFlag x) {
-    return flag(x);
-  }
-
-  Screen& operator<<(const Coordinate& x) {
-    return cursor(x);
-  }
-
-  Screen& operator<<(const Printable& x) {
-    return str(x.toString().c_str());
-  }
-
-  Screen& operator<<(const std::string& x) {
-    return str(x.c_str());
-  }
-
-  Screen& operator<<(const char* x) {
-    return str(x);
-  }
-
-  Screen& operator<<(const long long x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%lld", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const long x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%ld", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const int x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%d", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const short x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%hd", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const char x) {
-    return ch(x);
-  }
-
-  Screen& operator<<(const unsigned long long x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%llu", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const unsigned long x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%lu", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const unsigned x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%u", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const unsigned short x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%hu", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const unsigned char x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%hhu", x);
-    return str(sbuf);
-  }
-
-  Screen& operator<<(const float x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%.02f", x);
-    return str(sbuf);
-  }
+  Screen& operator<<(const ScreenColor x) { return color(x); }
+  Screen& operator<<(const ScreenFlag x) { return flag(x); }
+  Screen& operator<<(const Coordinate& x) { return cursor(x); }
+  Screen& operator<<(const Printable& x) { return str(x.toString()); }
+  Screen& operator<<(const std::string& x) { return str(x); }
+  Screen& operator<<(const char* x) { return str(x ? std::string(x) : ""); }
+  Screen& operator<<(const char x) { return ch(x); }
 
   Screen& operator<<(const double x) {
-    char sbuf[32];
-    snprintf(sbuf, sizeof(sbuf), "%.02lf", x);
-    return str(sbuf);
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2) << x;
+    return str(ss.str());
+  }
+
+  template<typename T>
+  Screen& operator<<(const T& x) {
+    return str(toStr(x));
   }
 
 private:
