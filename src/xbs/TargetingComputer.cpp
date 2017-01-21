@@ -23,8 +23,20 @@ TargetingComputer::TargetingComputer(const std::string& botName)
 {
   const CommandArgs& args = CommandArgs::getInstance();
   staticBoard = args.getValueOf({"-s", "--static-board"});
-  minSurfaceArea = toDouble(args.getValueOf("--msa"));
   debugMode = (args.indexOf("--debug") >= 0);
+
+  const std::string msaRatio = args.getValueOf("--msa");
+  if (msaRatio.size()) {
+    if (!isFloat(msaRatio)) {
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
+                             << XX;
+    }
+    minSurfaceArea = toDouble(msaRatio.c_str());
+    if ((minSurfaceArea < 0) || (minSurfaceArea > 100)) {
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
+                             << XX;
+    }
+  }
 
   const std::string name = args.getValueOf({"-n", "--name"});
   if (name.size()) {

@@ -23,9 +23,21 @@ EfficiencyTester::EfficiencyTester() {
   const unsigned height = toUInt(args.getValueOf({"-y", "--height"}));
   const unsigned width = toUInt(args.getValueOf({"-x", "--width"}));
   watch = (args.indexOf({"-w", "--watch"}) >= 0);
-  minSurfaceArea = toDouble(args.getValueOf("--msa"));
   positions = toUInt(args.getValueOf({"-p", "--positions"}), 100000);
   staticBoard = args.getValueOf({"-s", "--static-board"});
+
+  const std::string msaRatio = args.getValueOf("--msa");
+  if (msaRatio.size()) {
+    if (!isFloat(msaRatio)) {
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
+                             << XX;
+    }
+    minSurfaceArea = toDouble(msaRatio.c_str());
+    if ((minSurfaceArea < 0) || (minSurfaceArea > 100)) {
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
+                             << XX;
+    }
+  }
 
   testDB = args.getValueOf({"-d", "--test-db"});
   if (testDB.empty()) {
@@ -191,7 +203,7 @@ Coordinate EfficiencyTester::printStart(
 
   Screen::print() << board.getTopLeft() << ClearToScreenEnd;
   board.print(true);
-  Screen::print() << statusLine.shift(South, (board.getHeight() + 1)) << Flush;
+  Screen::print() << statusLine.shift(South, board.getHeight()) << Flush;
   return statusLine;
 }
 
