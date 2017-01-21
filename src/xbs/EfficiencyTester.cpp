@@ -46,6 +46,7 @@ void EfficiencyTester::test(TargetingComputer& bot) {
     Throw() << "Please use a different name for the bot your testing";
   }
 
+  bot.setStaticBoard("");
   totalShots = 0;
   maxShots = 0;
   minShots = ~0U;
@@ -212,6 +213,11 @@ void EfficiencyTester::newTargetBoard(
   bot.playerJoined(bot.getPlayerName());
   bot.playerJoined(TARGET_BOARD_NAME);
   bot.gameStarted({ bot.getPlayerName(), TARGET_BOARD_NAME});
+
+  // make sure the bot doesn't waste time regenerating a board each iteration
+  if (bot.getStaticBoard().empty()) {
+    bot.setStaticBoard(bot.getBoardDescriptor());
+  }
 }
 
 //-----------------------------------------------------------------------------

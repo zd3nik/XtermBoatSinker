@@ -22,6 +22,7 @@ TargetingComputer::TargetingComputer(const std::string& botName)
   : botName(botName)
 {
   const CommandArgs& args = CommandArgs::getInstance();
+  staticBoard = args.getValueOf({"-s", "--static-board"});
   minSurfaceArea = toDouble(args.getValueOf("--msa"));
   debugMode = (args.indexOf("--debug") >= 0);
 

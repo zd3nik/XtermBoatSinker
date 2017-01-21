@@ -48,8 +48,10 @@ public:
                          const std::string& /*target*/,
                          const Coordinate& /*hitCoordinate*/) { }
 
+  void setStaticBoard(const std::string& desc) { staticBoard = desc; }
   std::string getBotName() const { return botName; }
   std::string getPlayerName() const { return playerName; }
+  std::string getStaticBoard() const { return staticBoard; }
   std::string getBoardDescriptor() const {
     return myBoard ? myBoard->getDescriptor() : "";
   }

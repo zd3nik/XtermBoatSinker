@@ -16,7 +16,9 @@ std::string RandomRufus::getBestShot(Coordinate& shotCoord) {
   std::vector<Board*> boards;
   boards.reserve(boardMap.size());
   for (auto& it : boardMap) {
-    boards.push_back(it.second.get());
+    if (it.second && (it.second->getName() != getPlayerName())) {
+      boards.push_back(it.second.get());
+    }
   }
 
   Board* bestBoard = nullptr;
@@ -24,12 +26,10 @@ std::string RandomRufus::getBestShot(Coordinate& shotCoord) {
 
   std::random_shuffle(boards.begin(), boards.end());
   for (auto& board : boards) {
-    if (board && (board->getName() != getPlayerName())) {
-      ScoredCoordinate coord(bestShotOn(*board));
-      if (coord && (!bestBoard || (coord.getScore() > bestCoord.getScore()))) {
-        bestBoard = board;
-        bestCoord = coord;
-      }
+    ScoredCoordinate coord(bestShotOn(*board));
+    if (coord && (!bestBoard || (coord.getScore() > bestCoord.getScore()))) {
+      bestBoard = board;
+      bestCoord = coord;
     }
   }
 
@@ -40,27 +40,21 @@ std::string RandomRufus::getBestShot(Coordinate& shotCoord) {
 //-----------------------------------------------------------------------------
 ScoredCoordinate RandomRufus::bestShotOn(const Board& board) {
   const std::string desc = board.getDescriptor();
-  std::vector<ScoredCoordinate> openHits;
   std::vector<ScoredCoordinate> candidates;
+  candidates.reserve(desc.size() / 2);
 
   for (unsigned i = 0; i < desc.size(); ++i) {
     if (desc[i] == Ship::NONE) {
-      const ScoredCoordinate coord(board.toCoord(i));
+      const ScoredCoordinate coord(board.getShipCoord(i));
       if (board.adjacentHits(coord)) {
-        openHits.push_back(coord);
-        candidates.clear();
-      } else if (openHits.empty() &&
-                 isCandidate(board, coord) &&
-                 board.adjacentFree(coord))
-      {
+        candidates.push_back(coord);
+      } else if (isCandidate(board, coord) && board.adjacentFree(coord)) {
         candidates.push_back(coord);
       }
     }
   }
 
-  if (openHits.size()) {
-    candidates.assign(openHits.begin(), openHits.end());
-  } else if (candidates.empty()) {
+  if (candidates.empty()) {
     return ScoredCoordinate();
   }
 
