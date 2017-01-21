@@ -158,6 +158,7 @@ public:
   unsigned maxInlineHits(const Coordinate&) const noexcept;
   unsigned missCount() const noexcept;
   unsigned shipPointCount() const noexcept;
+  unsigned surfaceArea(const unsigned minArea = ~0U) const noexcept;
   unsigned verticalHits(const unsigned idx) const noexcept;
   unsigned verticalHits(const Coordinate&) const noexcept;
 

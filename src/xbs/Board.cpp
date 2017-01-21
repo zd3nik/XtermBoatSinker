@@ -534,6 +534,19 @@ unsigned Board::shipPointCount() const noexcept {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Board::surfaceArea(const unsigned minArea) const noexcept {
+  unsigned surfaceArea = 0;
+  for (unsigned i = 0; i < descriptor.size(); ++i) {
+    if (Ship::isShip(descriptor[i])) {
+      if ((surfaceArea += adjacentFree(getShipCoord(i))) >= minArea) {
+        return surfaceArea;
+      }
+    }
+  }
+  return surfaceArea;
+}
+
+//-----------------------------------------------------------------------------
 unsigned Board::verticalHits(const unsigned i) const noexcept {
   return verticalHits(getShipCoord(i));
 }
@@ -637,16 +650,27 @@ bool Board::placeShips(std::string& desc,
   if (shipBegin == shipEnd) {
     // all ships have been placed, now verify min-surface-area has been met
     if (msa) {
-      unsigned surfaceArea = 0;
-      for (unsigned i = 0; i < desc.size(); ++i) {
-        if (Ship::isShip(desc[i])) {
-          if ((surfaceArea += adjacentFree(getShipCoord(i))) >= msa) {
-            return true;
-          }
-        }
-      }
+      const std::string savedDesc = descriptor;
+      descriptor = desc;
+      const unsigned sa = surfaceArea(msa);
+      descriptor = savedDesc;
+      return (sa >= msa);
     }
-    return !msa;
+    return true;
+  }
+
+  if (msa) {
+    // is it possible to atain desired msa with remaining ships?
+    const std::string savedDesc = descriptor;
+    descriptor = desc;
+    unsigned sa = surfaceArea();
+    descriptor = savedDesc;
+    for (auto it = shipBegin; it != shipEnd; ++it) {
+      sa += ((2 * it->getLength()) + 2);
+    }
+    if (sa < msa) {
+      return false;
+    }
   }
 
   std::vector<Direction> dirs { North, East, South, West };
