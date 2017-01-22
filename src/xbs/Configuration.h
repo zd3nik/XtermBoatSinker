@@ -6,8 +6,10 @@
 #define XBS_CONFIGURATION_H
 
 #include "Platform.h"
+#include "Input.h"
 #include "Rectangle.h"
 #include "Ship.h"
+#include "Version.h"
 #include "db/DBRecord.h"
 
 namespace xbs
@@ -47,6 +49,10 @@ public:
   Configuration& setMaxPlayers(const unsigned maxPlayers) noexcept;
   Configuration& setMinPlayers(const unsigned minPlayers) noexcept;
   Configuration& setName(const std::string& name);
+  Configuration& load(Input&,
+                      bool& gameStarted,
+                      unsigned& playersJoined,
+                      Version& serverVersion);
 
   bool isValidShipDescriptor(const std::string& descriptor) const;
   Ship getLongestShip() const noexcept;

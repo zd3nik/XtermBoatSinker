@@ -112,13 +112,17 @@ void TargetingComputer::playerJoined(const std::string& player) {
 
 //-----------------------------------------------------------------------------
 void TargetingComputer::updateBoard(const std::string& player,
-                                    const std::string& boardDescriptor)
+                                    const std::string& status,
+                                    const std::string& boardDescriptor,
+                                    const unsigned score,
+                                    const unsigned skips)
 {
   auto board = game.boardForPlayer(player, true);
   if (!board) {
     Throw() << "Unknonwn player name: '" << player << "'" << XX;
   }
   board->updateDescriptor(boardDescriptor);
+  board->setStatus(status).setScore(score).setSkips(skips);
   if ((player == getPlayerName()) &&
       !myBoard->addHitsAndMisses(boardDescriptor))
   {
@@ -142,26 +146,144 @@ void TargetingComputer::test() {
 //-----------------------------------------------------------------------------
 void TargetingComputer::play() {
   login();
-
-  bool ok = waitForGameStart();
-  while (ok && !game.isFinished()) {
-    std::string msg = readln(input);
-    std::string type = input.getStr();
-    if (type == "Q") {
-      break;
-    } else if (type == "K") {
-      // TODO skipPlayerTurn
-    } else if (type == "N") {
-      // TODO updatePlayerToMove
-    } else if (type == "M") {
-      // TODO messageFrom
-    } else if (type == "H") {
-      // TODO hitScored
-    } else if (type == "F") {
-      finishGame();
-      break;
+  if (waitForGameStart()) {
+    while (!game.isFinished()) {
+      readln(input);
+      const std::string type = input.getStr();
+      if (type == "Q") {
+        break;
+      } else if (type == "B") {
+        handleBoardMessage();
+      } else if (type == "K") {
+        handleSkipTurnMessage();
+      } else if (type == "N") {
+        handleNextTurnMessage();
+      } else if (type == "M") {
+        handleMessageMessage();
+      } else if (type == "H") {
+        handleHitMessage();
+      } else if (type == "F") {
+        handleGameFinishedMessage();
+        break;
+      } else {
+        Throw() << "Unexpected message during game: " << input.getLine() << XX;
+      }
     }
   }
+}
+
+//-----------------------------------------------------------------------------
+bool TargetingComputer::waitForGameStart() {
+  while (true) {
+    readln(input);
+    const std::string type = input.getStr();
+    if (type == "Q") {
+      return false;
+    } else if (type == "J") {
+      handleJoinMessage();
+    } else if (type == "B") {
+      handleBoardMessage();
+    } else if (type == "M") {
+      handleMessageMessage();
+    } else if (type == "S") {
+      handleGameStartedMessage();
+      break;
+    } else {
+      Throw() << "Unexpected message waiting for game start: "
+              << input.getLine() << XX;
+    }
+  }
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::handleBoardMessage() {
+  const std::string player = input.getStr(1);
+  const std::string status = input.getStr(2);
+  const std::string desc = input.getStr(3);
+  const unsigned score = input.getUInt(4);
+  const unsigned skips = input.getUInt(5);
+  if (player.empty() || desc.empty()) {
+    Throw() << "Invalid board message: " << input.getLine() << XX;
+  }
+  updateBoard(player, status, desc, score, skips);
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::handleGameFinishedMessage() {
+  // TODO finishGame()
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::handleGameStartedMessage() {
+  const unsigned count = (input.getFieldCount() - 1);
+  if (count != game.getBoardCount()) {
+    Throw() << "Invalid player count in game start message: "
+            << input.getLine() << XX;
+  }
+  std::vector<std::string> boardOrder;
+  for (unsigned i = 1; i < input.getFieldCount(); ++i) {
+    const std::string player = input.getStr(i);
+    if (player.empty()) {
+      Throw() << "Empty player name in game start message: "
+              << input.getLine() << XX;
+    } else if (!game.hasBoard(player)) {
+      Throw() << "Unknown player name (" << player
+              << ") in game start message: " << input.getLine() << XX;
+    } else {
+      boardOrder.push_back(player);
+    }
+  }
+  startGame(boardOrder);
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::handleHitMessage() {
+  // TODO hitScored();
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::handleJoinMessage() {
+  const std::string player = input.getStr(1);
+  if (player.empty()) {
+    Throw() << "Invalid player join message: " << input.getLine() << XX;
+  }
+  playerJoined(player);
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::handleMessageMessage() {
+  const std::string from = input.getStr(1);
+  const std::string message = input.getStr(2);
+  const std::string group = input.getStr(3);
+  if (message.size()) {
+    if (from.empty()) {
+      messageFrom("server", message, group);
+    } else {
+      messageFrom(from, message, group);
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::handleSkipTurnMessage() {
+  const std::string player = input.getStr(1);
+  const std::string reason = input.getStr(2);
+  if (!game.hasBoard(player)) {
+    Throw() << "Invalid player name in skip turn message: " << input.getLine()
+            << XX;
+  }
+  skipPlayerTurn(player, reason);
+}
+
+//-----------------------------------------------------------------------------
+void TargetingComputer::handleNextTurnMessage() {
+  const std::string player = input.getStr(1);
+  if (!game.hasBoard(player)) {
+    Throw() << "Invalid player name in next turn message: " << input.getLine()
+            << XX;
+  }
+  updatePlayerToMove(player);
 }
 
 //-----------------------------------------------------------------------------
@@ -169,14 +291,15 @@ void TargetingComputer::login() {
   bool gameStarted = false;
   unsigned playersJoined = 0;
   Version serverVersion;
+  Configuration config;
 
   readln(input);
-  game.load(input, gameStarted, playersJoined, serverVersion);
+  config.load(input, gameStarted, playersJoined, serverVersion);
   if (!isCompatibleWith(serverVersion)) {
     Throw() << "Incompatible server version: " << serverVersion << XX;
   }
 
-  newGame(gameConfig());
+  newGame(config);
 
   if (gameStarted) {
     sendln(MSG('J') << getPlayerName());
@@ -188,9 +311,11 @@ void TargetingComputer::login() {
   std::string str = input.getStr();
 
   if (str == "J") {
-    if (input.getStr(1) != getPlayerName()) {
+    str = input.getStr(1);
+    if (str != getPlayerName()) {
       Throw() << "Unexpected join response: " << msg << XX;
     }
+    playerJoined(str);
     if (gameStarted) {
       msg = readln(input);
       if (input.getStr() != "Y") {
@@ -215,61 +340,6 @@ void TargetingComputer::login() {
   } else {
     Throw() << str << XX;
   }
-}
-
-//-----------------------------------------------------------------------------
-bool TargetingComputer::waitForGameStart() {
-  while (true) {
-    std::string msg = readln(input);
-    std::string type = input.getStr();
-    if (type == "Q") {
-      return false;
-    } else if (type == "J") {
-      std::string player = input.getStr(1);
-      if (player.empty()) {
-        Throw() << "Invalid player join message: " << msg << XX;
-      }
-      playerJoined(player);
-    } else if (type == "B") {
-      std::string player = input.getStr(1);
-      std::string desc = input.getStr(2);
-      if (player.empty() || desc.empty()) {
-        Throw() << "Invalid board message: " << msg << XX;
-      }
-      updateBoard(player, desc);
-    } else if (type == "M") {
-      std::string from = input.getStr(1);
-      std::string message = input.getStr(2);
-      std::string group = input.getStr(3);
-      if (message.size()) {
-        if (from.empty()) {
-          messageFrom("server", message, group);
-        } else {
-          messageFrom(from, message, group);
-        }
-      }
-    } else if (type == "S") {
-      unsigned count = (input.getFieldCount() - 1);
-      if (count != game.getBoardCount()) {
-        Throw() << "Invalid player count in game start message: " << msg << XX;
-      }
-      std::vector<std::string> boardOrder;
-      for (unsigned i = 1; i < input.getFieldCount(); ++i) {
-        const std::string player = input.getStr(i);
-        if (player.empty()) {
-          Throw() << "Empty player name in game start message: " << msg << XX;
-        } else if (!game.hasBoard(player)) {
-          Throw() << "Unknown player name (" << player
-                  << ") in game start message: " << msg << XX;
-        } else {
-          boardOrder.push_back(player);
-        }
-      }
-      startGame(boardOrder);
-      break;
-    }
-  }
-  return true;
 }
 
 } // namespace xbs

@@ -8,9 +8,7 @@
 #include "Platform.h"
 #include "Board.h"
 #include "Configuration.h"
-#include "Input.h"
 #include "Timer.h"
-#include "Version.h"
 #include "db/Database.h"
 
 namespace xbs
@@ -48,10 +46,6 @@ public:
   Game& clear() noexcept;
   Game& setConfiguration(const Configuration&);
   Game& setTitle(const std::string&);
-  Game& load(Input&,
-             bool& gameStarted,
-             unsigned& playersJoined,
-             Version& serverVersion);
 
   BoardPtr boardAtIndex(const unsigned index);
   BoardPtr boardForHandle(const int handle);

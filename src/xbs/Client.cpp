@@ -466,9 +466,10 @@ bool Client::readGameInfo(bool& gameStarted, unsigned& playersJoined) {
     return false;
   }
 
+  Configuration config;
   Version serverVersion;
   try  {
-    game.load(input, gameStarted, playersJoined, serverVersion);
+    config.load(input, gameStarted, playersJoined, serverVersion);
   } catch (const std::exception& e) {
     Logger::printError() << e.what();
     return false;
@@ -479,6 +480,7 @@ bool Client::readGameInfo(bool& gameStarted, unsigned& playersJoined) {
     return false;
   }
 
+  game.clear().setConfiguration(config);
   return true;
 }
 

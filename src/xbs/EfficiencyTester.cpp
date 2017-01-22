@@ -102,7 +102,7 @@ void EfficiencyTester::test(TargetingComputer& bot) {
       }
 
       Logger::debug() << "best shot = " << coord;
-      bot.updateBoard(player, displayBoard.getDescriptor());
+      bot.updateBoard(player, "", displayBoard.getDescriptor(), 0, 0);
       shots++;
 
       if (watch) {

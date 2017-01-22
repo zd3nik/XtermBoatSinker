@@ -27,10 +27,8 @@ Configuration Configuration::getDefaultConfiguration() {
 Configuration& Configuration::addShip(const Ship& newShip) {
   if (newShip) {
     ships.push_back(newShip);
-    pointGoal = 0;
     maxSurfaceArea = 0;
     for (const Ship& ship : ships) {
-      pointGoal += ship.getLength();
       maxSurfaceArea += ((2 * ship.getLength()) + 2);
     }
   }
@@ -66,6 +64,77 @@ Configuration& Configuration::setMinPlayers(const unsigned minPlayers) noexcept 
 //-----------------------------------------------------------------------------
 Configuration& Configuration::setName(const std::string& name) {
   this->name = name;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Configuration& Configuration::load(Input& input,
+                                   bool& gameStarted,
+                                   unsigned& playersJoined,
+                                   Version& serverVersion)
+{
+  clear();
+
+  unsigned n = 0;
+  std::string msg     = input.getLine();
+  std::string str     = input.getStr(n++);
+  serverVersion       = input.getStr(n++);
+  name                = input.getStr(n++);
+  std::string started = input.getStr(n++);
+  minPlayers          = input.getUInt(n++);
+  maxPlayers          = input.getUInt(n++);
+  playersJoined       = input.getUInt(n++, ~0U);
+  pointGoal           = input.getUInt(n++);
+  unsigned width      = input.getUInt(n++);
+  unsigned height     = input.getUInt(n++);
+  unsigned shipCount  = input.getUInt(n++);
+
+  if (str != "G") {
+    Throw() << "Expected game info message, got: " << msg << XX;
+  } else if (!serverVersion) {
+    Throw() << "Invalid version in game info message: " << msg << XX;
+  } else if (name.empty()) {
+    Throw() << "Empty title in game info message: " << msg << XX;
+  } else if ((started != "Y") && (started != "N")) {
+    Throw() << "Invalid started flag in game info message: " << msg << XX;
+  } else if (minPlayers < 2) {
+    Throw() << "Invalid min player count in game info message: " << msg << XX;
+  } else if (maxPlayers < minPlayers) {
+    Throw() << "Invalid max player count in game info message: " << msg << XX;
+  } else if (playersJoined > maxPlayers) {
+    Throw() << "Invalid joined count in game info message: " << msg << XX;
+  } else if (pointGoal < 1) {
+    Throw() << "Invalid point goal in game info message: " << msg << XX;
+  } else if (width < 1) {
+    Throw() << "Invalid board width in game info message: " << msg << XX;
+  } else if (height < 1) {
+    Throw() << "Invalid board height in game info message: " << msg << XX;
+  } else if (shipCount < 1) {
+    Throw() << "Invalid ship count in game info message: " << msg << XX;
+  }
+
+  setBoardSize(width, height);
+
+  Ship ship;
+  unsigned maxPointGoal = 0;
+  for (unsigned i = 0; i < shipCount; ++i) {
+    if (!ship.fromString(str = input.getStr(n++))) {
+      Throw() << "Invalid ship '" << str << "' in game info message: " << msg
+              << XX;
+    }
+    maxPointGoal += ship.getLength();
+    addShip(ship);
+  }
+
+  if (getShipCount() != shipCount) {
+    Throw() << "Ship count mismatch in game info message: " << msg << XX;
+  } else if (pointGoal > maxPointGoal) {
+    Throw() << "Impossible point goal in game info message: " << msg << XX;
+  } else if (!isValid()) {
+    Throw() << "Invalid game info message: " << msg << XX;
+  }
+
+  gameStarted = (started == "Y");
   return (*this);
 }
 

@@ -42,10 +42,14 @@ public:
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void updateBoard(const std::string& player,
-                           const std::string& boardDescriptor);
+                           const std::string& status,
+                           const std::string& boardDescriptor,
+                           const unsigned score,
+                           const unsigned skips);
 
   virtual void finishGame() { }
-  virtual void skipPlayerTurn(const std::string& /*player*/) { }
+  virtual void skipPlayerTurn(const std::string& /*player*/,
+                              const std::string& /*reason*/) { }
   virtual void updatePlayerToMove(const std::string& /*player*/) { }
   virtual void messageFrom(const std::string& /*from*/,
                            const std::string& /*msg*/,
@@ -91,8 +95,16 @@ private:
     std::cout.flush();
   }
 
-  void login();
   bool waitForGameStart();
+  void handleBoardMessage();
+  void handleGameFinishedMessage();
+  void handleGameStartedMessage();
+  void handleHitMessage();
+  void handleJoinMessage();
+  void handleMessageMessage();
+  void handleNextTurnMessage();
+  void handleSkipTurnMessage();
+  void login();
 };
 
 } // namespace xbs
