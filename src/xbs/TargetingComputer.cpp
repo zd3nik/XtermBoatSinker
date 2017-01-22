@@ -19,22 +19,21 @@ static Input input;
 
 //-----------------------------------------------------------------------------
 TargetingComputer::TargetingComputer(const std::string& botName)
-  : botName(botName)
+  : botName(trimStr(botName))
 {
+  if (this->botName.empty()) {
+    Throw() << "Empty bot name" << XX;
+  }
+
   const CommandArgs& args = CommandArgs::getInstance();
   staticBoard = args.getValueOf({"-s", "--static-board"});
   debugMode = (args.indexOf("--debug") >= 0);
 
-  const std::string msaRatio = args.getValueOf("--msa");
-  if (msaRatio.size()) {
-    if (!isFloat(msaRatio)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
-                             << XX;
-    }
-    minSurfaceArea = toDouble(msaRatio.c_str());
-    if ((minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
-                             << XX;
+  const std::string msa = args.getValueOf("--msa");
+  if (msa.size()) {
+    minSurfaceArea = toDouble(msa.c_str());
+    if (!isFloat(msa) || (minSurfaceArea < 0) || (minSurfaceArea > 100)) {
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msa << XX;
     }
   }
 
@@ -42,7 +41,7 @@ TargetingComputer::TargetingComputer(const std::string& botName)
   if (name.size()) {
     setPlayerName(name);
   } else {
-    setPlayerName(botName);
+    setPlayerName(this->botName);
   }
 }
 
@@ -121,13 +120,15 @@ void TargetingComputer::updateBoard(const std::string& player,
   if (!board) {
     Throw() << "Unknonwn player name: '" << player << "'" << XX;
   }
-  board->updateDescriptor(boardDescriptor);
-  board->setStatus(status).setScore(score).setSkips(skips);
+  if (!board->updateDescriptor(boardDescriptor)) {
+    Throw() << "Failed to update " << player << " board descriptor" << XX;
+  }
   if ((player == getPlayerName()) &&
       !myBoard->addHitsAndMisses(boardDescriptor))
   {
     Throw() << "Failed to update " << player << " hits/misses" << XX;
   }
+  board->setStatus(status).setScore(score).setSkips(skips);
 }
 
 //-----------------------------------------------------------------------------
@@ -164,7 +165,6 @@ void TargetingComputer::play() {
         handleHitMessage();
       } else if (type == "F") {
         handleGameFinishedMessage();
-        break;
       } else {
         Throw() << "Unexpected message during game: " << input.getLine() << XX;
       }
@@ -174,7 +174,7 @@ void TargetingComputer::play() {
 
 //-----------------------------------------------------------------------------
 bool TargetingComputer::waitForGameStart() {
-  while (true) {
+  while (!game.isStarted()) {
     readln(input);
     const std::string type = input.getStr();
     if (type == "Q") {
@@ -187,10 +187,8 @@ bool TargetingComputer::waitForGameStart() {
       handleMessageMessage();
     } else if (type == "S") {
       handleGameStartedMessage();
-      break;
     } else {
-      Throw() << "Unexpected message waiting for game start: "
-              << input.getLine() << XX;
+      Throw() << "Unexpected message before game: " << input.getLine() << XX;
     }
   }
   return true;

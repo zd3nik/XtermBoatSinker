@@ -19,23 +19,17 @@ static const std::string TARGET_BOARD_NAME("test");
 //-----------------------------------------------------------------------------
 EfficiencyTester::EfficiencyTester() {
   const CommandArgs& args = CommandArgs::getInstance();
-
   const unsigned height = toUInt(args.getValueOf({"-y", "--height"}));
   const unsigned width = toUInt(args.getValueOf({"-x", "--width"}));
-  watch = (args.indexOf({"-w", "--watch"}) >= 0);
   positions = toUInt(args.getValueOf({"-p", "--positions"}), 100000);
   staticBoard = args.getValueOf({"-s", "--static-board"});
+  watch = (args.indexOf({"-w", "--watch"}) >= 0);
 
-  const std::string msaRatio = args.getValueOf("--msa");
-  if (msaRatio.size()) {
-    if (!isFloat(msaRatio)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
-                             << XX;
-    }
-    minSurfaceArea = toDouble(msaRatio.c_str());
-    if ((minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
-                             << XX;
+  const std::string msa = args.getValueOf("--msa");
+  if (msa.size()) {
+    minSurfaceArea = toDouble(msa.c_str());
+    if (!isFloat(msa) || (minSurfaceArea < 0) || (minSurfaceArea > 100)) {
+      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msa << XX;
     }
   }
 
@@ -58,7 +52,7 @@ void EfficiencyTester::test(TargetingComputer& bot) {
     Throw() << "Please use a different name for the bot your testing";
   }
 
-  bot.setStaticBoard("");
+  bot.setStaticBoard(staticBoard);
   totalShots = 0;
   maxShots = 0;
   minShots = ~0U;

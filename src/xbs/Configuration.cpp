@@ -13,9 +13,10 @@ namespace xbs
 Configuration Configuration::getDefaultConfiguration() {
   return Configuration()
       .setName("Default")
-      .setBoardSize(10, 10)
       .setMinPlayers(2)
       .setMaxPlayers(9)
+      .setPointGoal(17)
+      .setBoardSize(10, 10)
       .addShip(Ship('A', 5))
       .addShip(Ship('B', 4))
       .addShip(Ship('C', 3))
@@ -64,6 +65,12 @@ Configuration& Configuration::setMinPlayers(const unsigned minPlayers) noexcept 
 //-----------------------------------------------------------------------------
 Configuration& Configuration::setName(const std::string& name) {
   this->name = name;
+  return (*this);
+}
+
+//-----------------------------------------------------------------------------
+Configuration& Configuration::setPointGoal(const unsigned pointGoal) noexcept {
+  this->pointGoal = pointGoal;
   return (*this);
 }
 

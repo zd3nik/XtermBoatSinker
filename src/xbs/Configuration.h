@@ -49,6 +49,7 @@ public:
   Configuration& setMaxPlayers(const unsigned maxPlayers) noexcept;
   Configuration& setMinPlayers(const unsigned minPlayers) noexcept;
   Configuration& setName(const std::string& name);
+  Configuration& setPointGoal(const unsigned pointGoal) noexcept;
   Configuration& load(Input&,
                       bool& gameStarted,
                       unsigned& playersJoined,
