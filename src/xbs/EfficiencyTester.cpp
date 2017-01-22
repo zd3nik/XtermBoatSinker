@@ -224,7 +224,7 @@ void EfficiencyTester::newTargetBoard(
   bot.newGame(config);
   bot.playerJoined(bot.getPlayerName());
   bot.playerJoined(TARGET_BOARD_NAME);
-  bot.gameStarted({ bot.getPlayerName(), TARGET_BOARD_NAME});
+  bot.startGame({ bot.getPlayerName(), TARGET_BOARD_NAME});
 
   // make sure the bot doesn't waste time regenerating a board each iteration
   if (bot.getStaticBoard().empty()) {

@@ -322,7 +322,7 @@ bool Client::joinGame(const bool gameStarted, bool& retry) {
     game.addBoard(std::make_shared<Board>(userName, config));
     if (gameStarted) {
       if (!input.readln(socket.getHandle()) || (input.getStr() != "Y")) {
-        Logger::printError() << "Expect your board from server, got: '"
+        Logger::printError() << "Expected your board from server, got: '"
                              << input.getLine() << "'";
         return false;
       }
@@ -466,90 +466,19 @@ bool Client::readGameInfo(bool& gameStarted, unsigned& playersJoined) {
     return false;
   }
 
-  unsigned n = 0;
-  std::string str     = input.getStr(n++);
-  std::string version = input.getStr(n++);
-  std::string title   = input.getStr(n++);
-  std::string started = input.getStr(n++);
-  unsigned minPlayers = input.getUInt(n++);
-  unsigned maxPlayers = input.getUInt(n++);
-  playersJoined       = input.getUInt(n++, ~0U);
-  unsigned pointGoal  = input.getUInt(n++);
-  unsigned width      = input.getUInt(n++);
-  unsigned height     = input.getUInt(n++);
-  unsigned shipCount  = input.getUInt(n++);
+  Version serverVersion;
+  try  {
+    game.load(input, gameStarted, playersJoined, serverVersion);
+  } catch (const std::exception& e) {
+    Logger::printError() << e.what();
+    return false;
+  }
 
-  Version serverVersion(version);
-
-  if (str != "G") {
-    Logger::printError() << "Invalid message type from server: " << str;
-    return false;
-  } else if (version.empty()) {
-    Logger::printError() << "Empty version in game info message from server";
-    return false;
-  } else if (!serverVersion) {
-    Logger::printError() << "Invalid version in game info message from server";
-    return false;
-  } else if (!isCompatibleWith(serverVersion)) {
+  if (!isCompatibleWith(serverVersion)) {
     Logger::printError() << "Incompatible server version: " << serverVersion;
     return false;
-  } else if (title.empty()) {
-    Logger::printError() << "Empty title in game info message from server";
-    return false;
-  } else if ((started != "Y") && (started != "N")) {
-    Logger::printError() << "Invalid started flag: " << started;
-    return false;
-  } else if (minPlayers < 2) {
-    Logger::printError() << "Invalid min player count: " << minPlayers;
-    return false;
-  } else if (maxPlayers < minPlayers) {
-    Logger::printError() << "Invalid max player count: " << maxPlayers;
-    return false;
-  } else if (playersJoined > maxPlayers) {
-    Logger::printError() << "Invalid joined count: " << playersJoined;
-    return false;
-  } else if (pointGoal < 1) {
-    Logger::printError() << "Invalid point goal: " << pointGoal;
-    return false;
-  } else if (width < 1) {
-    Logger::printError() << "Invalid board width: " << width;
-    return false;
-  } else if (height < 1) {
-    Logger::printError() << "Invalid board height: " << height;
-    return false;
-  } else if (shipCount < 1) {
-    Logger::printError() << "Invalid ship count: " << shipCount;
-    return false;
   }
 
-  Configuration config;
-  config.setName(title)
-      .setMinPlayers(minPlayers)
-      .setMaxPlayers(maxPlayers)
-      .setBoardSize(width, height);
-
-  Ship ship;
-  for (unsigned i = 0; i < shipCount; ++i) {
-    if (!ship.fromString(str = input.getStr(n++))) {
-      Logger::printError() << "Invalid ship[" << i << "] spec: '" << str << "'";
-      return false;
-    }
-    config.addShip(ship);
-  }
-
-  if (config.getShipCount() != shipCount) {
-    Logger::printError() << "Ship count mismatch in game config";
-    return false;
-  } else if (config.getPointGoal() != pointGoal) {
-    Logger::printError() << "Point goal mismatch in game config";
-    return false;
-  } else if (!config) {
-    Logger::printError() << "Invalid game config";
-    return false;
-  }
-
-  game.clear().setTitle(title).setConfiguration(config);
-  gameStarted = (started == "Y");
   return true;
 }
 
@@ -1392,13 +1321,10 @@ void Client::updateBoard() {
 //-----------------------------------------------------------------------------
 void Client::updateYourBoard() {
   const std::string desc = input.getStr(1);
-  if (desc.empty()) {
-    Throw() << "Invalid YourBoard message from server: " << input.getLine()
-            << XX;
-  } else if (!yourBoard->updateDescriptor(desc) ||
-             !yourBoard->matchesConfig(game.getConfiguration()))
+  if (!yourBoard->updateDescriptor(desc) ||
+      !yourBoard->matchesConfig(game.getConfiguration()))
   {
-    Throw() << "Board descriptor is invalid: '" << desc << "'" << XX;
+    Throw() << "Invalid YourBoard descriptor: '" << desc << "'" << XX;
   }
 }
 

@@ -14,10 +14,9 @@ namespace xbs
 //-----------------------------------------------------------------------------
 std::string RandomRufus::getBestShot(Coordinate& shotCoord) {
   std::vector<Board*> boards;
-  boards.reserve(boardMap.size());
-  for (auto& it : boardMap) {
-    if (it.second && (it.second->getName() != getPlayerName())) {
-      boards.push_back(it.second.get());
+  for (auto& board : game.getBoards()) {
+    if (board && (board->getName() != getPlayerName())) {
+      boards.push_back(board.get());
     }
   }
 
@@ -58,7 +57,7 @@ ScoredCoordinate RandomRufus::bestShotOn(const Board& board) {
     return ScoredCoordinate();
   }
 
-  double hitGoal = config.getPointGoal();
+  double hitGoal = gameConfig().getPointGoal();
   double hitCount = board.hitCount();
   double boardWeight = std::log(hitGoal - hitCount + 1);
   double optionsWeight = (desc.size() - candidates.size());

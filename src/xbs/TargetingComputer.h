@@ -9,6 +9,9 @@
 #include "Board.h"
 #include "Configuration.h"
 #include "Coordinate.h"
+#include "Game.h"
+#include "Input.h"
+#include "Throw.h"
 #include "Version.h"
 
 namespace xbs
@@ -22,28 +25,31 @@ protected:
   std::string botName;
   std::string playerName;
   std::string staticBoard;
-  Configuration config;
-  std::map<std::string, BoardPtr> boardMap;
   std::unique_ptr<Board> myBoard;
+  Game game;
 
 public:
   TargetingComputer(const std::string& botName);
   virtual ~TargetingComputer() { }
 
   virtual Version getVersion() const = 0;
+  virtual Version minServerVersion() const { return Version("1.1"); }
+  virtual Version maxServerVersion() const { return Version(~0U, ~0U, ~0U); }
   virtual std::string getBestShot(Coordinate&) = 0;
 
   virtual void run();
   virtual void newGame(const Configuration&);
   virtual void playerJoined(const std::string& player);
+  virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void updateBoard(const std::string& player,
                            const std::string& boardDescriptor);
 
-  virtual void gameFinished() { }
-  virtual void gameStarted(const std::vector<std::string>& /*playerOrder*/) { }
+  virtual void finishGame() { }
+  virtual void skipPlayerTurn(const std::string& /*player*/) { }
   virtual void updatePlayerToMove(const std::string& /*player*/) { }
   virtual void messageFrom(const std::string& /*from*/,
-                           const std::string& /*msg*/) { }
+                           const std::string& /*msg*/,
+                           const std::string& /*group*/) { }
   virtual void hitScored(const std::string& /*player*/,
                          const std::string& /*target*/,
                          const Coordinate& /*hitCoordinate*/) { }
@@ -52,8 +58,13 @@ public:
   std::string getBotName() const { return botName; }
   std::string getPlayerName() const { return playerName; }
   std::string getStaticBoard() const { return staticBoard; }
+
   std::string getBoardDescriptor() const {
     return myBoard ? myBoard->getDescriptor() : "";
+  }
+
+  const Configuration& gameConfig() const noexcept {
+    return game.getConfiguration();
   }
 
 protected:
@@ -61,6 +72,27 @@ protected:
   virtual void help();
   virtual void test();
   virtual void play();
+
+private:
+  bool isCompatibleWith(const Version& ver) const {
+    return ((ver >= minServerVersion()) && (ver <= maxServerVersion()));
+  }
+
+  std::string readln(Input& input) {
+    if (!input.readln(STDIN_FILENO)) {
+      Throw() << "No data from stdin" << XX;
+    }
+    return input.getLine();
+  }
+
+  template<typename T>
+  void sendln(const T& x) const {
+    std::cout << x << '\n';
+    std::cout.flush();
+  }
+
+  void login();
+  bool waitForGameStart();
 };
 
 } // namespace xbs
