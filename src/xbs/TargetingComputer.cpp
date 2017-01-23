@@ -7,6 +7,7 @@
 #include "EfficiencyTester.h"
 #include "Logger.h"
 #include "Screen.h"
+#include "Server.h"
 #include "Timer.h"
 #include "db/DBRecord.h"
 #include "db/FileSysDatabase.h"
@@ -28,6 +29,14 @@ TargetingComputer::TargetingComputer(const std::string& botName)
   const CommandArgs& args = CommandArgs::getInstance();
   staticBoard = args.getValueOf({"-s", "--static-board"});
   debugMode = (args.indexOf("--debug") >= 0);
+  host = args.getValueOf({"-h", "--host"});
+
+  const std::string portStr = args.getValueOf({"-p", "--port"});
+  if (portStr.empty()) {
+    port = Server::DEFAULT_PORT;
+  } else {
+    port = toInt(portStr, -1);
+  }
 
   const std::string msa = args.getValueOf("--msa");
   if (msa.size()) {
@@ -54,11 +63,16 @@ void TargetingComputer::help() {
       << "usage: " << args.getProgramName() << " [OPTIONS]" << EL
       << EL
       << "GENERAL OPTIONS:" << EL
-      << "  -h, --help                Show help and exit" << EL
+      << "  --help                    Show help and exit" << EL
       << "  -n, --name <name>         Use given name instead of " << getBotName() << EL
       << "  -l, --log-level <level>   Set log level: DEBUG, INFO, WARN, ERROR " << EL
       << "  -f, --log-file <file>     Write log messages to given file" << EL
       << "  --debug                   Enable debug mode" << EL
+      << EL
+      << "CONNECTION OPTIONS:" << EL
+      << "  Bot runs in shell mode if game server host not specified" << EL
+      << "  -h, --host <address>      Connect to game server at given address" << EL
+      << "  -p, --port <value>        Connect to game server on given port" << EL
       << EL
       << "BOARD OPTIONS:" << EL
       << "  -s, --static-board <brd>  Use given board instead of random generation" << EL
@@ -66,8 +80,8 @@ void TargetingComputer::help() {
       << "                              MSA is used in random board generation" << EL
       << EL
       << "TEST OPTIONS:" << EL
-      << "  -t, --test                Run tests and exit" << EL
-      << "  -p, --positions <count>   Set position count for --test mode" << EL
+      << "  --test                    Run tests and exit" << EL
+      << "  -c, --count <value>       Set position count for --test mode" << EL
       << "  -x, --width <value>       Set board width for --test mode" << EL
       << "  -y, --height <value>      Set board height for --test mode" << EL
       << "  -d, --test-db <dir>       Set database dir for --test mode" << EL
@@ -78,9 +92,9 @@ void TargetingComputer::help() {
 //-----------------------------------------------------------------------------
 void TargetingComputer::run() {
   const xbs::CommandArgs& args = xbs::CommandArgs::getInstance();
-  if (args.indexOf({"-h", "--help"}) >= 0) {
+  if (args.indexOf("--help") >= 0) {
     help();
-  } else if (args.indexOf({"-t", "--test"}) >= 0) {
+  } else if (args.indexOf("--test") >= 0) {
     test();
   } else {
     play();
@@ -114,21 +128,27 @@ void TargetingComputer::updateBoard(const std::string& player,
                                     const std::string& status,
                                     const std::string& boardDescriptor,
                                     const unsigned score,
-                                    const unsigned skips)
+                                    const unsigned skips,
+                                    const unsigned turns)
 {
   auto board = game.boardForPlayer(player, true);
   if (!board) {
     Throw() << "Unknonwn player name: '" << player << "'" << XX;
   }
-  if (!board->updateDescriptor(boardDescriptor)) {
-    Throw() << "Failed to update " << player << " board descriptor" << XX;
-  }
-  if ((player == getPlayerName()) &&
-      !myBoard->addHitsAndMisses(boardDescriptor))
-  {
-    Throw() << "Failed to update " << player << " hits/misses" << XX;
+  if (boardDescriptor.size()) {
+    if (!board->updateDescriptor(boardDescriptor)) {
+      Throw() << "Failed to update " << player << " board descriptor" << XX;
+    }
+    if ((player == getPlayerName()) &&
+        !myBoard->addHitsAndMisses(boardDescriptor))
+    {
+      Throw() << "Failed to update " << player << " hits/misses" << XX;
+    }
   }
   board->setStatus(status).setScore(score).setSkips(skips);
+  if (turns != ~0U) {
+    board->setTurns(turns);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -137,6 +157,15 @@ void TargetingComputer::startGame(const std::vector<std::string>& playerOrder) {
   if (!game.start()) {
     Throw() << "Game cannot start" << XX;
   }
+  // TODO log game start
+}
+
+void TargetingComputer::finishGame(const std::string& /*state*/,
+                                   const unsigned /*turnCount*/,
+                                   const unsigned /*playerCount*/)
+{
+  // TODO log results
+  game.finish();
 }
 
 //-----------------------------------------------------------------------------
@@ -191,7 +220,7 @@ bool TargetingComputer::waitForGameStart() {
       Throw() << "Unexpected message before game: " << input.getLine() << XX;
     }
   }
-  return true;
+  return game.isStarted();
 }
 
 //-----------------------------------------------------------------------------
@@ -209,7 +238,26 @@ void TargetingComputer::handleBoardMessage() {
 
 //-----------------------------------------------------------------------------
 void TargetingComputer::handleGameFinishedMessage() {
-  // TODO finishGame()
+  const std::string state = input.getStr(1);
+  const unsigned turnCount = input.getUInt(2);
+  const unsigned playerCount = input.getUInt(3);
+  if (state.empty()) {
+    Throw() << "Invalid game finished message: " << input.getLine() << XX;
+  }
+  for (unsigned i = 0; i < playerCount; ++i) {
+    readln(input);
+    if (input.getStr() != "R") {
+      Throw() << "Expected player result message, got: " << input.getLine()
+              << XX;
+    }
+    const std::string player = input.getStr(1);
+    const unsigned score = input.getUInt(2);
+    const unsigned skips = input.getUInt(3);
+    const unsigned turns = input.getUInt(4);
+    const std::string status = input.getStr(5);
+    updateBoard(player, status, "", score, skips, turns);
+  }
+  finishGame(state, turnCount, playerCount);
 }
 
 //-----------------------------------------------------------------------------
@@ -237,7 +285,13 @@ void TargetingComputer::handleGameStartedMessage() {
 
 //-----------------------------------------------------------------------------
 void TargetingComputer::handleHitMessage() {
-  // TODO hitScored();
+  const std::string player = input.getStr(1);
+  const std::string target = input.getStr(2);
+  Coordinate coord;
+  if (!coord.fromString(input.getStr(3))) {
+    Throw() << "Invalid coordinates in hit message: " << input.getLine() << XX;
+  }
+  hitScored(player, target, coord);
 }
 
 //-----------------------------------------------------------------------------
@@ -282,6 +336,15 @@ void TargetingComputer::handleNextTurnMessage() {
             << XX;
   }
   updatePlayerToMove(player);
+  if (player == getPlayerName()) {
+    Coordinate coord;
+    const std::string target = getBestShot(coord);
+    if (target.empty()) {
+      sendln(MSG('K'));
+    } else {
+      sendln(MSG('S') << target << coord.getX() << coord.getY());
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -290,6 +353,10 @@ void TargetingComputer::login() {
   unsigned playersJoined = 0;
   Version serverVersion;
   Configuration config;
+
+  if (host.size()) {
+    sock.connect(host, port);
+  }
 
   readln(input);
   config.load(input, gameStarted, playersJoined, serverVersion);

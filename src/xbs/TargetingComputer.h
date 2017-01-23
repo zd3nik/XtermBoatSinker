@@ -12,6 +12,7 @@
 #include "Game.h"
 #include "Input.h"
 #include "Throw.h"
+#include "TcpSocket.h"
 #include "Version.h"
 
 namespace xbs
@@ -22,10 +23,13 @@ class TargetingComputer {
 protected:
   double minSurfaceArea = 0;
   bool debugMode = false;
+  int port = 0;
+  std::string host;
   std::string botName;
   std::string playerName;
   std::string staticBoard;
   std::unique_ptr<Board> myBoard;
+  TcpSocket sock;
   Game game;
 
 public:
@@ -41,13 +45,16 @@ public:
   virtual void newGame(const Configuration&);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
+  virtual void finishGame(const std::string& state,
+                          const unsigned turnCount,
+                          const unsigned playerCount);
   virtual void updateBoard(const std::string& player,
                            const std::string& status,
                            const std::string& boardDescriptor,
                            const unsigned score,
-                           const unsigned skips);
+                           const unsigned skips,
+                           const unsigned turns = ~0U);
 
-  virtual void finishGame() { }
   virtual void skipPlayerTurn(const std::string& /*player*/,
                               const std::string& /*reason*/) { }
   virtual void updatePlayerToMove(const std::string& /*player*/) { }
@@ -83,16 +90,20 @@ private:
   }
 
   std::string readln(Input& input) {
-    if (!input.readln(STDIN_FILENO)) {
-      Throw() << "No data from stdin" << XX;
+    if (!input.readln(host.empty() ? STDIN_FILENO : sock.getHandle())) {
+      Throw() << "No input data" << XX;
     }
     return input.getLine();
   }
 
   template<typename T>
   void sendln(const T& x) const {
-    std::cout << x << '\n';
-    std::cout.flush();
+    if (host.empty()) {
+      std::cout << x << '\n';
+      std::cout.flush();
+    } else {
+      sock.send(x);
+    }
   }
 
   bool waitForGameStart();
