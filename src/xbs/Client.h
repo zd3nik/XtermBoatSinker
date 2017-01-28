@@ -11,6 +11,7 @@
 #include "Game.h"
 #include "Input.h"
 #include "Message.h"
+#include "Process.h"
 #include "TcpSocket.h"
 #include "Version.h"
 #include "db/FileSysDBRecord.h"
@@ -22,19 +23,21 @@ namespace xbs
 class Client
 {
 private:
-  double minSurfaceArea = 0;
   unsigned msgEnd = ~0U;
   int port = -1;
+  bool test = false;
   TcpSocket socket;
   Input input;
   Game game;
   std::string host;
   std::string userName;
   std::string staticBoard;
+  std::string botCommand;
   std::vector<Message> messages;
   std::vector<std::string> msgBuffer;
   std::unique_ptr<FileSysDBRecord> taunts;
   std::unique_ptr<Board> yourBoard;
+  std::unique_ptr<Process> bot;
 
 public:
   static Version getVersion();
@@ -50,8 +53,10 @@ public:
 
   void showHelp();
   bool init();
+  bool testMode() const noexcept { return test; }
   bool join();
   bool run();
+  bool runTest();
 
 private:
   Board& myBoard();

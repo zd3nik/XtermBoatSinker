@@ -9,6 +9,7 @@
 #include "Logger.h"
 #include "Screen.h"
 #include "Server.h"
+#include "ShellProcess.h"
 #include "StringUtils.h"
 #include "Throw.h"
 #include <sys/types.h>
@@ -34,26 +35,35 @@ bool Client::isCompatibleWith(const Version& ver) noexcept {
 
 //-----------------------------------------------------------------------------
 void Client::showHelp() {
+  const std::string progname = CommandArgs::getInstance().getProgramName();
   Screen::print()
       << EL
-      << "Options:" << EL
+      << "usage: " << progname << " [OPTIONS]" << EL
       << EL
-      << "  --help                 Show help and exit" << EL
-      << "  --host <addr>          Connect to game server at given address" << EL
-      << "   -h <addr>" << EL
-      << "  --port <port>          Connect to game server at given port" << EL
-      << "   -p <port>" << EL
-      << "  --user <name>          Join using given user/player name" << EL
-      << "   -u <name>" << EL
-      << "  --taunt-file <file>    Load taunts from given file" << EL
-      << "   -t <file>" << EL
-      << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
-      << "   -l <level>" << EL
-      << "  --log-file <file>      Log messages to given file" << EL
-      << "   -f <file>" << EL
-      << "  --static-board <brd>   Use this board setup" << EL
-      << "   -s <brd>" << EL
-      << "  --msa <ratio>          generate boards with this min-surface-area" << EL
+      << "GENERAL OPTIONS:" << EL
+      << "  --help                    Show help and exit" << EL
+      << "  -l, --log-level <level>   Set log level: DEBUG, INFO, WARN, ERROR " << EL
+      << "  -f, --log-file <file>     Write log messages to given file" << EL
+      << EL
+      << "CONNECTION OPTIONS:" << EL
+      << "  -h, --host <address>      Connect to game server at given address" << EL
+      << "  -p, --port <value>        Connect to game server on given port" << EL
+      << EL
+      << "GAME SETUP OPTIONS:" << EL
+      << "  -u, --user <name>         Join using given user/player name" << EL
+      << "  -t, --taunt-file <file>   Load taunts from given file" << EL
+      << "  -s, --static-board <brd>  Use this board setup" << EL
+      << EL
+      << "BOT OPTIONS:" << EL
+      << "  --bot <shell_cmd>         Run the given shell-bot" << EL
+      << EL
+      << "BOT TESTING OPTIONS:" << EL
+      << "  --test                    Test bot and exit (requires --bot)" << EL
+      << "  -c, --count <value>       Set position count for --test mode" << EL
+      << "  -x, --width <value>       Set board width for --test mode" << EL
+      << "  -y, --height <value>      Set board height for --test mode" << EL
+      << "  -d, --test-db <dir>       Set database dir for --test mode" << EL
+      << "  -w, --watch               Watch every shot during --test mode" << EL
       << EL << Flush;
 }
 
@@ -92,20 +102,22 @@ bool Client::init() {
     taunts.reset(new FileSysDBRecord("taunts", tauntFile));
   }
 
-  const std::string msaRatio = args.getValueOf("--msa");
-  if (msaRatio.size()) {
-    if (!isFloat(msaRatio)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
-                             << XX;
-    }
-    minSurfaceArea = toDouble(msaRatio.c_str());
-    if ((minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msaRatio
-                             << XX;
-    }
+  staticBoard = args.getValueOf({"-s", "--static-board"});
+  botCommand = args.getValueOf("--bot");
+  test = (args.indexOf("--test") >= 0);
+
+  if (test && isEmpty(botCommand)) {
+    showHelp();
+    Logger::printError() << "--test option requires --bot option";
+    return false;
   }
 
-  staticBoard = args.getValueOf({"-s", "--static-board"});
+  if (!isEmpty(botCommand)) {
+    bot.reset(new ShellProcess("bot", botCommand));
+    bot->validate();
+    bot->run();
+  }
+
   return true;
 }
 
@@ -170,6 +182,12 @@ bool Client::run() {
   }
 
   return ok;
+}
+
+//-----------------------------------------------------------------------------
+bool Client::runTest() {
+  Throw() << "Client::runTest() not implemented" << XX; // TODO
+  return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -505,6 +523,7 @@ bool Client::setupBoard() {
 
   // try to fit up to 9 boards in the terminal screen
   std::vector<BoardPtr> boards;
+  double minSurfaceArea = 0; // TODO add on-screen option to set MSA
   for (unsigned i = 0; i < 9; ++i) {
     const std::string name = ("Board #" + toStr(i + 1));
     auto board = std::make_shared<Board>(name, config);

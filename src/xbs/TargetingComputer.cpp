@@ -80,7 +80,7 @@ void TargetingComputer::help() {
       << "                              MSA is used in random board generation" << EL
       << EL
       << "TEST OPTIONS:" << EL
-      << "  --test                    Run tests and exit" << EL
+      << "  --test                    Test bot and exit" << EL
       << "  -c, --count <value>       Set position count for --test mode" << EL
       << "  -x, --width <value>       Set board width for --test mode" << EL
       << "  -y, --height <value>      Set board height for --test mode" << EL

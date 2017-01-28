@@ -38,35 +38,35 @@ Version Server::getVersion() {
 
 //-----------------------------------------------------------------------------
 void Server::showHelp() {
-  Screen::get()
+  const std::string progname = CommandArgs::getInstance().getProgramName();
+  Screen::print()
       << EL
-      << "Options:" << EL
+      << "usage: " << progname << " [OPTIONS]" << EL
       << EL
-      << "  --help                 Show help and exit" << EL
-      << "  --min <players>        Set minimum number of players" << EL
-      << "  --max <players>        Set maximum number of players" << EL
-      << "  --width <count>        Set board width" << EL
-      << "  --height <count>       Set board height" << EL
-      << "  --quiet                No screen updates during game" << EL
-      << "   -q"<< EL
-      << "  --auto-start           Auto start game if max players joined" << EL
-      << "   -a" << EL
-      << "  --repeat               Repeat game when done" << EL
-      << "   -r" << EL
-      << "  --bind-address <addr>  Bind server to given IP address" << EL
-      << "   -b <addr>" << EL
-      << "  --port <port>          Listen for connections on given port" << EL
-      << "   -p <port>" << EL
-      << "  --config <file>        Use given board configuration file" << EL
-      << "   -c <file>" << EL
-      << "  --title <title>        Set game title to given value" << EL
-      << "   -t <title>" << EL
-      << "  --db-dir <dir>         Save game stats to given directory" << EL
-      << "   -d <dir>" << EL
-      << "  --log-level <level>    Set log level: DEBUG, INFO, WARN, ERROR" << EL
-      << "   -l <level>" << EL
-      << "  --log-file <file>      Log messages to given file" << EL
-      << "   -f <file>" << EL
+      << "GENERAL OPTIONS:" << EL
+      << "  --help                    Show help and exit" << EL
+      << "  -l, --log-level <level>   Set log level: DEBUG, INFO, WARN, ERROR " << EL
+      << "  -f, --log-file <file>     Write log messages to given file" << EL
+      << "  -q, --quiet               No screen updates during game" << EL
+      << EL
+      << "CONNECTION OPTIONS:" << EL
+      << "  -b, --bind-address <addr> Bind server to given IP address" << EL
+      << "  -p, --port <port>         Listen for connections on given port" << EL
+      << EL
+      << "BOARD OPTIONS:" << EL
+      << "  -c, --config <file>       Use given board configuration file" << EL
+      << "  --width <count>           Set board width" << EL
+      << "  --height <count>          Set board height" << EL
+      << EL
+      << "GAME OPTIONS:" << EL
+      << "  -t, --title <title>       Set game title to given value" << EL
+      << "  -a, --auto-start          Auto start game if max players joined" << EL
+      << "  -r, --repeat              Repeat game when done" << EL
+      << "  --min <players>           Set minimum number of players" << EL
+      << "  --max <players>           Set maximum number of players" << EL
+      << EL
+      << "DATABASE OPTIONS:" << EL
+      << "  -d, --db-dir <dir>        Save game stats to given directory" << EL
       << EL << Flush;
 }
 
