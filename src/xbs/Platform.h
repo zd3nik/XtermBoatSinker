@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <cinttypes>
 #include <cassert>
+#include <cerrno>
 
 #include <algorithm>
 #include <fstream>

@@ -111,7 +111,7 @@ public:
                      const bool trim = true) const;
 
 private:
-  void bufferData(const int fd);
+  bool bufferData(const int fd);
 };
 
 } // namespace xbs

@@ -171,7 +171,9 @@ unsigned Input::readln(const int fd, const char delimeter) {
   unsigned n = 0;
   while (n < (BUFFER_SIZE - 1)) {
     if (pos[fd] >= len[fd]) {
-      bufferData(fd);
+      if (!bufferData(fd)) {
+        return 0;
+      }
     }
     if (!len[fd]) {
       break;
@@ -294,7 +296,7 @@ double Input::getDouble(const unsigned index, const double def) const {
 }
 
 //-----------------------------------------------------------------------------
-void Input::bufferData(const int fd) {
+bool Input::bufferData(const int fd) {
   pos[fd] = len[fd] = 0;
   while (len[fd] < BUFFER_SIZE) {
     ssize_t n = read(fd, buffer[fd].data(), BUFFER_SIZE);
@@ -302,8 +304,10 @@ void Input::bufferData(const int fd) {
       if (errno == EINTR) {
         Logger::debug() << "Input read interrupted, retrying";
         continue;
+      } else {
+        Logger::error() << "Input read failed: " << toError(errno);
+        return false;
       }
-      Throw() << "Input read failed: " << toError(errno) << XX;
     } else if (n <= BUFFER_SIZE) {
       len[fd] = n;
       break;
@@ -311,6 +315,7 @@ void Input::bufferData(const int fd) {
       Throw(OverflowError) << "Input buffer overflow!" << XX;
     }
   }
+  return true;
 }
 
 } // namespace xbs

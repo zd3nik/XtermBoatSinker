@@ -29,7 +29,7 @@ public:
   FileSysDatabase& operator=(FileSysDatabase&&) = delete;
   FileSysDatabase& operator=(const FileSysDatabase&) = delete;
 
-  virtual ~FileSysDatabase() { close(); }
+  virtual ~FileSysDatabase() noexcept { close(); }
   virtual std::string toString() const { return homeDir; }
   virtual void sync();
   virtual bool remove(const std::string& recordID);
@@ -37,13 +37,15 @@ public:
   virtual std::shared_ptr<DBRecord> get(const std::string& recordID,
                                         const bool add);
 
-  explicit operator bool() const noexcept { return (dir != nullptr); }
+  explicit operator bool() const noexcept { return homeDir.size(); }
 
-  void close();
+  void close() noexcept;
   FileSysDatabase& open(const std::string& dbHomeDir);
   std::string getHomeDir() const { return homeDir; }
 
 private:
+  void openDir(const std::string& path);
+  void closeDir() noexcept;
   void clearCache();
   void loadCache();
   void loadRecord(const std::string& recordID);

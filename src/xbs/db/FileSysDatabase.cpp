@@ -7,7 +7,6 @@
 #include "Logger.h"
 #include "StringUtils.h"
 #include "Throw.h"
-#include <cstring> // TODO remove this
 #include <sys/stat.h>
 
 namespace xbs
@@ -17,35 +16,49 @@ namespace xbs
 const std::string FileSysDatabase::DEFAULT_HOME_DIR = "./db";
 
 //-----------------------------------------------------------------------------
-void FileSysDatabase::close() {
+void FileSysDatabase::close() noexcept {
+  closeDir();
+  try { homeDir.clear(); } catch (...) { ASSERT(false); }
+  recordCache.clear();
+}
+
+//-----------------------------------------------------------------------------
+void FileSysDatabase::closeDir() noexcept {
   if (dir) {
     closedir(dir);
     dir = nullptr;
   }
-  homeDir.clear();
-  recordCache.clear();
+}
+
+//-----------------------------------------------------------------------------
+void FileSysDatabase::openDir(const std::string& path) {
+  if (dir) {
+    Throw() << "FileSysDatabase.openDir() dir is already open" << XX;
+  } else if (isEmpty(path)) {
+    Throw(InvalidArgument) << "FileSysDatabase.openDir() empty path" << XX;
+  }
+
+  int noents = 0;
+  while (!(dir = opendir(path.c_str()))) {
+    if ((errno != ENOENT) || (++noents > 1)) {
+      Throw() << "opendir(" << path << ") failed: " << toError(errno)
+              << XX;
+    } else if (mkdir(path.c_str(), 0750) != 0) {
+      Throw() << "mkdir(" << path << ") failed: " << toError(errno)
+              << XX;
+    }
+  }
+
+  homeDir = path;
 }
 
 //-----------------------------------------------------------------------------
 FileSysDatabase& FileSysDatabase::open(const std::string& dbURI) {
   close();
   try {
-    homeDir = dbURI.empty() ? DEFAULT_HOME_DIR : dbURI;
-    if (!(dir = opendir(homeDir.c_str()))) {
-      if (errno == ENOENT) {
-        if (mkdir(homeDir.c_str(), 0750) != 0) {
-          Throw() << "mkdir(" << homeDir << ") failed: " << toError(errno)
-                  << XX;
-        } else if (!(dir = opendir(homeDir.c_str()))) {
-          Throw() << "opendir(" << homeDir << ") failed: " << toError(errno)
-                  << XX;
-        }
-      } else {
-        Throw() << "opendir(" << homeDir << ") failed: " << toError(errno)
-                << XX;
-      }
-    }
+    openDir(isEmpty(dbURI) ? DEFAULT_HOME_DIR : dbURI);
     loadCache();
+    closeDir();
   }
   catch (...) {
     close();
@@ -56,12 +69,13 @@ FileSysDatabase& FileSysDatabase::open(const std::string& dbURI) {
 
 //-----------------------------------------------------------------------------
 void FileSysDatabase::loadCache() {
-  if (dir) {
-    for (dirent* entry = readdir(dir); entry; entry = readdir(dir)) {
-      std::string name = entry->d_name;
-      if ((name.size() > 4) && isalnum(name[0]) && iEndsWith(name, ".ini")) {
-        loadRecord(name.substr(0, (name.size() - 4)));
-      }
+  if (!dir) {
+    Throw() << "FileSysDatabase.loadCache() dir not open" << XX;
+  }
+  for (dirent* entry = readdir(dir); entry; entry = readdir(dir)) {
+    std::string name = entry->d_name;
+    if ((name.size() > 4) && isalnum(name[0]) && iEndsWith(name, ".ini")) {
+      loadRecord(name.substr(0, (name.size() - 4)));
     }
   }
 }
