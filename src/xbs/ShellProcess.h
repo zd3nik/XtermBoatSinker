@@ -14,10 +14,10 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class ShellProcess : public Process {
 public: // Process implementation
-  virtual bool isRunning() const noexcept { return (childPid > 0); }
+  virtual bool isRunning() const noexcept;
   virtual bool waitForExit(const Milliseconds timeout = 0) noexcept;
   virtual int getExitStatus() const noexcept { return exitStatus; }
-  virtual int inputHandle() const;
+  virtual int getInputHandle() const;
   virtual void close() noexcept;
   virtual void run();
   virtual void sendln(const std::string& line);
@@ -36,8 +36,7 @@ public: // enums
   };
 
 private:
-  enum { PARENT_READ, PARENT_WRITE }; // parent handle indexes
-  enum { CHILD_WRITE, CHILD_READ };   // child handle indexes
+  enum { READ_END, WRITE_END }; // pipe indexes
 
   IOType ioType;
   std::string alias;
@@ -48,6 +47,7 @@ private:
   int exitStatus = -1;
   int inPipe[2] = { -1, -1 };
   int outPipe[2] = { -1, -1 };
+  int errPipe[2] = { -1, -1 }; // TODO add interface(s) to use errPipe
 
 public:
   virtual ~ShellProcess() noexcept { close(); }

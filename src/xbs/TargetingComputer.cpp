@@ -358,6 +358,7 @@ void TargetingComputer::login() {
     sock.connect(host, port);
   }
 
+  Logger::debug() << "Waiting for game info message";
   readln(input);
   config.load(input, gameStarted, playersJoined, serverVersion);
   if (!isCompatibleWith(serverVersion)) {

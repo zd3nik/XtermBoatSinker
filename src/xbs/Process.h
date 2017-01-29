@@ -19,7 +19,7 @@ public:
   virtual bool isRunning() const noexcept = 0;
   virtual bool waitForExit(const Milliseconds timeout = 0) noexcept = 0;
   virtual int getExitStatus() const noexcept = 0;
-  virtual int inputHandle() const = 0;
+  virtual int getInputHandle() const = 0;
   virtual void close() noexcept = 0;
   virtual void run() = 0;
   virtual void sendln(const std::string& line) = 0;

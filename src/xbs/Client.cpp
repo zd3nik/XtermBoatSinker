@@ -116,6 +116,9 @@ bool Client::init() {
     bot.reset(new ShellProcess("bot", botCommand));
     bot->validate();
     bot->run();
+    if (!bot->isRunning()) {
+      Throw() << "Unabled to run bot command: '" << botCommand << "'" << XX;
+    }
   }
 
   return true;

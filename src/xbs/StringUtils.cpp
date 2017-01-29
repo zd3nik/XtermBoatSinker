@@ -355,18 +355,20 @@ std::string replace(const std::string& str,
                     const std::string& pattern,
                     const std::string& replacement)
 {
+  if (pattern.empty() || (pattern.size() > str.size())) {
+    return str;
+  }
+  auto p = str.find(pattern.c_str());
+  if (p == std::string::npos) {
+    return str;
+  }
   std::string result;
-  if (str.size() && pattern.size() && (pattern.size() <= str.size())) {
-    auto p = str.find(pattern.c_str());
-    if (p != std::string::npos) {
-      if (p > 0) {
-        result += str.substr(0, p);
-      }
-      result += replacement;
-      if ((p + pattern.size()) < str.size()) {
-        result += str.substr(p + pattern.size());
-      }
-    }
+  if (p > 0) {
+    result += str.substr(0, p);
+  }
+  result += replacement;
+  if ((p + pattern.size()) < str.size()) {
+    result += str.substr(p + pattern.size());
   }
   return result;
 }
