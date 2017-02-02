@@ -4,11 +4,11 @@
 //-----------------------------------------------------------------------------
 #include "ShellProcess.h"
 #include "CSV.h"
-#include "Input.h"
 #include "Logger.h"
 #include "StringUtils.h"
 #include "Throw.h"
 #include <csignal>
+#include <sys/stat.h>
 #include <sys/wait.h>
 
 namespace xbs
@@ -39,40 +39,14 @@ std::vector<std::string> ShellProcess::splitStr(const std::string& str) {
 }
 
 //-----------------------------------------------------------------------------
-static void closeHandle(int& fd) noexcept {
-  if (fd >= 0) {
-    ::close(fd);
-    fd = -1;
-  }
-}
-
-//-----------------------------------------------------------------------------
-void ShellProcess::close() noexcept {
-  closeHandle(inPipe[READ_END]);
-  closeHandle(inPipe[WRITE_END]);
-  closeHandle(outPipe[READ_END]);
-  closeHandle(outPipe[WRITE_END]);
-  closeHandle(errPipe[READ_END]);
-  closeHandle(errPipe[WRITE_END]);
-
-  if (childPid > 0) {
-    if (!waitForExit(1000)) {
-      if (::kill(childPid, SIGTERM) || !waitForExit(1000)) {
-        ::kill(childPid, SIGKILL);
-        exitStatus = -2;
-        childPid = -1;
-      }
-    }
-  }
-}
-
-//-----------------------------------------------------------------------------
 ShellProcess::ShellProcess(const IOType ioType,
                            const std::string& alias,
                            const std::string& cmd)
   : ioType(ioType),
     alias(alias)
 {
+  Pipe::openSelfPipe(); // used for timeouts
+
   std::vector<std::string> args = splitStr(cmd);
   if (args.size()) {
     shellCommand = joinStr(args);
@@ -94,22 +68,62 @@ ShellProcess::ShellProcess(const IOType ioType,
     shellExecutable(executable),
     commandArgs(args.begin(), args.end())
 {
+  Pipe::openSelfPipe(); // used for timeouts
+
   if (commandArgs.size()) {
     shellCommand += joinStr(args);
   }
 }
 
 //-----------------------------------------------------------------------------
+void ShellProcess::close() noexcept {
+  inPipe.close();
+  outPipe.close();
+  errPipe.close();
+
+  if (childPid > 0) {
+    if (!waitForExit(1000)) {
+      if (::kill(childPid, SIGTERM) || !waitForExit(1000)) {
+        ::kill(childPid, SIGKILL);
+        exitStatus = -2;
+        childPid = -1;
+      }
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+static bool unsafe(const std::string& str) {
+  return containsAny(str, "<>()[]~!#$%^&*;|'\"\\");
+}
+
+//-----------------------------------------------------------------------------
 void ShellProcess::validate() {
   if (isEmpty(alias)) {
-    Throw() << "Empty shell process alias" << XX;
+    Throw() << "ShellProcess() empty alias" << XX;
   }
+
   if (isEmpty(shellExecutable)) {
-    Throw() << "Empty shell process (alias=" << alias << ") executable" << XX;
+    Throw() << "ShellProcess(" << alias << ") empty executable" << XX;
   }
-  // TODO verify executable exists, and is executable by current process
-  // TODO verify executable is not dangerous
-  // TODO verify commandArgs has no special characters
+
+  struct stat st;
+  if (::stat(shellExecutable.c_str(), &st) || !S_ISREG(st.st_mode)) {
+    Throw() << "ShellProcess(" << alias << ") executable '" << shellExecutable
+            << "' not found or not a file" << XX;
+  }
+
+  if (unsafe(shellExecutable)) {
+    Throw() << "ShellProcess(" << alias << ") executable '" << shellExecutable
+            << "' has unsafe characters" << XX;
+  }
+
+  for (auto& arg : commandArgs) {
+    if (unsafe(arg)) {
+      Throw() << "ShellProcess(" << alias << ") argument '" << arg
+              << "' has unsafe characters" << XX;
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -120,23 +134,14 @@ void ShellProcess::run() {
   }
 
   if (ioType != OUTPUT_ONLY) {
-    if (::pipe(inPipe) < 0) {
-      Throw() << "ShellProcess(" << alias << ").run() "
-              << "failed to create input pipe: " << toError(errno) << XX;
-    }
+    inPipe.open();
   }
 
   if (ioType != INPUT_ONLY) {
-    if (::pipe(outPipe) < 0) {
-      Throw() << "ShellProcess(" << alias << ").run() "
-              << "failed to create output pipe: " << toError(errno) << XX;
-    }
+    outPipe.open();
   }
 
-  if (::pipe(errPipe) < 0) {
-    Throw() << "ShellProcess(" << alias << ").run() "
-            << "failed to create status pipe: " << toError(errno) << XX;
-  }
+  errPipe.open();
 
   childPid = ::fork();
   if (childPid < 0) {
@@ -145,82 +150,132 @@ void ShellProcess::run() {
   }
 
   if (childPid == 0) {
-    runChild(); // we're in the child process of the fork
+    // we're in the child process of the fork
+    runChild();
   } else {
-    runParent(); // we're in the parent process of the fork
+    // we're in the parent process of the fork
+    runParent();
   }
 }
 
 //-----------------------------------------------------------------------------
 void ShellProcess::runChild() {
   assert(childPid == 0);
-
   const int pid = getpid();
-  Logger::debug() << "ShellProcess(" << alias << ").runChild(" << pid
-                  << ") started";
+  try {
+    Logger::debug() << "ShellProcess(" << alias << ").runChild(" << pid
+                    << ") started";
 
-  // child only "writes" to parent err, so close "read" end of errPipe
-  closeHandle(errPipe[READ_END]);
-  if (::dup2(errPipe[WRITE_END], STDERR_FILENO) != STDERR_FILENO) {
+    // child only "writes" to parent err, so close "read" end of errPipe
+    errPipe.closeRead();
+
+    // send any STDERR activity to parent via errPipe
+    errPipe.mergeWrite(STDERR_FILENO);
+
+    // let parent know child has started
+    std::string msg = ("STARTED|" + toStr(pid) + "\n");
+    inPipe.writeln(msg);
+
+    if (ioType != INPUT_ONLY) {
+      // child only "writes" to parent input, so close "read" end of the inPipe
+      inPipe.closeRead();
+
+      // replace STDOUT with parent input channel
+      inPipe.mergeWrite(STDOUT_FILENO);
+    } else {
+      ::close(STDOUT_FILENO);
+    }
+
+    if (ioType != OUTPUT_ONLY) {
+      // child only "reads" from parent output, so close "write" end of outPipe
+      outPipe.closeWrite();
+
+      // replace STDIN with parent output channel
+      outPipe.mergeRead(STDIN_FILENO);
+    } else {
+      ::close(STDIN_FILENO);
+    }
+
+    // exec calls require command args as an array of char*
+    std::vector<char*> argv;
+    argv.push_back(const_cast<char*>(shellExecutable.c_str()));
+    for (auto& arg : commandArgs) {
+      argv.push_back(const_cast<char*>(arg.c_str()));
+    }
+    argv.push_back(nullptr);
+
+    Logger::debug() << "ShellProcess(" << alias << ").runChild(" << pid
+                    << ") " << shellCommand;
+
+    execvp(shellExecutable.c_str(), argv.data());
+  } catch (const std::exception& e) {
     Logger::printError() << "ShellProcess(" << alias << ").runChild(" << pid
-                         << ") failed to dup STDERR: " << toError(errno);
+                         << ") " << e.what();
+    _exit(1);
+  } catch (...) {
+    Logger::printError() << "ShellProcess(" << alias << ").runChild(" << pid
+                         << ") unhandled exception";
     _exit(1);
   }
-
-  // let parent know child has started
-  std::string msg = ("STARTED|" + toStr(pid) + "\n");
-  if (::write(inPipe[WRITE_END], msg.c_str(), msg.size()) < 0) {
-    Logger::printError() << "ShellProcess(" << alias << ").runChild(" << pid
-                         << ") failed to send start message: "
-                         << toError(errno);
-    _exit(1);
-  }
-
-  if (ioType != INPUT_ONLY) {
-    // child only "writes" to parent input, so close "read" end of the inPipe
-    closeHandle(inPipe[READ_END]);
-
-    // replace STDOUT with parent input channel
-    if (::dup2(inPipe[WRITE_END], STDOUT_FILENO) != STDOUT_FILENO) {
-      Logger::printError() << "ShellProcess(" << alias << ").runChild(" << pid
-                           << ") failed to dup STDOUT: " << toError(errno);
-      _exit(1);
-    }
-  } else {
-    ::close(STDOUT_FILENO);
-  }
-
-  if (ioType != OUTPUT_ONLY) {
-    // child only "reads" from parent output, so close "write" end of outPipe
-    closeHandle(outPipe[WRITE_END]);
-
-    // replace STDIN with parent output channel
-    if (::dup2(outPipe[READ_END], STDIN_FILENO) != STDIN_FILENO) {
-      Logger::printError() << "ShellProcess(" << alias << ").runChild(" << pid
-                           << ") failed to dup STDIN: " << toError(errno);
-      _exit(1);
-    }
-  } else {
-    ::close(STDIN_FILENO);
-  }
-
-  // exec calls require command args as an array of char*
-  std::vector<char*> argv;
-  argv.push_back(const_cast<char*>(shellExecutable.c_str()));
-  for (auto& arg : commandArgs) {
-    argv.push_back(const_cast<char*>(arg.c_str()));
-  }
-  argv.push_back(nullptr);
-
-  Logger::debug() << "ShellProcess(" << alias << ").runChild(" << pid
-                  << ") " << shellCommand;
-
-  execvp(shellExecutable.c_str(), argv.data());
 
   // if we get to this line exec failed
   Logger::printError() << "ShellProcess(" << alias << ").runChild(" << pid
                        << ") exec failed" << toError(errno);
   _exit(1);
+}
+
+//-----------------------------------------------------------------------------
+std::string ShellProcess::readln(const int fd, const Milliseconds timeout) {
+  timeval tv;
+  tv.tv_sec = (timeout / 1000);
+  tv.tv_usec = (10 * (timeout % 1000));
+
+  const int fd1 = Pipe::SELF_PIPE.getReadHandle();
+  const int maxFd = std::max<int>(fd, fd1);
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(fd1, &fds);
+  FD_SET(fd, &fds);
+
+  int ret;
+  while ((ret = ::select((maxFd + 1), &fds, nullptr, nullptr, &tv))) {
+    if (ret < 0) {
+      if (errno == EINTR) {
+        continue;
+      } else {
+        Throw() << "ShellProcess(" << alias
+                << ").readln(" << fd
+                << ") select failed: " << toError(errno) << XX;
+      }
+    }
+
+    if (FD_ISSET(fd1, &fds)) {
+      char sbuf[4096];
+      ssize_t n;
+      while ((n = ::read(fd, sbuf, sizeof(sbuf))) > 0) {
+        sbuf[n] = 0;
+        Logger::debug() << "SelfPipe: " << trimStr(sbuf);
+      }
+    }
+
+    if (FD_ISSET(fd, &fds)) {
+      std::string line;
+      char ch = 0;
+      // TODO figure how to do non-blocking read
+      //      otherwise timeout only works until we start reading
+      while ((::read(fd, &ch, 1) == 1) && (ch != '\n')) {
+        line += ch;
+      }
+      Logger::debug() << "ShellProcess(" << alias << ").readln(" << childPid
+                      << ") received: '" << line << "'";
+      return line;
+    }
+  }
+
+  Logger::debug() << "ShellProcess(" << alias
+                  << ").waitForExit(" << childPid
+                  << ") timeout";
+  return "";
 }
 
 //-----------------------------------------------------------------------------
@@ -231,20 +286,28 @@ void ShellProcess::runParent() {
                   << ") started";
 
   // parent only "reads" from inPipe, so close the "write" end of the pipe
-  closeHandle(inPipe[WRITE_END]);
+  inPipe.closeWrite();
 
   // parent only "writes" to outPipe, so close the "read" end of the pipe
-  closeHandle(outPipe[READ_END]);
+  outPipe.closeRead();
 
-  // wait for start message from child process - TODO incorporate timeout
-  Input input;
-  if (!input.readln(inPipe[READ_END])) {
+  // wait for start message from child process
+  const std::string msg = readln(inPipe.getReadHandle(), 3000);
+  if (msg.empty()) {
     Throw() << "ShellProcess(" << alias << ").runParent(" << childPid
             << ") no start message from child process" << XX;
-  } else if ((input.getStr(0) != "STARTED") || (input.getInt(1) != childPid)) {
+  }
+
+  // verify start message
+  CSV csv(msg, '|');
+  std::string label;
+  std::string pidStr;
+  if (!csv.next(label) || (label != "STARTED") ||
+      !csv.next(pidStr) || (toInt(pidStr) != childPid))
+  {
     Throw() << "ShellProcess(" << alias << ").runParent(" << childPid
             << ") invalid start message from child process: '"
-            << input.getLine(true) << "'" << XX;
+            << msg << "'" << XX;
   }
 }
 
@@ -269,11 +332,7 @@ void ShellProcess::sendln(const std::string& line) {
   Logger::debug() << "ShellProcess(" << alias << ").sendln(" << childPid
                   << ") '" << line << "'";
 
-  if (::write(outPipe[WRITE_END], data.c_str(), data.size()) < 0) {
-    Throw() << "ShellProcess(" << alias << ").sendln(" << childPid
-            << ',' << line.substr(0, 20)
-            << ") write failed: " << toError(errno) << XX;
-  }
+  outPipe.writeln(data);
 }
 
 //-----------------------------------------------------------------------------
@@ -287,7 +346,7 @@ int ShellProcess::getInputHandle() const {
             << ") IOType = WRITE_ONLY" << XX;
   }
 
-  const int handle = inPipe[READ_END];
+  const int handle = inPipe.getReadHandle();
   if (handle < 0) {
     Throw() << "ShellProcess(" << alias << ").getInputHandle(" << childPid
             << ") handle is not open!" << XX;
@@ -307,15 +366,58 @@ bool ShellProcess::waitForExit(const Milliseconds timeout) noexcept {
     return true;
   }
 
-  // TODO handle timeout
-
   exitStatus = -1;
-  int result = ::waitpid(childPid, &exitStatus, 0);
-  if (result != childPid) {
+
+  timeval tv;
+  tv.tv_sec = (timeout / 1000);
+  tv.tv_usec = (10 * (timeout % 1000));
+
+  const int fd = Pipe::SELF_PIPE.getReadHandle();
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(fd, &fds);
+
+  int ret;
+  while ((ret = ::select((fd + 1), &fds, nullptr, nullptr, &tv))) {
+    if (ret < 0) {
+      try {
+        Logger::debug() << "ShellProcess(" << alias
+                        << ").waitForExit(" << childPid
+                        << ") select failed: " << toError(errno);
+      } catch (...) { }
+      if (errno == EINTR) {
+        continue;
+      } else {
+        return false;
+      }
+    }
+
+    char sbuf[4096];
+    ssize_t n;
+    while ((n = ::read(fd, sbuf, sizeof(sbuf))) > 0) {
+      try {
+        sbuf[n] = 0;
+        Logger::debug() << "SelfPipe: " << trimStr(sbuf);
+      } catch (...) { }
+    }
+
+    int result = ::waitpid(childPid, &exitStatus, 0);
+    if (result == childPid) {
+      break;
+    }
+
     try {
       Logger::error() << "ShellProcess(" << alias
                       << ").waitForExit(" << childPid
                       << ") waitpid = " << result << " " << toError(errno);
+    } catch (...) { }
+  }
+
+  if (ret == 0) {
+    try {
+      Logger::debug() << "ShellProcess(" << alias
+                      << ").waitForExit(" << childPid
+                      << ") timeout";
     } catch (...) { }
     return false;
   }
@@ -325,7 +427,6 @@ bool ShellProcess::waitForExit(const Milliseconds timeout) noexcept {
                     << ").waitForExit(" << childPid
                     << ") child exit status = " << exitStatus;
   } catch (...) { }
-
   childPid = -1;
   return true;
 }

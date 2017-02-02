@@ -6,6 +6,7 @@
 #define XBS_SHELL_PROCESS_H
 
 #include "Platform.h"
+#include "Pipe.h"
 #include "Process.h"
 
 namespace xbs
@@ -36,8 +37,6 @@ public: // enums
   };
 
 private:
-  enum { READ_END, WRITE_END }; // pipe indexes
-
   IOType ioType;
   std::string alias;
   std::string shellCommand;
@@ -45,9 +44,9 @@ private:
   std::vector<std::string> commandArgs;
   int childPid = -1;
   int exitStatus = -1;
-  int inPipe[2] = { -1, -1 };
-  int outPipe[2] = { -1, -1 };
-  int errPipe[2] = { -1, -1 }; // TODO add interface(s) to use errPipe
+  Pipe inPipe;
+  Pipe outPipe;
+  Pipe errPipe; // TODO add interface(s) to use errPipe
 
 public:
   virtual ~ShellProcess() noexcept { close(); }
@@ -87,6 +86,7 @@ public:
 private:
   void runChild();
   void runParent();
+  std::string readln(const int fd, const Milliseconds timeout);
 };
 
 } // namespace xbs
