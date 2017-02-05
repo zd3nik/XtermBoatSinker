@@ -18,16 +18,11 @@ class ShellBot : public Bot {
 //-----------------------------------------------------------------------------
 public: // Bot implementation
   virtual Version getVersion() const { return botVersion; }
-  virtual Version minServerVersion() const { return minServerVer; }
-  virtual Version maxServerVersion() const { return maxServerVer; }
   virtual std::string getBotName() const { return botName; }
   virtual std::string getPlayerName() const { return playerName; }
   virtual std::string getBestShot(Coordinate&);
   virtual void setStaticBoard(const std::string& /*desc*/) { }
-  virtual void newGame(const Configuration& gameConfig,
-                       const bool gameStarted,
-                       const unsigned playersJoined,
-                       const Version& serverVersion);
+  virtual void newGame(const Configuration& gameConfig);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void finishGame(const std::string& state,
@@ -49,13 +44,16 @@ public: // Bot implementation
                          const std::string& target,
                          const Coordinate& hitCoordinate);
 
+  virtual bool isCompatibleServer(const Version& serverVersion) const {
+    return (serverVersion >= Version(1, 1));
+  }
+
 //-----------------------------------------------------------------------------
 private: // Variables
+
+  Version botVersion;
   std::string botName;
   std::string playerName;
-  Version botVersion;
-  Version minServerVer;
-  Version maxServerVer;
   ShellProcess proc;
 
 //-----------------------------------------------------------------------------

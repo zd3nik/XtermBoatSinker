@@ -102,11 +102,7 @@ void BotRunner::run() {
 }
 
 //-----------------------------------------------------------------------------
-void BotRunner::newGame(const Configuration& config,
-                        const bool /*gameStarted*/,
-                        const unsigned /*playersJoined*/,
-                        const Version& /*serverVersion*/)
-{
+void BotRunner::newGame(const Configuration& config) {
   game.clear().setConfiguration(config);
   myBoard.reset(new Board("me", config));
   if (staticBoard.size()) {
@@ -181,12 +177,19 @@ void BotRunner::test() {
 //-----------------------------------------------------------------------------
 void BotRunner::play() {
   login();
-  if (waitForGameStart()) {
+  while (waitForGameStart()) {
     while (!game.isFinished()) {
       readln(input);
       const std::string type = input.getStr();
       if (type == "Q") {
         break;
+      } else if (type == "G") {
+        if (sock) {
+          Throw() << "Unexpected game info message during game: "
+                  << input.getLine() << XX;
+        }
+        handleGameInfoMessage();
+        break; // restart waitForGameStart() loop
       } else if (type == "B") {
         handleBoardMessage();
       } else if (type == "K") {
@@ -199,6 +202,13 @@ void BotRunner::play() {
         handleHitMessage();
       } else if (type == "F") {
         handleGameFinishedMessage();
+        if (sock) {
+          return; // all done
+        } else {
+          myBoard.reset();
+          game.clear();
+          break; // restart waitForGameStart() loop
+        }
       } else {
         Throw() << "Unexpected message during game: " << input.getLine() << XX;
       }
@@ -213,6 +223,8 @@ bool BotRunner::waitForGameStart() {
     const std::string type = input.getStr();
     if (type == "Q") {
       return false;
+    } else if (type == "G") {
+      handleGameInfoMessage();
     } else if (type == "J") {
       handleJoinMessage();
     } else if (type == "B") {
@@ -226,6 +238,62 @@ bool BotRunner::waitForGameStart() {
     }
   }
   return game.isStarted();
+}
+
+//-----------------------------------------------------------------------------
+void BotRunner::handleGameInfoMessage() {
+  Configuration config;
+  bool gameStarted = false;
+  unsigned playersJoined = 0;
+  Version serverVersion;
+
+  config.load(input, gameStarted, playersJoined, serverVersion);
+  if (!isCompatibleServer(serverVersion)) {
+    Throw() << getBotName() << " is incompatible with server version: "
+            << serverVersion << XX;
+  }
+
+  newGame(config);
+
+  if (gameStarted) {
+    sendln(MSG('J') << getPlayerName());
+  } else {
+    sendln(MSG('J') << getPlayerName() << myBoard->getDescriptor());
+  }
+
+  std::string msg = readln(input);
+  std::string str = input.getStr();
+
+  if (str == "J") {
+    str = input.getStr(1);
+    if (str != getPlayerName()) {
+      Throw() << "Unexpected join response: " << msg << XX;
+    }
+    playerJoined(str);
+    if (gameStarted) {
+      msg = readln(input);
+      if (input.getStr() != "Y") {
+        Throw() << "Expected YourBoard message, got: " << msg << XX;
+      }
+      const std::string desc = input.getStr(1);
+      if (!myBoard->updateDescriptor(desc) ||
+          !myBoard->matchesConfig(game.getConfiguration()))
+      {
+        Throw() << "Invalid YourBoard descriptor: '" << desc << "'" << XX;
+      }
+    }
+  } else if (str == "E") {
+    str = input.getStr(1);
+    if (str.empty()) {
+      Throw() << "Empty error message received" << XX;
+    } else {
+      Throw() << str << XX;
+    }
+  } else if (str.empty()) {
+    Throw() << "Empty message received" << XX;
+  } else {
+    Throw() << "Expected join message, got: " << msg << XX;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -354,72 +422,17 @@ void BotRunner::handleNextTurnMessage() {
 
 //-----------------------------------------------------------------------------
 void BotRunner::login() {
-  bool gameStarted = false;
-  unsigned playersJoined = 0;
-  Version serverVersion;
-  Configuration config;
-
   if (host.size()) {
+    // connect to server using standard client protocol
     sock.connect(host, port);
   } else {
-    sendln(MSG('I')
-           << getBotName()
-           << getPlayerName()
-           << getVersion()
-           << minServerVersion()
-           << maxServerVersion());
+    // running as a shell-bot, send bot info
+    sendln(MSG('I') << getBotName() << getVersion() << getPlayerName());
   }
 
   Logger::debug() << "Waiting for game info message";
   readln(input);
-  config.load(input, gameStarted, playersJoined, serverVersion);
-  if ((serverVersion < minServerVersion()) ||
-      (serverVersion > maxServerVersion()))
-  {
-    Throw() << "Incompatible server version: " << serverVersion << XX;
-  }
-
-  newGame(config, gameStarted, playersJoined, serverVersion);
-
-  if (gameStarted) {
-    sendln(MSG('J') << getPlayerName());
-  } else {
-    sendln(MSG('J') << getPlayerName() << myBoard->getDescriptor());
-  }
-
-  std::string msg = readln(input);
-  std::string str = input.getStr();
-
-  if (str == "J") {
-    str = input.getStr(1);
-    if (str != getPlayerName()) {
-      Throw() << "Unexpected join response: " << msg << XX;
-    }
-    playerJoined(str);
-    if (gameStarted) {
-      msg = readln(input);
-      if (input.getStr() != "Y") {
-        Throw() << "Expected YourBoard message, got: " << msg << XX;
-      }
-      const std::string desc = input.getStr(1);
-      if (!myBoard->updateDescriptor(desc) ||
-          !myBoard->matchesConfig(game.getConfiguration()))
-      {
-        Throw() << "Invalid YourBoard descriptor: '" << desc << "'" << XX;
-      }
-    }
-  } else if (str == "E") {
-    str = input.getStr(1);
-    if (str.empty()) {
-      Throw() << "Empty error message received" << XX;
-    } else {
-      Throw() << str << XX;
-    }
-  } else if (str.empty()) {
-    Throw() << "Empty message received" << XX;
-  } else {
-    Throw() << str << XX;
-  }
+  handleGameInfoMessage();
 }
 
 } // namespace xbs

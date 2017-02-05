@@ -26,20 +26,18 @@ ShellBot::ShellBot(const std::string& cmd)
   }
 
   std::vector<std::string> info = CSV(line, '|', true).readCells();
-  if ((info.size() < 6) ||
+  if ((info.size() < 3) ||
       (info[0] != "I") ||
       info[1].empty() ||
-      info[3].empty())
+      info[2].empty())
   {
     Throw() << "Invalid info message (" << line
             << ") from bot command: '" << cmd << "'" << XX;
   }
 
   botName = info[1];
-  playerName = info[2].empty() ? botName : info[2];
-  botVersion = info[3];
-  minServerVer = info[4].empty() ? Version(1, 1) : Version(info[4]);
-  maxServerVer = info[5].empty() ? Version::MAX_VERSION : Version(info[5]);
+  botVersion = info[2];
+  playerName = ((info.size() < 4) || info[3].empty()) ? botName : info[3];
 }
 
 //-----------------------------------------------------------------------------
@@ -74,18 +72,14 @@ std::string ShellBot::getBestShot(Coordinate& bestShot) {
 }
 
 //-----------------------------------------------------------------------------
-void ShellBot::newGame(const Configuration& config,
-                       const bool gameStarted,
-                       const unsigned playersJoined,
-                       const Version& serverVersion)
-{
+void ShellBot::newGame(const Configuration& config) {
   CSV msg = MSG('G')
-      << serverVersion
+      << Version(1, 1) // server version
       << config.getName()
-      << (gameStarted ? 'Y' : 'N')
+      << 'N' // game started?
       << config.getMinPlayers()
       << config.getMaxPlayers()
-      << playersJoined
+      << 0 // players joined
       << config.getPointGoal()
       << config.getBoardWidth()
       << config.getBoardHeight()
@@ -103,16 +97,13 @@ void ShellBot::newGame(const Configuration& config,
   }
 
   std::vector<std::string> info = CSV(line, '|', true).readCells();
-  if ((info.size() != (2U + !gameStarted)) ||
+  if ((info.size() != 3) ||
       (info[0] != "J") ||
-      (info[1] != playerName))
+      (info[1] != playerName) ||
+      info[2].empty())
   {
     Throw() << "Invalid join message (" << line
             << ") from bot: '" << botName << "'" << XX;
-  }
-
-  if (gameStarted) {
-    // TODO send YourBoard message
   }
 }
 

@@ -40,13 +40,14 @@ void FileSysDBRecord::load() {
   }
 
   dirty = false;
-  Logger::debug() << "Loading '" << filePath << "' as record ID '"
-                  << recordID << "'";
 
   std::ifstream file(filePath.c_str());
   if (!file) {
-    Logger::info() << "File '" << filePath << "' does not exist";
+    Logger::debug() << "File '" << filePath << "' does not exist";
     return;
+  } else {
+    Logger::debug() << "Loading '" << filePath << "' as record ID '"
+                    << recordID << "'";
   }
 
   unsigned line = 0;

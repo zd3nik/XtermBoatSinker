@@ -26,10 +26,7 @@ public: // Bot implementation
   virtual std::string getBotName() const { return botName; }
   virtual std::string getPlayerName() const { return playerName; }
   virtual void setStaticBoard(const std::string& desc) { staticBoard = desc; }
-  virtual void newGame(const Configuration& gameConfig,
-                       const bool gameStarted,
-                       const unsigned playersJoined,
-                       const Version& serverVersion);
+  virtual void newGame(const Configuration& gameConfig);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void finishGame(const std::string& state,
@@ -102,6 +99,7 @@ private: // methods
   }
 
   bool waitForGameStart();
+  void handleGameInfoMessage();
   void handleBoardMessage();
   void handleGameFinishedMessage();
   void handleGameStartedMessage();

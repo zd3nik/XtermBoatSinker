@@ -15,7 +15,6 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 static const std::string TARGET_BOARD_NAME("test");
-static const Version TEST_SERVER_VERSION("1.1");
 
 //-----------------------------------------------------------------------------
 BotTester::BotTester() {
@@ -231,7 +230,7 @@ void BotTester::newTargetBoard(
     Throw() << "Failed random boat placement" << XX;
   }
 
-  bot.newGame(config, false, 0, TEST_SERVER_VERSION);
+  bot.newGame(config);
   bot.playerJoined(bot.getPlayerName());
   bot.playerJoined(TARGET_BOARD_NAME);
   bot.startGame({bot.getPlayerName(), TARGET_BOARD_NAME});

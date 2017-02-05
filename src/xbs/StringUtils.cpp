@@ -204,6 +204,14 @@ bool isUInt(const std::string& str) noexcept {
 }
 
 //-----------------------------------------------------------------------------
+bool isBool(const std::string& str) noexcept {
+  return (iEqual(str, "true") || iEqual(str, "false") ||
+          iEqual(str, "yes") || iEqual(str, "no") ||
+          iEqual(str, "y") || iEqual(str, "n") ||
+          (str == "0") || (str == "1"));
+}
+
+//-----------------------------------------------------------------------------
 int iCompare(const std::string& a, const std::string& b) noexcept {
   for (auto ai = a.begin(), bi = b.begin();
        (ai != a.end()) && (bi != b.end()); ++ai, ++bi)

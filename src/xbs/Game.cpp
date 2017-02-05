@@ -147,7 +147,7 @@ bool Game::start(const bool randomize) {
     return false;
   }
 
-  Logger::info() << "starting game '" << getTitle() << "'";
+  Logger::debug() << "starting game '" << getTitle() << "'";
 
   if (randomize) {
     std::random_shuffle(boards.begin(), boards.end());
