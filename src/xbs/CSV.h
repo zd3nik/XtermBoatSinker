@@ -14,15 +14,19 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class CSV : public Printable {
-private:
+//-----------------------------------------------------------------------------
+public: // Printable implementation
+  virtual std::string toString() const { return stream.str(); }
+
+//-----------------------------------------------------------------------------
+private: // variables
   bool trim = false;
   char delim = ',';
   unsigned cellCount = 0;
   std::stringstream stream;
 
-public:
-  virtual std::string toString() const { return stream.str(); }
-
+//-----------------------------------------------------------------------------
+public: // constructors
   CSV() = default;
   CSV(CSV&&) noexcept = default;
   CSV& operator=(CSV&&) noexcept = default;
@@ -67,6 +71,21 @@ public:
     return (*this);
   }
 
+//-----------------------------------------------------------------------------
+public: // methods
+  bool next(std::string& str) {
+    if (std::getline(stream, str, delim)) {
+      if (trim) {
+        str = trimStr(str);
+      }
+      cellCount++;
+      return true;
+    }
+    return false;
+  }
+
+//-----------------------------------------------------------------------------
+public: // operator overloads
   CSV& operator<<(const std::string& x) {
     if (trim) {
       const std::string tmp = trimStr(x);
@@ -101,17 +120,6 @@ public:
   CSV& operator>>(std::string& str) {
     next(str);
     return (*this);
-  }
-
-  bool next(std::string& str) {
-    if (std::getline(stream, str, delim)) {
-      if (trim) {
-        str = trimStr(str);
-      }
-      cellCount++;
-      return true;
-    }
-    return false;
   }
 };
 

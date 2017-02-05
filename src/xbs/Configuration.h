@@ -16,9 +16,13 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Configuration
-{
-private:
+class Configuration {
+//-----------------------------------------------------------------------------
+public: // static methods
+  static Configuration getDefaultConfiguration();
+
+  //-----------------------------------------------------------------------------
+private: // variables
   std::string name;
   unsigned minPlayers = 0;
   unsigned maxPlayers = 0;
@@ -27,11 +31,8 @@ private:
   Rectangle shipArea;
   std::vector<Ship> ships;
 
-public:
-  static Configuration getDefaultConfiguration();
-
-  explicit operator bool() const noexcept { return isValid(); }
-
+//-----------------------------------------------------------------------------
+public: // methods
   Rectangle getShipArea() const noexcept { return shipArea; }
   Ship getShip(const unsigned index) const noexcept { return ships.at(index); }
   std::string getName() const { return name; }
@@ -71,7 +72,12 @@ public:
     return ships.end();
   }
 
-private:
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return isValid(); }
+
+//-----------------------------------------------------------------------------
+private: // methods
   bool isValid() const noexcept;
   bool getShip(std::string& desc,
                const unsigned startIndex,

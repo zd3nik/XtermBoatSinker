@@ -16,18 +16,22 @@ namespace xbs
 // enables or disables them, and restores saved state when goes out of scope
 //-----------------------------------------------------------------------------
 class CanonicalMode {
-public:
+//-----------------------------------------------------------------------------
+private: // variables
+  bool ok;
+  termios savedTermIOs;
+
+//-----------------------------------------------------------------------------
+public: // constructors
   explicit CanonicalMode(const bool enabled);
   CanonicalMode(CanonicalMode&&) = delete;
   CanonicalMode(const CanonicalMode&) = delete;
   CanonicalMode& operator=(CanonicalMode&&) = delete;
   CanonicalMode& operator=(const CanonicalMode&) = delete;
 
+//-----------------------------------------------------------------------------
+public: // destructor
   ~CanonicalMode() noexcept;
-
-private:
-  bool ok;
-  termios savedTermIOs;
 };
 
 } // namespace xbs

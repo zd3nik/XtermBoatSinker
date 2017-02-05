@@ -14,13 +14,9 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Coordinate : public Printable
-{
-private:
-  unsigned x = 0;
-  unsigned y = 0;
-
-public:
+class Coordinate : public Printable {
+//-----------------------------------------------------------------------------
+public: // Printable implementaion
   virtual std::string toString() const {
     if (x < 26) {
       return (static_cast<char>('a' + x - 1) + toStr(y)); // "a1" format
@@ -29,6 +25,13 @@ public:
     }
   }
 
+//-----------------------------------------------------------------------------
+private: // variables
+  unsigned x = 0;
+  unsigned y = 0;
+
+//-----------------------------------------------------------------------------
+public: // constructors
   Coordinate() noexcept = default;
   Coordinate(Coordinate&&) noexcept = default;
   Coordinate(const Coordinate&) noexcept = default;
@@ -40,8 +43,8 @@ public:
       y(y)
   { }
 
-  explicit operator bool() const noexcept { return (x && y); }
-
+//-----------------------------------------------------------------------------
+public: // methods
   unsigned getX() const noexcept { return x; }
   unsigned getY() const noexcept { return y; }
   unsigned parity() const noexcept { return ((x & 1) == (y & 1)); }
@@ -104,22 +107,6 @@ public:
     return (*this);
   }
 
-  Coordinate operator+(const Direction dir) const noexcept {
-    return Coordinate(*this).shift(dir);
-  }
-
-  bool operator==(const Coordinate& other) const noexcept {
-    return ((x == other.x) && (y == other.y));
-  }
-
-  bool operator!=(const Coordinate& other) const noexcept {
-    return !operator==(other);
-  }
-
-  bool operator<(const Coordinate& other) const noexcept {
-    return ((y < other.y) || ((y == other.y) && (x < other.x)));
-  }
-
   bool fromString(const std::string& str) {
     std::string xCell;
     std::string yCell;
@@ -137,6 +124,26 @@ public:
       return true;
     }
     return false;
+  }
+
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return (x && y); }
+
+  Coordinate operator+(const Direction dir) const noexcept {
+    return Coordinate(*this).shift(dir);
+  }
+
+  bool operator==(const Coordinate& other) const noexcept {
+    return ((x == other.x) && (y == other.y));
+  }
+
+  bool operator!=(const Coordinate& other) const noexcept {
+    return !operator==(other);
+  }
+
+  bool operator<(const Coordinate& other) const noexcept {
+    return ((y < other.y) || ((y == other.y) && (x < other.x)));
   }
 };
 

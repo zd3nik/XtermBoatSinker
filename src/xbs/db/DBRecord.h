@@ -13,8 +13,12 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class DBRecord : public Printable {
-public:
+//-----------------------------------------------------------------------------
+public: // Printable implementation
   virtual std::string toString() const { return getID(); }
+
+//-----------------------------------------------------------------------------
+public: // abstract methods
   virtual std::string getID() const = 0;
   virtual void clear(const std::string& fld) = 0;
 
@@ -25,6 +29,8 @@ public:
   virtual unsigned addStrings(const std::string& fld,
                               const std::vector<std::string>& values) = 0;
 
+//-----------------------------------------------------------------------------
+public: // virtual methods
   virtual std::vector<int> getInts(const std::string& fld) const;
   virtual int getInt(const std::string& fld) const;
   virtual int incInt(const std::string& fld, const int inc = 1);

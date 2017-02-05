@@ -189,7 +189,13 @@ bool Client::run() {
 
 //-----------------------------------------------------------------------------
 bool Client::runTest() {
-  Throw() << "Client::runTest() not implemented" << XX; // TODO
+  if (!bot) {
+    Throw() << "--test option requires --bot option" << XX;
+  } else if (!bot->isRunning()) {
+    Throw() << "--test: bot is not running" << XX;
+  }
+
+  // TODO
   return false;
 }
 

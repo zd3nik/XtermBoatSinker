@@ -225,10 +225,19 @@ void ShellProcess::runChild() {
 }
 
 //-----------------------------------------------------------------------------
+std::string ShellProcess::readln(const Milliseconds timeout) {
+  return readln(inPipe.getReadHandle(), timeout);
+}
+
+//-----------------------------------------------------------------------------
 std::string ShellProcess::readln(const int fd, const Milliseconds timeout) {
+  timeval* tmout = nullptr;
   timeval tv;
-  tv.tv_sec = (timeout / 1000);
-  tv.tv_usec = (10 * (timeout % 1000));
+  if (timeout) {
+    tv.tv_sec = (timeout / 1000);
+    tv.tv_usec = (10 * (timeout % 1000));
+    tmout = &tv;
+  }
 
   const int fd1 = Pipe::SELF_PIPE.getReadHandle();
   const int maxFd = std::max<int>(fd, fd1);
@@ -238,7 +247,7 @@ std::string ShellProcess::readln(const int fd, const Milliseconds timeout) {
   FD_SET(fd, &fds);
 
   int ret;
-  while ((ret = ::select((maxFd + 1), &fds, nullptr, nullptr, &tv))) {
+  while ((ret = ::select((maxFd + 1), &fds, nullptr, nullptr, tmout))) {
     if (ret < 0) {
       if (errno == EINTR) {
         continue;

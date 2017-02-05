@@ -20,9 +20,14 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Client
-{
-private:
+class Client {
+//-----------------------------------------------------------------------------
+public: // static methods
+  static Version getVersion();
+  static bool isCompatibleWith(const Version& serverVersion) noexcept;
+
+//-----------------------------------------------------------------------------
+private: // variables
   unsigned msgEnd = ~0U;
   int port = -1;
   bool test = false;
@@ -39,18 +44,20 @@ private:
   std::unique_ptr<Board> yourBoard;
   std::unique_ptr<Process> bot;
 
-public:
-  static Version getVersion();
-  static bool isCompatibleWith(const Version& serverVersion) noexcept;
-
+//-----------------------------------------------------------------------------
+public: // constructors
   Client() { input.addHandle(STDIN_FILENO); }
   Client(Client&&) = delete;
   Client(const Client&) = delete;
   Client& operator=(Client&&) = delete;
   Client& operator=(const Client&) = delete;
 
+//-----------------------------------------------------------------------------
+public: // destructor
   ~Client() noexcept { closeSocket(); }
 
+//-----------------------------------------------------------------------------
+public: // methods
   void showHelp();
   bool init();
   bool testMode() const noexcept { return test; }
@@ -58,7 +65,8 @@ public:
   bool run();
   bool runTest();
 
-private:
+//-----------------------------------------------------------------------------
+private: // methods
   Board& myBoard();
 
   std::string prompt(Coordinate, const std::string& question,

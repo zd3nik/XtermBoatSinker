@@ -14,14 +14,18 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class ScoredCoordinate : public Coordinate {
-private:
-  unsigned score = 0;
-
-public:
+//-----------------------------------------------------------------------------
+public: // Printable implementation
   virtual std::string toString() const {
     return (Coordinate::toString() + toStr(score));
   }
 
+//-----------------------------------------------------------------------------
+private: // variables
+  unsigned score = 0;
+
+//-----------------------------------------------------------------------------
+public: // constructors
   ScoredCoordinate() noexcept = default;
   ScoredCoordinate(ScoredCoordinate&&) noexcept = default;
   ScoredCoordinate(const ScoredCoordinate&) noexcept = default;
@@ -41,6 +45,8 @@ public:
       score(score)
   { }
 
+//-----------------------------------------------------------------------------
+public: // methods
   ScoredCoordinate& setScore(const double score) noexcept {
     this->score = score;
     return (*this);
@@ -50,6 +56,8 @@ public:
     return score;
   }
 
+//-----------------------------------------------------------------------------
+public: // operator overloads
   bool operator<(const ScoredCoordinate& other) const noexcept {
     return (score < other.score);
   }

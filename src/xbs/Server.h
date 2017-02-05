@@ -18,7 +18,18 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class Server {
-private:
+//-----------------------------------------------------------------------------
+public: // enums
+  enum {
+    DEFAULT_PORT = 7948
+  };
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static Version getVersion();
+
+//-----------------------------------------------------------------------------
+private: // variables
   bool quietMode = false;
   bool autoStart = false;
   bool repeat = false;
@@ -28,28 +39,28 @@ private:
   std::set<std::string> blackList;
   std::map<int, BoardPtr> newBoards;
 
-public:
-  enum {
-    DEFAULT_PORT = 7948
-  };
-
-  static Version getVersion();
-
+//-----------------------------------------------------------------------------
+public: // constructors
   Server() { input.addHandle(STDIN_FILENO); }
   Server(Server&&) = delete;
   Server(const Server&) = delete;
   Server& operator=(Server&&) = delete;
   Server& operator=(const Server&) = delete;
 
+//-----------------------------------------------------------------------------
+public: // destructor
   ~Server() { close(); }
 
+//-----------------------------------------------------------------------------
+public: // methods
   void showHelp();
   bool init();
   bool run();
   bool isAutoStart() const { return autoStart; }
   bool isRepeatOn() const { return repeat; }
 
-private:
+//-----------------------------------------------------------------------------
+private: // methods
   void sendToAll(const Printable& p) {
     sendToAll(p.toString());
   }

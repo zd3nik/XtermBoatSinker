@@ -12,15 +12,36 @@
 namespace xbs
 {
 
-class TcpSocket : public Printable
-{
-private:
+//-----------------------------------------------------------------------------
+class TcpSocket : public Printable {
+//-----------------------------------------------------------------------------
+public: // Printable implementation
+  virtual std::string toString() const;
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static bool isValidPort(const int port) noexcept {
+    return ((port > 0) && (port <= 0x7FFF));
+  }
+
+//-----------------------------------------------------------------------------
+private: // variables
   std::string label;
   std::string address;
   int port = -1;
   int handle = -1;
   enum Mode { Unknown, Client, Server, Remote } mode = Unknown;
 
+//-----------------------------------------------------------------------------
+public: // constructors
+  TcpSocket() = default;
+  TcpSocket(TcpSocket&& other) noexcept;
+  TcpSocket(const TcpSocket&) = delete;
+  TcpSocket& operator=(TcpSocket&& other) noexcept;
+  TcpSocket& operator=(const TcpSocket&) = delete;
+
+//-----------------------------------------------------------------------------
+private: // constructors
   explicit TcpSocket(const std::string& address,
                      const int port,
                      const int handle) noexcept
@@ -30,22 +51,12 @@ private:
       mode(Remote)
   { }
 
-public:
-  virtual std::string toString() const;
+//-----------------------------------------------------------------------------
+public: // destructor
   virtual ~TcpSocket() noexcept { close(); }
 
-  static bool isValidPort(const int port) noexcept {
-    return ((port > 0) && (port <= 0x7FFF));
-  }
-
-  TcpSocket() = default;
-  TcpSocket(TcpSocket&& other) noexcept;
-  TcpSocket(const TcpSocket&) = delete;
-  TcpSocket& operator=(TcpSocket&& other) noexcept;
-  TcpSocket& operator=(const TcpSocket&) = delete;
-
-  explicit operator bool() const noexcept { return isOpen(); }
-
+//-----------------------------------------------------------------------------
+public: // methods
   bool isOpen() const noexcept { return (handle >= 0); }
   bool send(const Printable& p) const { return send(p.toString()); }
   int getHandle() const noexcept { return handle; }
@@ -63,11 +74,16 @@ public:
                     const int port,
                     const int backlog = 10);
 
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return isOpen(); }
+
   bool operator==(const TcpSocket& other) const noexcept {
     return ((handle >= 0) && (handle == other.handle));
   }
 
-private:
+//-----------------------------------------------------------------------------
+private: // methods
   void openSocket();
 };
 

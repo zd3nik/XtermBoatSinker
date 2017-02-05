@@ -12,12 +12,14 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class Message {
-private:
+//-----------------------------------------------------------------------------
+private: // variables
   std::string from;
   std::string to;
   std::string message;
 
-public:
+//-----------------------------------------------------------------------------
+public: // constructors
   Message() = default;
   Message(Message&&) noexcept = default;
   Message(const Message&) = default;
@@ -32,8 +34,8 @@ public:
       message(message)
   { }
 
-  explicit operator bool() const { return (from.size() && message.size()); }
-
+//-----------------------------------------------------------------------------
+public: // methods
   std::string getFrom() const { return from; }
   std::string getTo() const { return to; }
   std::string getMessage() const { return message; }
@@ -41,7 +43,12 @@ public:
   void appendTo(std::vector<std::string>& messages,
                 const unsigned nameLen) const;
 
-private:
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const { return (from.size() && message.size()); }
+
+//-----------------------------------------------------------------------------
+private: // methodss
   void setHeader(std::string& line, const unsigned nameLen) const;
   unsigned append(std::string& line, const unsigned maxLen,
                   const char* message) const;

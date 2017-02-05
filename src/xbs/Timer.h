@@ -16,13 +16,13 @@ typedef int64_t Milliseconds;
 typedef Milliseconds Timestamp;
 
 //-----------------------------------------------------------------------------
-class Timer : public Printable
-{
-private:
-  Timestamp startTime;
-  Timestamp lastTick;
+class Timer : public Printable {
+//-----------------------------------------------------------------------------
+public: // Printable implementation
+  virtual std::string toString() const;
 
-public:
+//-----------------------------------------------------------------------------
+public: // enums
   enum Interval : Milliseconds {
     ONE_SECOND = 1000,
     ONE_MINUTE = (60 * 1000),
@@ -30,28 +30,29 @@ public:
     BAD_TIME   = 0x7FFFFFFFFFFFFFFFULL
   };
 
-  virtual std::string toString() const;
-
+//-----------------------------------------------------------------------------
+public: // static methods
   static Timestamp now() noexcept;
 
+//-----------------------------------------------------------------------------
+private: // variables
+  Timestamp startTime;
+  Timestamp lastTick;
+
+//-----------------------------------------------------------------------------
+public: // constructors
   Timer(Timer&&) noexcept = default;
   Timer(const Timer&) noexcept = default;
   Timer& operator=(Timer&&) noexcept = default;
   Timer& operator=(const Timer&) noexcept = default;
 
-  Timer(const Timestamp startTime = now()) noexcept
+  explicit Timer(const Timestamp startTime = now()) noexcept
     : startTime(startTime),
       lastTick(startTime)
   { }
 
-  explicit operator bool() const noexcept { return (startTime != BAD_TIME); }
-  explicit operator Timestamp() const noexcept { return startTime; }
-
-  Timer& operator+=(const Milliseconds) noexcept;
-  Timer& operator-=(const Milliseconds) noexcept;
-  Timer operator+(const Milliseconds) const noexcept;
-  Timer operator-(const Milliseconds) const noexcept;
-
+//-----------------------------------------------------------------------------
+public: // methods
   void start() noexcept{ start(now()); }
   void tock() noexcept { lastTick = now(); }
   Milliseconds tick() const noexcept { return (now() - lastTick); }
@@ -60,6 +61,16 @@ public:
   void start(const Timestamp startTimestamp) noexcept {
     lastTick = startTime = startTimestamp;
   }
+
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return (startTime != BAD_TIME); }
+  explicit operator Timestamp() const noexcept { return startTime; }
+
+  Timer& operator+=(const Milliseconds) noexcept;
+  Timer& operator-=(const Milliseconds) noexcept;
+  Timer operator+(const Milliseconds) const noexcept;
+  Timer operator-(const Milliseconds) const noexcept;
 
   bool operator<(const Timer& other) const noexcept {
     return (startTime < other.startTime);

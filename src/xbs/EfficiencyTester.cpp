@@ -45,7 +45,7 @@ EfficiencyTester::EfficiencyTester() {
 }
 
 //-----------------------------------------------------------------------------
-void EfficiencyTester::test(TargetingComputer& bot) {
+void EfficiencyTester::test(BotRunner& bot) {
   if (!config) {
     Throw() << "Invalid test configuration" << XX;
   } else if (bot.getPlayerName() == TARGET_BOARD_NAME) {
@@ -156,7 +156,7 @@ void EfficiencyTester::test(TargetingComputer& bot) {
 
 //-----------------------------------------------------------------------------
 std::shared_ptr<DBRecord> EfficiencyTester::newTestRecord(
-    const TargetingComputer& bot) const
+    const BotRunner& bot) const
 {
   std::string recordID = ("test." +
                           toStr(config.getBoardWidth()) + "x" +
@@ -173,7 +173,7 @@ std::shared_ptr<DBRecord> EfficiencyTester::newTestRecord(
 
 //-----------------------------------------------------------------------------
 Coordinate EfficiencyTester::printStart(
-    const TargetingComputer& bot,
+    const BotRunner& bot,
     const DBRecord& rec,
     Board& board) const
 {
@@ -203,7 +203,7 @@ Coordinate EfficiencyTester::printStart(
 
 //-----------------------------------------------------------------------------
 void EfficiencyTester::newTargetBoard(
-    TargetingComputer& bot,
+    BotRunner& bot,
     Board& board) const
 {
   if (staticBoard.size()) {

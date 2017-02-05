@@ -13,13 +13,14 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class LogStream
-{
-private:
+class LogStream {
+//-----------------------------------------------------------------------------
+private: // variables
   std::ostream* stream = nullptr;
   bool print = false;
 
-public:
+//-----------------------------------------------------------------------------
+public: // constructors
   LogStream() noexcept = default;
   LogStream(LogStream&&) noexcept = default;
   LogStream(const LogStream&) = delete;
@@ -42,6 +43,8 @@ public:
     }
   }
 
+//-----------------------------------------------------------------------------
+public: // destructor
   ~LogStream() {
     if (stream) {
       (*stream) << std::endl;
@@ -52,6 +55,8 @@ public:
     }
   }
 
+//-----------------------------------------------------------------------------
+public: // operator overloads
   template<class T>
   LogStream& operator<<(const T& x) {
     if (stream) {

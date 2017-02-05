@@ -13,13 +13,15 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Ship : public Printable
-{
-private:
-  char id = 0;
-  unsigned length = 0;
+class Ship : public Printable {
+//-----------------------------------------------------------------------------
+public: // Printable implementaion
+  virtual std::string toString() const {
+    return (*this) ? (id + toStr(length)) : "";
+  }
 
-public:
+//-----------------------------------------------------------------------------
+public: // enums
   enum {
     MIN_LENGTH = 2,
     MAX_LENGTH = 8,
@@ -30,10 +32,8 @@ public:
     HIT = 'X'
   };
 
-  virtual std::string toString() const {
-    return (*this) ? (id + toStr(length)) : "";
-  }
-
+//-----------------------------------------------------------------------------
+public: // static methods
   static bool isValidID(const char id) noexcept {
     return ((id >= MIN_ID) && (id <= MAX_ID));
   }
@@ -69,6 +69,13 @@ public:
     return id;
   }
 
+//-----------------------------------------------------------------------------
+private: // variables
+  char id = 0;
+  unsigned length = 0;
+
+//-----------------------------------------------------------------------------
+public: // constructors
   Ship() noexcept = default;
   Ship(Ship&&) noexcept = default;
   Ship(const Ship&) noexcept = default;
@@ -80,20 +87,14 @@ public:
       length(length)
   { }
 
-  explicit operator bool() const noexcept {
-    return (isValidID(id) && isValidLength(length));
-  }
-
+//-----------------------------------------------------------------------------
+public: // methods
   char getID() const noexcept {
     return id;
   }
 
   unsigned getLength() const noexcept {
     return length;
-  }
-
-  bool operator==(const Ship& other) const noexcept {
-    return ((id == other.id) && (length == other.length));
   }
 
   bool fromString(const std::string& str) {
@@ -110,6 +111,16 @@ public:
       }
     }
     return static_cast<bool>(*this);
+  }
+
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept {
+    return (isValidID(id) && isValidLength(length));
+  }
+
+  bool operator==(const Ship& other) const noexcept {
+    return ((id == other.id) && (length == other.length));
   }
 };
 

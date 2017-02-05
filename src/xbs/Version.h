@@ -12,24 +12,26 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Version : public Printable
-{
-private:
+class Version : public Printable {
+//-----------------------------------------------------------------------------
+public: // Printable implementation
+  virtual std::string toString() const { return str; }
+
+//-----------------------------------------------------------------------------
+private: // variables
   unsigned majorNum = 0;
   unsigned minorNum = 0;
   unsigned buildNum = 0;
   std::string other;
   std::string str;
 
-public:
-  virtual std::string toString() const { return str; }
-
+//-----------------------------------------------------------------------------
+public: // constructors
   Version() = default;
   Version(Version&&) noexcept = default;
   Version(const Version&) = default;
   Version& operator=(Version&&) noexcept = default;
   Version& operator=(const Version&) = default;
-  Version& operator=(const std::string&);
 
   explicit Version(const std::string&);
   explicit Version(const unsigned majorNum,
@@ -42,13 +44,17 @@ public:
                    const unsigned buildNum,
                    const std::string& other = "");
 
-  explicit operator bool() const noexcept { return str.size(); }
-
+//-----------------------------------------------------------------------------
+public: // methods
   unsigned getMajor() const noexcept { return majorNum; }
   unsigned getMinor() const noexcept { return minorNum; }
   unsigned getBuild() const noexcept { return buildNum; }
   std::string getOther() const { return other; }
 
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  Version& operator=(const std::string&);
+  explicit operator bool() const noexcept { return str.size(); }
   bool operator<(const Version&) const noexcept;
   bool operator>(const Version&) const noexcept;
   bool operator==(const Version&) const noexcept;

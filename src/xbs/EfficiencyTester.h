@@ -8,7 +8,7 @@
 #include "Platform.h"
 #include "Configuration.h"
 #include "Coordinate.h"
-#include "TargetingComputer.h"
+#include "Bot.h"
 #include "Timer.h"
 #include "db/DBRecord.h"
 
@@ -16,9 +16,9 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class EfficiencyTester
-{
-private:
+class EfficiencyTester {
+//-----------------------------------------------------------------------------
+private: // variables
   bool watch = false;
   double minSurfaceArea = 0;
   u_int64_t totalShots = 0;
@@ -31,14 +31,19 @@ private:
   std::string staticBoard;
   std::string testDB;
 
-public:
+//-----------------------------------------------------------------------------
+public: // constructors
   EfficiencyTester();
-  void test(TargetingComputer&);
 
-private:
-  std::shared_ptr<DBRecord> newTestRecord(const TargetingComputer&) const;
-  Coordinate printStart(const TargetingComputer&, const DBRecord&, Board&) const;
-  void newTargetBoard(TargetingComputer&, Board&) const;
+//-----------------------------------------------------------------------------
+public: // methods
+  void test(BotRunner&);
+
+//-----------------------------------------------------------------------------
+private: // methods
+  std::shared_ptr<DBRecord> newTestRecord(const BotRunner&) const;
+  Coordinate printStart(const BotRunner&, const DBRecord&, Board&) const;
+  void newTargetBoard(BotRunner&, Board&) const;
   void storeResult(DBRecord&, const Milliseconds elapsed) const;
 };
 

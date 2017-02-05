@@ -28,12 +28,14 @@ enum ThrowType {
 
 //-----------------------------------------------------------------------------
 class Throw {
-private:
+//-----------------------------------------------------------------------------
+private: // variables
   const ThrowType type;
   std::stringstream ss;
   bool thrown = false;
 
-public:
+//-----------------------------------------------------------------------------
+public: // constructors
   Throw(Throw&&) = delete;
   Throw(const Throw&) = delete;
   Throw& operator=(Throw&&) = delete;
@@ -43,6 +45,8 @@ public:
     : type(type)
   { }
 
+//-----------------------------------------------------------------------------
+public: // destructor
   ~Throw() {
     // throwing exceptions from the descructor can cause undefined behavior
     // always terminate Throw() with << XX to prevent this from happening
@@ -54,6 +58,8 @@ public:
     }
   }
 
+//-----------------------------------------------------------------------------
+public: // operator overloads
   Throw& operator<<(const ExceptionTrigger&) {
     doThrow();
     return (*this);
@@ -65,7 +71,8 @@ public:
     return (*this);
   }
 
-private:
+//-----------------------------------------------------------------------------
+private: // methods
   void doThrow() {
     thrown = true;
     switch (type) {

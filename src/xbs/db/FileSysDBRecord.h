@@ -13,19 +13,8 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class FileSysDBRecord : public DBRecord {
-private:
-  std::string recordID;
-  std::string filePath;
-  std::map<std::string, std::vector<std::string>> fieldCache;
-  bool dirty = false;
-
-public:
-  FileSysDBRecord(const std::string& recordID, const std::string& filePath);
-  FileSysDBRecord(FileSysDBRecord&&) = delete;
-  FileSysDBRecord(const FileSysDBRecord&) = delete;
-  FileSysDBRecord& operator=(FileSysDBRecord&&) = delete;
-  FileSysDBRecord& operator=(const FileSysDBRecord&) = delete;
-
+//-----------------------------------------------------------------------------
+public: // DBRecord implementation
   virtual std::string getID() const { return recordID; }
   virtual std::string getString(const std::string& fld) const;
   virtual std::vector<std::string> getStrings(const std::string& fld) const;
@@ -35,12 +24,32 @@ public:
   virtual unsigned addStrings(const std::string& fld,
                               const std::vector<std::string>& values);
 
+//-----------------------------------------------------------------------------
+private: // variables
+  std::string recordID;
+  std::string filePath;
+  std::map<std::string, std::vector<std::string>> fieldCache;
+  bool dirty = false;
+
+//-----------------------------------------------------------------------------
+public: // constructors
+  FileSysDBRecord(FileSysDBRecord&&) = delete;
+  FileSysDBRecord(const FileSysDBRecord&) = delete;
+  FileSysDBRecord& operator=(FileSysDBRecord&&) = delete;
+  FileSysDBRecord& operator=(const FileSysDBRecord&) = delete;
+
+  explicit FileSysDBRecord(const std::string& recordID,
+                           const std::string& filePath);
+
+//-----------------------------------------------------------------------------
+public: // methods
   std::string getFilePath() const { return filePath; }
   void clear();
   void load();
   void store(const bool force = false);
 
-private:
+//-----------------------------------------------------------------------------
+private: // methods
   std::string validate(const std::string& fld,
                        const std::string& val = "") const;
 };

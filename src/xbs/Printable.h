@@ -11,10 +11,13 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Printable
-{
-public:
+class Printable {
+//-----------------------------------------------------------------------------
+public: // destructor
   virtual ~Printable() {}
+
+//-----------------------------------------------------------------------------
+public: // abstract methods
   virtual std::string toString() const = 0;
 };
 

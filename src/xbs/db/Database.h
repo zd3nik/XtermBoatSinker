@@ -13,11 +13,13 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Database : public Printable
-{
-public:
+class Database : public Printable {
+//-----------------------------------------------------------------------------
+public: // destructor
   virtual ~Database() { }
 
+//-----------------------------------------------------------------------------
+public: // abstract methods
   virtual void sync() = 0;
   virtual bool remove(const std::string& recordID) = 0;
   virtual std::vector<std::string> getRecordIDs() = 0;

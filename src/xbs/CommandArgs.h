@@ -13,10 +13,26 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class CommandArgs {
-public:
+//-----------------------------------------------------------------------------
+public: // static methods
   static void initialize(const int argc, const char* argv[]);  
   static const CommandArgs& getInstance();
 
+//-----------------------------------------------------------------------------
+private: // variables
+  std::vector<std::string> args;
+  std::string progName;
+
+//-----------------------------------------------------------------------------
+private: // constructors
+  explicit CommandArgs(const int argc, const char** argv);
+  CommandArgs(CommandArgs&&) = delete;
+  CommandArgs(const CommandArgs&) = delete;
+  CommandArgs& operator=(CommandArgs&&) = delete;
+  CommandArgs& operator=(const CommandArgs&) = delete;
+
+//-----------------------------------------------------------------------------
+public: // methods
   int indexOf(const std::string&) const noexcept;
   int indexOf(const std::initializer_list<std::string>&) const noexcept;
   bool match(const int idx, const std::string&) const;
@@ -41,16 +57,6 @@ public:
   bool hasArgAt(const int idx) const {
     return get(idx).size();
   }
-
-private:
-  explicit CommandArgs(const int argc, const char** argv);
-  CommandArgs(CommandArgs&&) = delete;
-  CommandArgs(const CommandArgs&) = delete;
-  CommandArgs& operator=(CommandArgs&&) = delete;
-  CommandArgs& operator=(const CommandArgs&) = delete;
-
-  std::vector<std::string> args;
-  std::string progName;
 };
 
 } // namespace xbs

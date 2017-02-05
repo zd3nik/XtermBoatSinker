@@ -12,9 +12,9 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Logger
-{
-public:
+class Logger {
+//-----------------------------------------------------------------------------
+public: // enums
   enum LogLevel {
     ERROR,
     WARN,
@@ -22,6 +22,8 @@ public:
     DEBUG
   };
 
+//-----------------------------------------------------------------------------
+public: // static methods
   static Logger& getInstance();
 
   static inline LogStream printError() {
@@ -44,8 +46,27 @@ public:
     return getInstance().log(DEBUG, "DEBUG: ");
   }
 
+//-----------------------------------------------------------------------------
+private: // variables
+  LogLevel logLevel;
+  std::ostream* stream;
+  std::ofstream fileStream;
+  std::string logFile;
+
+//-----------------------------------------------------------------------------
+private: // constructors
+  Logger();
+  Logger(Logger&&) = delete;
+  Logger(const Logger&) = delete;
+  Logger& operator=(Logger&&) = delete;
+  Logger& operator=(const Logger&) = delete;
+
+//-----------------------------------------------------------------------------
+public: // destructor
   ~Logger();
 
+//-----------------------------------------------------------------------------
+public: // methods
   Logger& setLogLevel(const LogLevel logLevel);
   Logger& setLogLevel(const std::string& logLevelStr);
   Logger& appendToFile(const std::string& filePath);
@@ -68,18 +89,6 @@ public:
   LogLevel getLogLevel() const {
     return logLevel;
   }
-
-private:
-  Logger();
-  Logger(Logger&&) = delete;
-  Logger(const Logger&) = delete;
-  Logger& operator=(Logger&&) = delete;
-  Logger& operator=(const Logger&) = delete;
-
-  LogLevel logLevel;
-  std::ostream* stream;
-  std::ofstream fileStream;
-  std::string logFile;
 };
 
 } // namespace xbs

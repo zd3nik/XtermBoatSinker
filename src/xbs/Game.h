@@ -16,7 +16,8 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class Game {
-private:
+//-----------------------------------------------------------------------------
+private: // variables
   Timestamp started = 0;
   Timestamp aborted = 0;
   Timestamp finished = 0;
@@ -25,7 +26,8 @@ private:
   Configuration config;
   std::vector<BoardPtr> boards;
 
-public:
+//-----------------------------------------------------------------------------
+public: // constructors
   Game() = default;
   Game(Game&&) = delete;
   Game(const Game&) = delete;
@@ -40,8 +42,8 @@ public:
     }
   }
 
-  explicit operator bool() const noexcept { return isValid(); }
-
+//-----------------------------------------------------------------------------
+public: // methods
   Game& addBoard(const BoardPtr&);
   Game& clear() noexcept;
   Game& setConfiguration(const Configuration&);
@@ -96,7 +98,12 @@ public:
     return std::move(result);
   }
 
-private:
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return isValid(); }
+
+//-----------------------------------------------------------------------------
+private: // methods
   bool isValid() const noexcept;
   void updateBoardToMove() noexcept;
 };

@@ -13,9 +13,12 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class Process {
-public:
+//-----------------------------------------------------------------------------
+public: // destructor
   virtual ~Process() noexcept { }
 
+//-----------------------------------------------------------------------------
+public: // abstract methods
   virtual bool isRunning() const noexcept = 0;
   virtual bool waitForExit(const Milliseconds timeout = 0) noexcept = 0;
   virtual int getExitStatus() const noexcept = 0;

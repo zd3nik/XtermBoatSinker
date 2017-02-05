@@ -15,35 +15,52 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class FileSysDatabase : public Database {
-private:
-  static const std::string DEFAULT_HOME_DIR;
-
-  DIR* dir = nullptr;
-  std::string homeDir = DEFAULT_HOME_DIR;
-  std::map<std::string, std::shared_ptr<FileSysDBRecord>> recordCache;
-
-public:
-  FileSysDatabase() = default;
-  FileSysDatabase(FileSysDatabase&&) = delete;
-  FileSysDatabase(const FileSysDatabase&) = delete;
-  FileSysDatabase& operator=(FileSysDatabase&&) = delete;
-  FileSysDatabase& operator=(const FileSysDatabase&) = delete;
-
-  virtual ~FileSysDatabase() noexcept { close(); }
+//-----------------------------------------------------------------------------
+public: // Database::Printable implementation
   virtual std::string toString() const { return homeDir; }
+
+//-----------------------------------------------------------------------------
+public: // Database implementation
   virtual void sync();
   virtual bool remove(const std::string& recordID);
   virtual std::vector<std::string> getRecordIDs();
   virtual std::shared_ptr<DBRecord> get(const std::string& recordID,
                                         const bool add);
 
-  explicit operator bool() const noexcept { return homeDir.size(); }
+//-----------------------------------------------------------------------------
+private: // static constants
+  static const std::string DEFAULT_HOME_DIR;
 
+//-----------------------------------------------------------------------------
+private: // variables
+  DIR* dir = nullptr;
+  std::string homeDir = DEFAULT_HOME_DIR;
+  std::map<std::string, std::shared_ptr<FileSysDBRecord>> recordCache;
+
+//-----------------------------------------------------------------------------
+public: // constructors
+  FileSysDatabase() = default;
+  FileSysDatabase(FileSysDatabase&&) = delete;
+  FileSysDatabase(const FileSysDatabase&) = delete;
+  FileSysDatabase& operator=(FileSysDatabase&&) = delete;
+  FileSysDatabase& operator=(const FileSysDatabase&) = delete;
+
+//-----------------------------------------------------------------------------
+public: // destructor
+  virtual ~FileSysDatabase() noexcept { close(); }
+
+//-----------------------------------------------------------------------------
+public: // methods
   void close() noexcept;
   FileSysDatabase& open(const std::string& dbHomeDir);
   std::string getHomeDir() const { return homeDir; }
 
-private:
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return homeDir.size(); }
+
+  //-----------------------------------------------------------------------------
+private: // methods
   void openDir(const std::string& path);
   void closeDir() noexcept;
   void clearCache();

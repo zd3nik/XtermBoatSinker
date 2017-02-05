@@ -4,8 +4,6 @@
 //-----------------------------------------------------------------------------
 #include "RandomRufus.h"
 #include "CommandArgs.h"
-#include "Throw.h"
-#include "Screen.h"
 #include <cmath>
 
 namespace xbs
@@ -47,7 +45,7 @@ ScoredCoordinate RandomRufus::bestShotOn(const Board& board) {
       const ScoredCoordinate coord(board.getShipCoord(i));
       if (board.adjacentHits(coord)) {
         candidates.push_back(coord);
-      } else if (isCandidate(board, coord) && board.adjacentFree(coord)) {
+      } else if ((coord.parity() == parity) && board.adjacentFree(coord)) {
         candidates.push_back(coord);
       }
     }

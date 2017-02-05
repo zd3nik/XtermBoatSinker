@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------------------
-// TargetingComputer.cpp
+// BotRunner.cpp
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include "TargetingComputer.h"
+#include "BotRunner.h"
 #include "CommandArgs.h"
 #include "EfficiencyTester.h"
 #include "Logger.h"
@@ -19,7 +19,7 @@ namespace xbs
 static Input input;
 
 //-----------------------------------------------------------------------------
-TargetingComputer::TargetingComputer(const std::string& botName)
+BotRunner::BotRunner(const std::string& botName)
   : botName(trimStr(botName))
 {
   if (this->botName.empty()) {
@@ -48,14 +48,14 @@ TargetingComputer::TargetingComputer(const std::string& botName)
 
   const std::string name = args.getValueOf({"-n", "--name"});
   if (name.size()) {
-    setPlayerName(name);
+    playerName = name;
   } else {
-    setPlayerName(this->botName);
+    playerName = this->botName;
   }
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::help() {
+void BotRunner::help() {
   const CommandArgs& args = CommandArgs::getInstance();
   Screen::print()
       << getBotName() << " version " << getVersion() << EL
@@ -90,7 +90,7 @@ void TargetingComputer::help() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::run() {
+void BotRunner::run() {
   const xbs::CommandArgs& args = xbs::CommandArgs::getInstance();
   if (args.indexOf("--help") >= 0) {
     help();
@@ -102,7 +102,7 @@ void TargetingComputer::run() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::newGame(const Configuration& config) {
+void BotRunner::newGame(const Configuration& config) {
   game.clear().setConfiguration(config);
   myBoard.reset(new Board("me", gameConfig()));
   if (staticBoard.size()) {
@@ -119,12 +119,12 @@ void TargetingComputer::newGame(const Configuration& config) {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::playerJoined(const std::string& player) {
+void BotRunner::playerJoined(const std::string& player) {
   game.addBoard(std::make_shared<Board>(player, gameConfig()));
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::updateBoard(const std::string& player,
+void BotRunner::updateBoard(const std::string& player,
                                     const std::string& status,
                                     const std::string& boardDescriptor,
                                     const unsigned score,
@@ -152,7 +152,7 @@ void TargetingComputer::updateBoard(const std::string& player,
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::startGame(const std::vector<std::string>& playerOrder) {
+void BotRunner::startGame(const std::vector<std::string>& playerOrder) {
   game.setBoardOrder(playerOrder);
   if (!game.start()) {
     Throw() << "Game cannot start" << XX;
@@ -160,7 +160,7 @@ void TargetingComputer::startGame(const std::vector<std::string>& playerOrder) {
   // TODO log game start
 }
 
-void TargetingComputer::finishGame(const std::string& /*state*/,
+void BotRunner::finishGame(const std::string& /*state*/,
                                    const unsigned /*turnCount*/,
                                    const unsigned /*playerCount*/)
 {
@@ -169,12 +169,12 @@ void TargetingComputer::finishGame(const std::string& /*state*/,
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::test() {
+void BotRunner::test() {
   EfficiencyTester().test(*this);
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::play() {
+void BotRunner::play() {
   login();
   if (waitForGameStart()) {
     while (!game.isFinished()) {
@@ -202,7 +202,7 @@ void TargetingComputer::play() {
 }
 
 //-----------------------------------------------------------------------------
-bool TargetingComputer::waitForGameStart() {
+bool BotRunner::waitForGameStart() {
   while (!game.isStarted()) {
     readln(input);
     const std::string type = input.getStr();
@@ -224,7 +224,7 @@ bool TargetingComputer::waitForGameStart() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::handleBoardMessage() {
+void BotRunner::handleBoardMessage() {
   const std::string player = input.getStr(1);
   const std::string status = input.getStr(2);
   const std::string desc = input.getStr(3);
@@ -237,7 +237,7 @@ void TargetingComputer::handleBoardMessage() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::handleGameFinishedMessage() {
+void BotRunner::handleGameFinishedMessage() {
   const std::string state = input.getStr(1);
   const unsigned turnCount = input.getUInt(2);
   const unsigned playerCount = input.getUInt(3);
@@ -261,7 +261,7 @@ void TargetingComputer::handleGameFinishedMessage() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::handleGameStartedMessage() {
+void BotRunner::handleGameStartedMessage() {
   const unsigned count = (input.getFieldCount() - 1);
   if (count != game.getBoardCount()) {
     Throw() << "Invalid player count in game start message: "
@@ -284,7 +284,7 @@ void TargetingComputer::handleGameStartedMessage() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::handleHitMessage() {
+void BotRunner::handleHitMessage() {
   const std::string player = input.getStr(1);
   const std::string target = input.getStr(2);
   Coordinate coord;
@@ -295,7 +295,7 @@ void TargetingComputer::handleHitMessage() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::handleJoinMessage() {
+void BotRunner::handleJoinMessage() {
   const std::string player = input.getStr(1);
   if (player.empty()) {
     Throw() << "Invalid player join message: " << input.getLine() << XX;
@@ -304,7 +304,7 @@ void TargetingComputer::handleJoinMessage() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::handleMessageMessage() {
+void BotRunner::handleMessageMessage() {
   const std::string from = input.getStr(1);
   const std::string message = input.getStr(2);
   const std::string group = input.getStr(3);
@@ -318,7 +318,7 @@ void TargetingComputer::handleMessageMessage() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::handleSkipTurnMessage() {
+void BotRunner::handleSkipTurnMessage() {
   const std::string player = input.getStr(1);
   const std::string reason = input.getStr(2);
   if (!game.hasBoard(player)) {
@@ -329,7 +329,7 @@ void TargetingComputer::handleSkipTurnMessage() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::handleNextTurnMessage() {
+void BotRunner::handleNextTurnMessage() {
   const std::string player = input.getStr(1);
   if (!game.hasBoard(player)) {
     Throw() << "Invalid player name in next turn message: " << input.getLine()
@@ -348,7 +348,7 @@ void TargetingComputer::handleNextTurnMessage() {
 }
 
 //-----------------------------------------------------------------------------
-void TargetingComputer::login() {
+void BotRunner::login() {
   bool gameStarted = false;
   unsigned playersJoined = 0;
   Version serverVersion;

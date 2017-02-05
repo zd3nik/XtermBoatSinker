@@ -45,9 +45,18 @@ namespace xbs
 //                    +------+
 // Example ship area descriptor: .X..X.0X0..0...0X. (row1row2row3)
 //-----------------------------------------------------------------------------
-class Board : public Rectangle
-{
-private:
+class Board : public Rectangle {
+//-----------------------------------------------------------------------------
+public: // Rectangle::Printable implementation
+  virtual std::string toString() const;
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static std::string toString(const std::string& descriptor,
+                              const unsigned width);
+
+//-----------------------------------------------------------------------------
+private: // variables
   bool toMove = false;
   unsigned score = 0;
   unsigned skips = 0;
@@ -59,12 +68,8 @@ private:
   std::vector<std::string> hitTaunts;
   std::vector<std::string> missTaunts;
 
-public:
-  virtual std::string toString() const;
-
-  static std::string toString(const std::string& descriptor,
-                              const unsigned width);
-
+//-----------------------------------------------------------------------------
+public: // constructors
   Board() = default;
   Board(Board&&) = delete;
   Board(const Board&) = delete;
@@ -82,8 +87,8 @@ public:
     : Board(name, c.getBoardWidth(), c.getBoardHeight(), std::move(sock))
   { }
 
-  explicit operator bool() const noexcept { return isValid(); }
-
+//-----------------------------------------------------------------------------
+public: // methods
   Rectangle getShipArea() const noexcept { return shipArea; }
   std::string getAddress() const { return socket.getAddress(); }
   std::string getDescriptor() const { return descriptor; }
@@ -174,7 +179,12 @@ public:
     return shipArea.toIndex(coord);
   }
 
-private:
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return isValid(); }
+
+//-----------------------------------------------------------------------------
+private: // methods
   bool isValid() const noexcept {
     return (Rectangle::isValid() &&
             (shipArea.getSize() > 0) &&

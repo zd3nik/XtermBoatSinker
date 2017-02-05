@@ -14,19 +14,22 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Rectangle : public Printable
-{
-private:
+class Rectangle : public Printable {
+//-----------------------------------------------------------------------------
+public: // Printable implementation
+  virtual std::string toString() const {
+    return (toStr(getWidth()) + 'x' + toStr(getHeight()) + " Rectangle");
+  }
+
+//-----------------------------------------------------------------------------
+private: // variables
   Coordinate begin;
   Coordinate end;
   unsigned width = 0;
   unsigned height = 0;
 
-public:
-  virtual std::string toString() const {
-    return (toStr(getWidth()) + 'x' + toStr(getHeight()) + " Rectangle");
-  }
-
+//-----------------------------------------------------------------------------
+public: // constructors
   Rectangle() noexcept = default;
   Rectangle(Rectangle&&) noexcept = default;
   Rectangle(const Rectangle&) noexcept = default;
@@ -41,6 +44,8 @@ public:
       height((begin && end) ? (end.getY() - begin.getY() + 1) : 0)
   { }
 
+//-----------------------------------------------------------------------------
+public: // methods
   Rectangle& set(const Coordinate& topLeft,
                  const Coordinate& bottomRight) noexcept
   {
@@ -50,8 +55,6 @@ public:
     height = (begin && end) ? (end.getY() - begin.getY() + 1) : 0;
     return (*this);
   }
-
-  explicit operator bool() const noexcept { return isValid();  }
 
   Coordinate getTopLeft() const noexcept { return begin; }
   Coordinate getBottomRight() const noexcept { return end; }
@@ -69,18 +72,6 @@ public:
 
   Rectangle& shift(const Direction dir, const unsigned count) noexcept {
     return set(begin.shift(dir, count), end.shift(dir, count));
-  }
-
-  bool operator<(const Rectangle& other) const noexcept {
-    return (begin < other.begin);
-  }
-
-  bool operator==(const Rectangle& other) const noexcept {
-    return ((begin == other.begin) && (end == other.end));
-  }
-
-  bool operator!=(const Rectangle& other) const noexcept {
-    return ((begin != other.begin) || (end != other.end));
   }
 
   bool contains(const unsigned x, const unsigned y) const noexcept {
@@ -108,7 +99,24 @@ public:
     return (contains(coord) && contains(coord.shift(dir, distance)));
   }
 
-protected:
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return isValid();  }
+
+  bool operator<(const Rectangle& other) const noexcept {
+    return (begin < other.begin);
+  }
+
+  bool operator==(const Rectangle& other) const noexcept {
+    return ((begin == other.begin) && (end == other.end));
+  }
+
+  bool operator!=(const Rectangle& other) const noexcept {
+    return ((begin != other.begin) || (end != other.end));
+  }
+
+//-----------------------------------------------------------------------------
+protected: // methods
   bool isValid() const noexcept {
     return (begin && end &&
             (getMinX() <= getMaxX()) &&

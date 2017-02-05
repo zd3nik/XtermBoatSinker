@@ -39,11 +39,26 @@ enum ScreenFlag {
 
 //-----------------------------------------------------------------------------
 class Screen : public Rectangle {
-public:
+//-----------------------------------------------------------------------------
+public: // static methods
   static Screen& get(const bool update = false);
   static Screen& print() { return get(false); }
   static const char* colorCode(const ScreenColor);
 
+//-----------------------------------------------------------------------------
+private: // constructors
+  Screen() = delete;
+  Screen(Screen&&) = delete;
+  Screen(const Screen&) = delete;
+  Screen& operator=(Screen&&) = delete;
+  Screen& operator=(const Screen&) = delete;
+
+  explicit Screen(const Rectangle& container)
+    : Rectangle(container)
+  { }
+
+//-----------------------------------------------------------------------------
+public: // methods
   Screen& ch(const char);
   Screen& clear();
   Screen& clearLine();
@@ -66,6 +81,8 @@ public:
   Screen& operator<<(const char* x) { return str(x ? std::string(x) : ""); }
   Screen& operator<<(const char x) { return ch(x); }
 
+//-----------------------------------------------------------------------------
+public: // operator overloads
   Screen& operator<<(const double x) {
     std::stringstream ss;
     ss << std::fixed << std::setprecision(2) << x;
@@ -76,17 +93,6 @@ public:
   Screen& operator<<(const T& x) {
     return str(toStr(x));
   }
-
-private:
-  Screen() = delete;
-  Screen(Screen&&) = delete;
-  Screen(const Screen&) = delete;
-  Screen& operator=(Screen&&) = delete;
-  Screen& operator=(const Screen&) = delete;
-
-  explicit Screen(const Rectangle& container)
-    : Rectangle(container)
-  { }
 };
 
 } // namespace xbs

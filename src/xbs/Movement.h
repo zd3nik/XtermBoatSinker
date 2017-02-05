@@ -19,13 +19,14 @@ enum Direction {
 };
 
 //-----------------------------------------------------------------------------
-class Movement
-{
-private:
+class Movement {
+//-----------------------------------------------------------------------------
+private: // variables
   Direction direction;
   unsigned distance;
 
-public:
+//-----------------------------------------------------------------------------
+public: // constructors
   Movement() = delete;
   Movement(Movement&&) noexcept = default;
   Movement(const Movement&) noexcept = default;
@@ -38,20 +39,24 @@ public:
       distance(distance)
   { }
 
-  bool operator==(const Movement& other) const noexcept {
-    return ((direction == other.direction) && (distance == other.distance));
-  }
-
-  bool operator!=(const Movement& other) const noexcept {
-    return ((direction != other.direction) || (distance != other.distance));
-  }
-
+//-----------------------------------------------------------------------------
+public: // methods
   Direction getDirection() const noexcept {
     return direction;
   }
 
   unsigned getDistance() const noexcept {
     return distance;
+  }
+
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  bool operator==(const Movement& other) const noexcept {
+    return ((direction == other.direction) && (distance == other.distance));
+  }
+
+  bool operator!=(const Movement& other) const noexcept {
+    return ((direction != other.direction) || (distance != other.distance));
   }
 };
 

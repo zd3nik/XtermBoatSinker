@@ -12,16 +12,18 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class Pipe {
-private:
-  int fdRead = -1;
-  int fdWrite = -1;
-
-public:
+//-----------------------------------------------------------------------------
+public: // static members
   static Pipe SELF_PIPE;
   static void openSelfPipe();
 
-public:
-  ~Pipe() noexcept { close(); }
+//-----------------------------------------------------------------------------
+private: // variables
+  int fdRead = -1;
+  int fdWrite = -1;
+
+//-----------------------------------------------------------------------------
+public: // constructors
   Pipe() noexcept = default;
   Pipe(const Pipe&) = delete;
   Pipe& operator=(const Pipe&) = delete;
@@ -45,6 +47,12 @@ public:
     return (*this);
   }
 
+//-----------------------------------------------------------------------------
+public: // destructor
+  ~Pipe() noexcept { close(); }
+
+//-----------------------------------------------------------------------------
+public: // methods
   bool canRead() const noexcept { return (fdRead >= 0); }
   bool canWrite() const noexcept { return (fdWrite >= 0); }
 

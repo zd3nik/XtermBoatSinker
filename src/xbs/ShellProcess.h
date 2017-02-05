@@ -14,6 +14,7 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class ShellProcess : public Process {
+//-----------------------------------------------------------------------------
 public: // Process implementation
   virtual bool isRunning() const noexcept;
   virtual bool waitForExit(const Milliseconds timeout = 0) noexcept;
@@ -25,10 +26,7 @@ public: // Process implementation
   virtual void validate();
   virtual std::string getAlias() const { return alias; }
 
-public: // static methods
-  static std::string joinStr(const std::vector<std::string>&);
-  static std::vector<std::string> splitStr(const std::string&);
-
+//-----------------------------------------------------------------------------
 public: // enums
   enum IOType {
     INPUT_ONLY,
@@ -36,7 +34,13 @@ public: // enums
     BIDIRECTIONAL
   };
 
-private:
+//-----------------------------------------------------------------------------
+public: // static methods
+  static std::string joinStr(const std::vector<std::string>&);
+  static std::vector<std::string> splitStr(const std::string&);
+
+//-----------------------------------------------------------------------------
+private: // variables
   IOType ioType;
   std::string alias;
   std::string shellCommand;
@@ -48,9 +52,8 @@ private:
   Pipe outPipe;
   Pipe errPipe; // TODO add interface(s) to use errPipe
 
-public:
-  virtual ~ShellProcess() noexcept { close(); }
-
+//-----------------------------------------------------------------------------
+public: // constructors
   explicit ShellProcess(const IOType,
                         const std::string& alias,
                         const std::string& shellCommand);
@@ -76,17 +79,27 @@ public:
   ShellProcess& operator=(ShellProcess&&) noexcept = default;
   ShellProcess& operator=(const ShellProcess&) = delete;
 
-  explicit operator bool() const noexcept { return (childPid > 0); }
+//-----------------------------------------------------------------------------
+public: // destructor
+  virtual ~ShellProcess() noexcept { close(); }
 
+//-----------------------------------------------------------------------------
+public: // methods
   int getChildPID() const noexcept { return childPid; }
   IOType getIOType() const noexcept { return ioType; }
   std::string getShellCommand() const { return shellCommand; }
   std::vector<std::string> getCommandArgs() const { return commandArgs; }
+  std::string readln(const Milliseconds timeout = 0);
 
-private:
+//-----------------------------------------------------------------------------
+public: // operator overloads
+  explicit operator bool() const noexcept { return (childPid > 0); }
+
+//-----------------------------------------------------------------------------
+private: // methods
+  std::string readln(const int fd, const Milliseconds timeout);
   void runChild();
   void runParent();
-  std::string readln(const int fd, const Milliseconds timeout);
 };
 
 } // namespace xbs
