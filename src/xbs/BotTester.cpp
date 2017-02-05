@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------------------
-// EfficiencyTester.cpp
+// BotTester.cpp
 // Copyright (c) 2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#include "EfficiencyTester.h"
+#include "BotTester.h"
 #include "CommandArgs.h"
 #include "Input.h"
 #include "Logger.h"
@@ -15,9 +15,10 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 static const std::string TARGET_BOARD_NAME("test");
+static const Version TEST_SERVER_VERSION("1.1");
 
 //-----------------------------------------------------------------------------
-EfficiencyTester::EfficiencyTester() {
+BotTester::BotTester() {
   const CommandArgs& args = CommandArgs::getInstance();
   const unsigned height = toUInt(args.getValueOf({"-y", "--height"}));
   const unsigned width = toUInt(args.getValueOf({"-x", "--width"}));
@@ -41,18 +42,32 @@ EfficiencyTester::EfficiencyTester() {
   config = Configuration::getDefaultConfiguration();
   if (width && height) {
     config.setBoardSize(width, height);
+  } else if (width) {
+    config.setBoardSize(width, config.getBoardHeight());
+  } else if (height) {
+    config.setBoardSize(config.getBoardWidth(), height);
   }
 }
 
 //-----------------------------------------------------------------------------
-void EfficiencyTester::test(BotRunner& bot) {
+void BotTester::test(Bot& bot) {
   if (!config) {
     Throw() << "Invalid test configuration" << XX;
   } else if (bot.getPlayerName() == TARGET_BOARD_NAME) {
-    Throw() << "Please use a different name for the bot your testing";
+    Throw() << "Please use a different name for the bot your testing" << XX;
   }
 
-  bot.setStaticBoard(staticBoard);
+  // try to prevent bot from wasting time generating a new board each iteration
+  if (staticBoard.size()) {
+    bot.setStaticBoard(staticBoard);
+  } else {
+    Board tmp("tmp", config);
+    if (!tmp.addRandomShips(config, minSurfaceArea)) {
+      Throw() << "Unable to generate random board for specified config" << XX;
+    }
+    bot.setStaticBoard(tmp.getDescriptor());
+  }
+
   totalShots = 0;
   maxShots = 0;
   minShots = ~0U;
@@ -77,6 +92,7 @@ void EfficiencyTester::test(BotRunner& bot) {
     unsigned shots = 0;
     while (hits < config.getPointGoal()) {
       Coordinate coord;
+      bot.updatePlayerToMove(bot.getPlayerName());
       std::string player = bot.getBestShot(coord);
       if (player != TARGET_BOARD_NAME) {
         Throw() << bot.getBotName() << " chose to shoot at '" << player
@@ -155,8 +171,8 @@ void EfficiencyTester::test(BotRunner& bot) {
 }
 
 //-----------------------------------------------------------------------------
-std::shared_ptr<DBRecord> EfficiencyTester::newTestRecord(
-    const BotRunner& bot) const
+std::shared_ptr<DBRecord> BotTester::newTestRecord(
+    const Bot& bot) const
 {
   std::string recordID = ("test." +
                           toStr(config.getBoardWidth()) + "x" +
@@ -172,8 +188,8 @@ std::shared_ptr<DBRecord> EfficiencyTester::newTestRecord(
 }
 
 //-----------------------------------------------------------------------------
-Coordinate EfficiencyTester::printStart(
-    const BotRunner& bot,
+Coordinate BotTester::printStart(
+    const Bot& bot,
     const DBRecord& rec,
     Board& board) const
 {
@@ -202,8 +218,8 @@ Coordinate EfficiencyTester::printStart(
 }
 
 //-----------------------------------------------------------------------------
-void EfficiencyTester::newTargetBoard(
-    BotRunner& bot,
+void BotTester::newTargetBoard(
+    Bot& bot,
     Board& board) const
 {
   if (staticBoard.size()) {
@@ -215,19 +231,14 @@ void EfficiencyTester::newTargetBoard(
     Throw() << "Failed random boat placement" << XX;
   }
 
-  bot.newGame(config);
+  bot.newGame(config, false, 0, TEST_SERVER_VERSION);
   bot.playerJoined(bot.getPlayerName());
   bot.playerJoined(TARGET_BOARD_NAME);
-  bot.startGame({ bot.getPlayerName(), TARGET_BOARD_NAME});
-
-  // make sure the bot doesn't waste time regenerating a board each iteration
-  if (bot.getStaticBoard().empty()) {
-    bot.setStaticBoard(bot.getBoardDescriptor());
-  }
+  bot.startGame({bot.getPlayerName(), TARGET_BOARD_NAME});
 }
 
 //-----------------------------------------------------------------------------
-void EfficiencyTester::storeResult(
+void BotTester::storeResult(
     DBRecord& rec,
     const Milliseconds elapsed) const
 {

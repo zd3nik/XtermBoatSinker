@@ -10,6 +10,11 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
+const Version Version::NO_VERSION;
+const Version Version::MIN_VERSION(0);
+const Version Version::MAX_VERSION(~0U, ~0U, ~0U);
+
+//-----------------------------------------------------------------------------
 Version::Version(const std::string& value)
   : str(trimStr(value))
 {

@@ -4,7 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "BotRunner.h"
 #include "CommandArgs.h"
-#include "EfficiencyTester.h"
+#include "BotTester.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "Server.h"
@@ -102,17 +102,21 @@ void BotRunner::run() {
 }
 
 //-----------------------------------------------------------------------------
-void BotRunner::newGame(const Configuration& config) {
+void BotRunner::newGame(const Configuration& config,
+                        const bool /*gameStarted*/,
+                        const unsigned /*playersJoined*/,
+                        const Version& /*serverVersion*/)
+{
   game.clear().setConfiguration(config);
-  myBoard.reset(new Board("me", gameConfig()));
+  myBoard.reset(new Board("me", config));
   if (staticBoard.size()) {
     if (!myBoard->updateDescriptor(staticBoard) ||
-        !myBoard->matchesConfig(gameConfig()))
+        !myBoard->matchesConfig(config))
     {
       Throw() << "Invalid " << getPlayerName() << " board descriptor: '"
               << staticBoard << "'" << XX;
     }
-  } else if (!myBoard->addRandomShips(gameConfig(), minSurfaceArea)) {
+  } else if (!myBoard->addRandomShips(config, minSurfaceArea)) {
     Throw() << "Failed to generate random ship placement for "
             << getPlayerName() << " board" << XX;
   }
@@ -120,7 +124,7 @@ void BotRunner::newGame(const Configuration& config) {
 
 //-----------------------------------------------------------------------------
 void BotRunner::playerJoined(const std::string& player) {
-  game.addBoard(std::make_shared<Board>(player, gameConfig()));
+  game.addBoard(std::make_shared<Board>(player, game.getConfiguration()));
 }
 
 //-----------------------------------------------------------------------------
@@ -160,6 +164,7 @@ void BotRunner::startGame(const std::vector<std::string>& playerOrder) {
   // TODO log game start
 }
 
+//-----------------------------------------------------------------------------
 void BotRunner::finishGame(const std::string& /*state*/,
                                    const unsigned /*turnCount*/,
                                    const unsigned /*playerCount*/)
@@ -170,7 +175,7 @@ void BotRunner::finishGame(const std::string& /*state*/,
 
 //-----------------------------------------------------------------------------
 void BotRunner::test() {
-  EfficiencyTester().test(*this);
+  BotTester().test(*this);
 }
 
 //-----------------------------------------------------------------------------
@@ -356,16 +361,25 @@ void BotRunner::login() {
 
   if (host.size()) {
     sock.connect(host, port);
+  } else {
+    sendln(MSG('I')
+           << getBotName()
+           << getPlayerName()
+           << getVersion()
+           << minServerVersion()
+           << maxServerVersion());
   }
 
   Logger::debug() << "Waiting for game info message";
   readln(input);
   config.load(input, gameStarted, playersJoined, serverVersion);
-  if (!isCompatibleWith(serverVersion)) {
+  if ((serverVersion < minServerVersion()) ||
+      (serverVersion > maxServerVersion()))
+  {
     Throw() << "Incompatible server version: " << serverVersion << XX;
   }
 
-  newGame(config);
+  newGame(config, gameStarted, playersJoined, serverVersion);
 
   if (gameStarted) {
     sendln(MSG('J') << getPlayerName());
@@ -389,7 +403,7 @@ void BotRunner::login() {
       }
       const std::string desc = input.getStr(1);
       if (!myBoard->updateDescriptor(desc) ||
-          !myBoard->matchesConfig(gameConfig()))
+          !myBoard->matchesConfig(game.getConfiguration()))
       {
         Throw() << "Invalid YourBoard descriptor: '" << desc << "'" << XX;
       }

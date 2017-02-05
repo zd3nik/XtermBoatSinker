@@ -17,13 +17,17 @@ namespace xbs
 class ShellBot : public Bot {
 //-----------------------------------------------------------------------------
 public: // Bot implementation
-  virtual std::string getBotName() const { return botName; }
   virtual Version getVersion() const { return botVersion; }
   virtual Version minServerVersion() const { return minServerVer; }
   virtual Version maxServerVersion() const { return maxServerVer; }
-
+  virtual std::string getBotName() const { return botName; }
+  virtual std::string getPlayerName() const { return playerName; }
   virtual std::string getBestShot(Coordinate&);
-  virtual void newGame(const Configuration&);
+  virtual void setStaticBoard(const std::string& /*desc*/) { }
+  virtual void newGame(const Configuration& gameConfig,
+                       const bool gameStarted,
+                       const unsigned playersJoined,
+                       const Version& serverVersion);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void finishGame(const std::string& state,
@@ -48,6 +52,7 @@ public: // Bot implementation
 //-----------------------------------------------------------------------------
 private: // Variables
   std::string botName;
+  std::string playerName;
   Version botVersion;
   Version minServerVer;
   Version maxServerVer;
@@ -55,7 +60,7 @@ private: // Variables
 
 //-----------------------------------------------------------------------------
 public: // Constructors
-    explicit ShellBot(const std::string& shellCommand);
+    ShellBot(const std::string& shellCommand);
     ShellBot(ShellBot&&) = delete;
     ShellBot(const ShellBot&) = delete;
     ShellBot& operator=(ShellBot&&) = delete;

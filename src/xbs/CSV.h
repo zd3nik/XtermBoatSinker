@@ -84,6 +84,14 @@ public: // methods
     return false;
   }
 
+  std::vector<std::string> readCells() {
+    std::vector<std::string> cells;
+    for (std::string cell; next(cell); ) {
+      cells.push_back(cell);
+    }
+    return cells;
+  }
+
 //-----------------------------------------------------------------------------
 public: // operator overloads
   CSV& operator<<(const std::string& x) {

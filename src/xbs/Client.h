@@ -11,7 +11,7 @@
 #include "Game.h"
 #include "Input.h"
 #include "Message.h"
-#include "Process.h"
+#include "ShellBot.h"
 #include "TcpSocket.h"
 #include "Version.h"
 #include "db/FileSysDBRecord.h"
@@ -42,7 +42,7 @@ private: // variables
   std::vector<std::string> msgBuffer;
   std::unique_ptr<FileSysDBRecord> taunts;
   std::unique_ptr<Board> yourBoard;
-  std::unique_ptr<Process> bot;
+  std::unique_ptr<ShellBot> bot;
 
 //-----------------------------------------------------------------------------
 public: // constructors

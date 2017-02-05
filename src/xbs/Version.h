@@ -18,6 +18,12 @@ public: // Printable implementation
   virtual std::string toString() const { return str; }
 
 //-----------------------------------------------------------------------------
+public: // static constants
+  static const Version NO_VERSION;
+  static const Version MIN_VERSION;
+  static const Version MAX_VERSION;
+
+//-----------------------------------------------------------------------------
 private: // variables
   unsigned majorNum = 0;
   unsigned minorNum = 0;

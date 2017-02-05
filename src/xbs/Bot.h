@@ -21,12 +21,17 @@ public: // destructor
 
 //-----------------------------------------------------------------------------
 public: // abstract methods
-  virtual std::string getBotName() const = 0;
   virtual Version getVersion() const = 0;
-  virtual Version minServerVersion() const { return Version("1.1"); }
-  virtual Version maxServerVersion() const { return Version(~0U, ~0U, ~0U); }
+  virtual Version minServerVersion() const = 0;
+  virtual Version maxServerVersion() const = 0;
+  virtual std::string getBotName() const = 0;
+  virtual std::string getPlayerName() const = 0;
   virtual std::string getBestShot(Coordinate&) = 0;
-  virtual void newGame(const Configuration&) = 0;
+  virtual void setStaticBoard(const std::string&) = 0;
+  virtual void newGame(const Configuration& gameConfig,
+                       const bool gameStarted,
+                       const unsigned playersJoined,
+                       const Version& serverVersion) = 0;
   virtual void playerJoined(const std::string& player) = 0;
   virtual void startGame(const std::vector<std::string>& playerOrder) = 0;
   virtual void finishGame(const std::string& state,
@@ -37,7 +42,7 @@ public: // abstract methods
                            const std::string& boardDescriptor,
                            const unsigned score,
                            const unsigned skips,
-                           const unsigned turns) = 0;
+                           const unsigned turns = ~0U) = 0;
   virtual void skipPlayerTurn(const std::string& player,
                               const std::string& reason) = 0;
   virtual void updatePlayerToMove(const std::string& player) = 0;

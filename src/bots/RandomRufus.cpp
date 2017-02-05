@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "RandomRufus.h"
 #include "CommandArgs.h"
+#include "Logger.h"
 #include <cmath>
 
 namespace xbs
@@ -55,7 +56,7 @@ ScoredCoordinate RandomRufus::bestShotOn(const Board& board) {
     return ScoredCoordinate();
   }
 
-  double hitGoal = gameConfig().getPointGoal();
+  double hitGoal = game.getConfiguration().getPointGoal();
   double hitCount = board.hitCount();
   double boardWeight = std::log(hitGoal - hitCount + 1);
   double optionsWeight = (desc.size() - candidates.size());
@@ -73,10 +74,10 @@ int main(const int argc, const char* argv[]) {
     xbs::CommandArgs::initialize(argc, argv);
     xbs::RandomRufus().run();
   } catch (const std::exception& e) {
-    std::cerr << "ERROR: " << e.what() << std::endl;
+    xbs::Logger::printError() << e.what();
     return 1;
   } catch (...) {
-    std::cerr << "ERROR: unhandled exception" << std::endl;
+    xbs::Logger::printError() << "unhandled exception";
     return 1;
   }
   return 0;

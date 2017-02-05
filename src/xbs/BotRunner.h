@@ -24,8 +24,12 @@ class BotRunner : public Bot {
 //-----------------------------------------------------------------------------
 public: // Bot implementation
   virtual std::string getBotName() const { return botName; }
-
-  virtual void newGame(const Configuration&);
+  virtual std::string getPlayerName() const { return playerName; }
+  virtual void setStaticBoard(const std::string& desc) { staticBoard = desc; }
+  virtual void newGame(const Configuration& gameConfig,
+                       const bool gameStarted,
+                       const unsigned playersJoined,
+                       const Version& serverVersion);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void finishGame(const std::string& state,
@@ -37,7 +41,6 @@ public: // Bot implementation
                            const unsigned score,
                            const unsigned skips,
                            const unsigned turns = ~0U);
-
   virtual void skipPlayerTurn(const std::string& /*player*/,
                               const std::string& /*reason*/) { }
   virtual void updatePlayerToMove(const std::string& /*player*/) { }
@@ -47,10 +50,6 @@ public: // Bot implementation
   virtual void hitScored(const std::string& /*player*/,
                          const std::string& /*target*/,
                          const Coordinate& /*hitCoordinate*/) { }
-
-//-----------------------------------------------------------------------------
-public: // virtual methods
-  virtual void run();
 
 //-----------------------------------------------------------------------------
 protected: // variables
@@ -67,29 +66,15 @@ protected: // variables
 
 //-----------------------------------------------------------------------------
 public: // constructors
-  explicit BotRunner(const std::string& botName);
+  BotRunner(const std::string& botName);
   BotRunner(BotRunner&&) = delete;
   BotRunner(const BotRunner&) = delete;
   BotRunner& operator=(BotRunner&&) = delete;
   BotRunner& operator=(const BotRunner&) = delete;
 
 //-----------------------------------------------------------------------------
-public: // destructor
-  virtual ~BotRunner() { }
-
-//-----------------------------------------------------------------------------
-public: // methods
-  void setStaticBoard(const std::string& desc) { staticBoard = desc; }
-  std::string getPlayerName() const { return playerName; }
-  std::string getStaticBoard() const { return staticBoard; }
-
-  std::string getBoardDescriptor() const {
-    return myBoard ? myBoard->getDescriptor() : "";
-  }
-
-  const Configuration& gameConfig() const noexcept {
-    return game.getConfiguration();
-  }
+public: // virtual methods
+  virtual void run();
 
 //-----------------------------------------------------------------------------
 protected: // virtual methods
@@ -99,10 +84,6 @@ protected: // virtual methods
 
 //-----------------------------------------------------------------------------
 private: // methods
-  bool isCompatibleWith(const Version& ver) const {
-    return ((ver >= minServerVersion()) && (ver <= maxServerVersion()));
-  }
-
   std::string readln(Input& input) {
     if (!input.readln(host.empty() ? STDIN_FILENO : sock.getHandle())) {
       Throw() << "No input data" << XX;

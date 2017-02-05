@@ -13,20 +13,24 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class RandomRufus : public BotRunner
-{
-protected:
-  bool parity = random(2);
-
-public:
-  RandomRufus()
-    : BotRunner("RandomRufus")
-  { }
-
+class RandomRufus : public BotRunner {
+//-----------------------------------------------------------------------------
+public: // BotRunner::Bot implementation
   virtual Version getVersion() const { return Version("2.0.x"); }
+  virtual Version minServerVersion() const { return Version(1, 1); }
+  virtual Version maxServerVersion() const { return Version::MAX_VERSION; }
   virtual std::string getBestShot(Coordinate&);
 
-protected:
+//-----------------------------------------------------------------------------
+private: // variables
+  bool parity = random(2);
+
+//-----------------------------------------------------------------------------
+public: // constructors
+  RandomRufus() : BotRunner("RandomRufus") { }
+
+//-----------------------------------------------------------------------------
+private: // methods
   ScoredCoordinate bestShotOn(const Board&);
 };
 

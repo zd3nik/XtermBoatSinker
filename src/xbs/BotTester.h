@@ -1,13 +1,14 @@
 //-----------------------------------------------------------------------------
-// EfficiencyTester.h
+// BotTester.h
 // Copyright (c) 2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef XBS_EFFICIENCY_TESTER_H
-#define XBS_EFFICIENCY_TESTER_H
+#ifndef XBS_BOT_TESTER_H
+#define XBS_BOT_TESTER_H
 
 #include "Platform.h"
 #include "Configuration.h"
 #include "Coordinate.h"
+#include "Board.h"
 #include "Bot.h"
 #include "Timer.h"
 #include "db/DBRecord.h"
@@ -16,7 +17,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class EfficiencyTester {
+class BotTester {
 //-----------------------------------------------------------------------------
 private: // variables
   bool watch = false;
@@ -33,20 +34,20 @@ private: // variables
 
 //-----------------------------------------------------------------------------
 public: // constructors
-  EfficiencyTester();
+  BotTester();
 
 //-----------------------------------------------------------------------------
 public: // methods
-  void test(BotRunner&);
+  void test(Bot&);
 
 //-----------------------------------------------------------------------------
 private: // methods
-  std::shared_ptr<DBRecord> newTestRecord(const BotRunner&) const;
-  Coordinate printStart(const BotRunner&, const DBRecord&, Board&) const;
-  void newTargetBoard(BotRunner&, Board&) const;
+  std::shared_ptr<DBRecord> newTestRecord(const Bot&) const;
+  Coordinate printStart(const Bot&, const DBRecord&, Board&) const;
+  void newTargetBoard(Bot&, Board&) const;
   void storeResult(DBRecord&, const Milliseconds elapsed) const;
 };
 
 } // namespace xbs
 
-#endif // XBS_EFFICIENCY_TESTER_H
+#endif // XBS_BOT_TESTER_H

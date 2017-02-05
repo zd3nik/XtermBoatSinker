@@ -3,13 +3,13 @@
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Client.h"
+#include "BotTester.h"
 #include "CanonicalMode.h"
 #include "CommandArgs.h"
 #include "CSV.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "Server.h"
-#include "ShellProcess.h"
 #include "StringUtils.h"
 #include "Throw.h"
 #include <sys/types.h>
@@ -113,12 +113,7 @@ bool Client::init() {
   }
 
   if (!isEmpty(botCommand)) {
-    bot.reset(new ShellProcess("bot", botCommand));
-    bot->validate();
-    bot->run();
-    if (!bot->isRunning()) {
-      Throw() << "Unabled to run bot command: '" << botCommand << "'" << XX;
-    }
+    bot.reset(new ShellBot(botCommand));
   }
 
   return true;
@@ -191,12 +186,10 @@ bool Client::run() {
 bool Client::runTest() {
   if (!bot) {
     Throw() << "--test option requires --bot option" << XX;
-  } else if (!bot->isRunning()) {
-    Throw() << "--test: bot is not running" << XX;
+  } else {
+    BotTester().test(*bot);
   }
-
-  // TODO
-  return false;
+  return true;
 }
 
 //-----------------------------------------------------------------------------
