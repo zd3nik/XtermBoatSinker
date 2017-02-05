@@ -132,6 +132,10 @@ bool Server::run() {
     printPlayers(coord);
     if (!ok) {
       sendToAll(GAME_ABORTED);
+      if (game.isStarted()) {
+        game.clear();
+        ok = true;
+      }
     } else if (game.isFinished() && !game.isAborted()) {
       sendGameResults();
       saveResult();
@@ -647,7 +651,13 @@ void Server::printPlayers(Coordinate& coord) {
 
 //-----------------------------------------------------------------------------
 bool Server::quitGame(Coordinate coord) {
-  std::string s = prompt(coord, "Quit Game? [y/N] -> ");
+  std::string msg;
+  if (game.isStarted()) {
+    msg = "Quit Game?";
+  } else {
+    msg = "Terminate Server?";
+  }
+  std::string s = prompt(coord, (msg + " [y/N] -> "));
   if (iStartsWith(s, 'Y')) {
     game.abort();
     return true;
