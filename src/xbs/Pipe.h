@@ -65,7 +65,7 @@ public: // methods
   void closeWrite() noexcept;
   void mergeRead(const int fd);
   void mergeWrite(const int fd);
-  void writeln(const std::string& = "");
+  void writeln(const std::string& = "") const;
 };
 
 } // namespace xbs

@@ -25,13 +25,18 @@ class BotRunner : public Bot {
 public: // Bot implementation
   virtual std::string getBotName() const { return botName; }
   virtual std::string getPlayerName() const { return playerName; }
+  virtual std::string newGame(const Configuration& gameConfig);
   virtual void setStaticBoard(const std::string& desc) { staticBoard = desc; }
-  virtual void newGame(const Configuration& gameConfig);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void finishGame(const std::string& state,
                           const unsigned turnCount,
                           const unsigned playerCount);
+  virtual void playerResult(const std::string& player,
+                            const unsigned score,
+                            const unsigned skips,
+                            const unsigned turns,
+                            const std::string& status);
   virtual void updateBoard(const std::string& player,
                            const std::string& status,
                            const std::string& boardDescriptor,
@@ -99,9 +104,9 @@ private: // methods
   }
 
   bool waitForGameStart();
-  void handleGameInfoMessage();
   void handleBoardMessage();
   void handleGameFinishedMessage();
+  void handleGameInfoMessage();
   void handleGameStartedMessage();
   void handleHitMessage();
   void handleJoinMessage();

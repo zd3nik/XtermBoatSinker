@@ -22,8 +22,8 @@ public: // Process implementation
   virtual int getInputHandle() const;
   virtual void close() noexcept;
   virtual void run();
-  virtual void sendln(const std::string& line);
-  virtual void validate();
+  virtual void sendln(const std::string& line) const;
+  virtual void validate() const;
   virtual std::string getAlias() const { return alias; }
 
 //-----------------------------------------------------------------------------
@@ -89,7 +89,7 @@ public: // methods
   IOType getIOType() const noexcept { return ioType; }
   std::string getShellCommand() const { return shellCommand; }
   std::vector<std::string> getCommandArgs() const { return commandArgs; }
-  std::string readln(const Milliseconds timeout = 0);
+  std::string readln(const Milliseconds timeout = 0) const;
 
 //-----------------------------------------------------------------------------
 public: // operator overloads
@@ -97,7 +97,7 @@ public: // operator overloads
 
 //-----------------------------------------------------------------------------
 private: // methods
-  std::string readln(const int fd, const Milliseconds timeout);
+  std::string readln(const int fd, const Milliseconds timeout) const;
   void runChild();
   void runParent();
 };

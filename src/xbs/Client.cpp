@@ -114,6 +114,7 @@ bool Client::init() {
 
   if (!isEmpty(botCommand)) {
     bot.reset(new ShellBot(botCommand));
+    bot->setStaticBoard(staticBoard);
   }
 
   return true;
@@ -261,7 +262,14 @@ bool Client::getHostPort() {
 
 //-----------------------------------------------------------------------------
 bool Client::getUserName(const bool gameStarted) {
-  userName = getUserArg();
+  if (bot) {
+    userName = bot->getPlayerName();
+    if (isEmpty(userName)) {
+      Throw() << "No player name from bot '" << botCommand << "'" << XX;
+    }
+  } else {
+    userName = getUserArg();
+  }
   while (true) {
     if (isEmpty(userName)) {
       Screen::print() << EL << "Enter your username, [Q=quit]-> " << Flush;
@@ -313,7 +321,7 @@ bool Client::joinGame(const bool gameStarted, bool& retry) {
       Logger::printError() << "Failed to send join message to server";
       return false;
     }
-    yourBoard = std::unique_ptr<Board>(new Board(userName, config));
+    yourBoard.reset(new Board(userName, config));
   } else {
     // joining a game that hasn't started yet
     if (!yourBoard) {
@@ -347,6 +355,8 @@ bool Client::joinGame(const bool gameStarted, bool& retry) {
         return false;
       }
       updateYourBoard();
+    } else if (bot) {
+      bot->playerJoined(userName);
     }
     if (taunts) {
       for (auto& taunt : taunts->getStrings("hit")) {
@@ -388,6 +398,10 @@ bool Client::joinGame(const bool gameStarted, bool& retry) {
 
 //-----------------------------------------------------------------------------
 bool Client::joinPrompt(const bool gameStarted, const unsigned playersJoined) {
+  if (bot) {
+    return true;
+  }
+
   clearScreen();
 
   Coordinate coord(1, 1);
@@ -501,11 +515,26 @@ bool Client::readGameInfo(bool& gameStarted, unsigned& playersJoined) {
   }
 
   game.clear().setConfiguration(config);
+
+  if (bot) {
+    std::string desc = bot->newGame(config);
+    yourBoard.reset(new Board("", game.getConfiguration()));
+    if (!yourBoard->updateDescriptor(desc) ||
+        !yourBoard->matchesConfig(game.getConfiguration()))
+    {
+      Throw() << "Invalid bot(" << bot->getPlayerName() << ") board: "
+              << desc << XX;
+    }
+  }
   return true;
 }
 
 //-----------------------------------------------------------------------------
 bool Client::setupBoard() {
+  if (bot) {
+    return static_cast<bool>(yourBoard);
+  }
+
   const Configuration& config = game.getConfiguration();
   std::unique_ptr<Board> tmpBoard(new Board("", config));
   yourBoard.reset();
@@ -795,6 +824,10 @@ void Client::addMessage() {
   const std::string msg  = input.getStr(2);
   const std::string to   = input.getStr(3);
   appendMessage(msg, from, to);
+
+  if (bot) {
+    bot->messageFrom(from, msg, to);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -807,6 +840,10 @@ void Client::addPlayer() {
             << XX;
   }
   game.addBoard(std::make_shared<Board>(name, game.getConfiguration()));
+
+  if (bot) {
+    bot->playerJoined(name);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -885,6 +922,10 @@ void Client::endGame() {
   Screen::print() << coord.south() << "Turns taken  : " << rounds;
   Screen::print() << coord.south() << "Participants : " << players;
 
+  if (bot) {
+    bot->finishGame(status, rounds, players);
+  }
+
   coord.south().setX(3);
   for (unsigned i = 0; i < players; ++i) {
     if (!input.readln(socket.getHandle())) {
@@ -904,6 +945,10 @@ void Client::endGame() {
                       << ", skips = " << skips
                       << ", turns = " << turns
                       << " " << sts;
+    }
+
+    if (bot) {
+      bot->playerResult(name, score, skips, turns, sts);
     }
   }
   Screen::print() << coord.south(2).setX(1) << Flush;
@@ -955,6 +1000,14 @@ void Client::hit() {
 
   appendMessage(msg);
   board->incScore();
+
+  if (bot) {
+    Coordinate coord;
+    if (!coord.fromString(square)) {
+      Logger::error() << "Invalid square in hit message: " << input.getLine();
+    }
+    bot->hitScored(shooter, target, coord);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -964,6 +1017,23 @@ void Client::nextTurn() {
     Throw() << "Incomplete nextTurn message from server" << XX;
   } else if (!game.setNextTurn(name)) {
     Throw() << "Invalid nextTurn message: " << input.getLine() << XX;
+  }
+
+  if (bot) {
+    bot->updatePlayerToMove(name);
+    if (name == userName) {
+      Coordinate shotCoord;
+      Logger::debug() << "waiting for shoot message from bot("
+                      << bot->getBotName() << ')';
+      std::string target = bot->getBestShot(shotCoord);
+      Logger::debug() << "bot target: " << target << ", coord: " << shotCoord;
+      if (isEmpty(target)) {
+        myBoard().incSkips();
+        send(MSG('K') << userName);
+      } else {
+        send(MSG('S') << target << shotCoord.getX() << shotCoord.getY());
+      }
+    }
   }
 }
 
@@ -1052,6 +1122,8 @@ void Client::removePlayer() {
     Throw() << "Received removePlayer message after game start" << XX;
   }
   game.removeBoard(name);
+
+  // TODO pass on to bot?
 }
 
 //-----------------------------------------------------------------------------
@@ -1270,6 +1342,10 @@ void Client::skip() {
   }
 
   board->incSkips();
+
+  if (bot) {
+    bot->skipPlayerTurn(user, reason);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1316,6 +1392,10 @@ void Client::startGame() {
   } else {
     Throw() << "Game cannot start" << XX;
   }
+
+  if (bot) {
+    bot->startGame(boardOrder);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1339,6 +1419,10 @@ void Client::updateBoard() {
   } else if ((name == userName) && !yourBoard->addHitsAndMisses(desc)) {
     Throw() << "Board descriptor mismatch: '" << desc << "'" << XX;
   }
+
+  if (bot) {
+    bot->updateBoard(name, status, desc, score, skips);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -1348,6 +1432,9 @@ void Client::updateYourBoard() {
       !yourBoard->matchesConfig(game.getConfiguration()))
   {
     Throw() << "Invalid YourBoard descriptor: '" << desc << "'" << XX;
+  }
+  if (bot) {
+    // TODO bot->yourBoard(desc);
   }
 }
 

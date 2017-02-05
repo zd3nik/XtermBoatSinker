@@ -106,7 +106,7 @@ void Pipe::mergeWrite(const int fd) {
 }
 
 //-----------------------------------------------------------------------------
-void Pipe::writeln(const std::string& str) {
+void Pipe::writeln(const std::string& str) const {
   if (fdWrite < 0) {
     Throw() << "Pipe.writeln() not open for writing" << XX;
   }

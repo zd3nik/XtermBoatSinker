@@ -98,7 +98,7 @@ static bool unsafe(const std::string& str) {
 }
 
 //-----------------------------------------------------------------------------
-void ShellProcess::validate() {
+void ShellProcess::validate() const {
   if (isEmpty(alias)) {
     Throw() << "ShellProcess() empty alias" << XX;
   }
@@ -225,12 +225,13 @@ void ShellProcess::runChild() {
 }
 
 //-----------------------------------------------------------------------------
-std::string ShellProcess::readln(const Milliseconds timeout) {
+std::string ShellProcess::readln(const Milliseconds timeout) const {
   return readln(inPipe.getReadHandle(), timeout);
 }
 
 //-----------------------------------------------------------------------------
-std::string ShellProcess::readln(const int fd, const Milliseconds timeout) {
+std::string ShellProcess::readln(const int fd, const Milliseconds timeout)
+const {
   timeval* tmout = nullptr;
   timeval tv;
   if (timeout) {
@@ -321,7 +322,7 @@ void ShellProcess::runParent() {
 }
 
 //-----------------------------------------------------------------------------
-void ShellProcess::sendln(const std::string& line) {
+void ShellProcess::sendln(const std::string& line) const {
   if (childPid <= 0) {
     Throw() << "ShellProcess(" << alias << ").sendln(" << childPid
             << ',' << line.substr(0, 20)

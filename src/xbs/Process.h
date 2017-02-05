@@ -25,8 +25,8 @@ public: // abstract methods
   virtual int getInputHandle() const = 0;
   virtual void close() noexcept = 0;
   virtual void run() = 0;
-  virtual void sendln(const std::string& line) = 0;
-  virtual void validate() = 0;
+  virtual void sendln(const std::string& line) const = 0;
+  virtual void validate() const = 0;
   virtual std::string getAlias() const = 0;
 };
 

@@ -71,15 +71,25 @@ std::string ShellBot::getBestShot(Coordinate& bestShot) {
   return info[1];
 }
 
+
 //-----------------------------------------------------------------------------
-void ShellBot::newGame(const Configuration& config) {
+std::string ShellBot::newGame(const Configuration& config) {
+  return newGame(config, Version(1, 1), 0, false);
+}
+
+//-----------------------------------------------------------------------------
+std::string ShellBot::newGame(const Configuration& config,
+                              const Version& serverVersion,
+                              const unsigned playersJoined,
+                              const bool gameStarted)
+{
   CSV msg = MSG('G')
-      << Version(1, 1) // server version
+      << serverVersion
       << config.getName()
-      << 'N' // game started?
+      << (gameStarted ? 'Y' : 'N')
       << config.getMinPlayers()
       << config.getMaxPlayers()
-      << 0 // players joined
+      << playersJoined
       << config.getPointGoal()
       << config.getBoardWidth()
       << config.getBoardHeight()
@@ -97,14 +107,22 @@ void ShellBot::newGame(const Configuration& config) {
   }
 
   std::vector<std::string> info = CSV(line, '|', true).readCells();
-  if ((info.size() != 3) ||
+  if ((info.size() != (2U + !gameStarted)) ||
       (info[0] != "J") ||
       (info[1] != playerName) ||
-      info[2].empty())
+      (!gameStarted && info[2].empty()))
   {
     Throw() << "Invalid join message (" << line
             << ") from bot: '" << botName << "'" << XX;
   }
+
+  return gameStarted ? "" : info[2];
+}
+
+//-----------------------------------------------------------------------------
+void ShellBot::yourBoard(const std::string& boardDescriptor) {
+  CSV msg = MSG('Y') << boardDescriptor;
+  proc.sendln(msg.toString());
 }
 
 //-----------------------------------------------------------------------------
@@ -128,6 +146,17 @@ void ShellBot::finishGame(const std::string& state,
                           const unsigned playerCount)
 {
   CSV msg = MSG('F') << state << turnCount << playerCount;
+  proc.sendln(msg.toString());
+}
+
+//-----------------------------------------------------------------------------
+void ShellBot::playerResult(const std::string& player,
+                            const unsigned score,
+                            const unsigned skips,
+                            const unsigned turns,
+                            const std::string& status)
+{
+  CSV msg = MSG('R') << player << score << skips << turns << status;
   proc.sendln(msg.toString());
 }
 

@@ -21,13 +21,18 @@ public: // Bot implementation
   virtual std::string getBotName() const { return botName; }
   virtual std::string getPlayerName() const { return playerName; }
   virtual std::string getBestShot(Coordinate&);
+  virtual std::string newGame(const Configuration& gameConfig);
   virtual void setStaticBoard(const std::string& /*desc*/) { }
-  virtual void newGame(const Configuration& gameConfig);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void finishGame(const std::string& state,
                           const unsigned turnCount,
                           const unsigned playerCount);
+  virtual void playerResult(const std::string& player,
+                            const unsigned score,
+                            const unsigned skips,
+                            const unsigned turns,
+                            const std::string& status);
   virtual void updateBoard(const std::string& player,
                            const std::string& status,
                            const std::string& boardDescriptor,
@@ -44,12 +49,12 @@ public: // Bot implementation
                          const std::string& target,
                          const Coordinate& hitCoordinate);
 
-  virtual bool isCompatibleServer(const Version& serverVersion) const {
+  virtual bool isCompatibleWith(const Version& serverVersion) const {
     return (serverVersion >= Version(1, 1));
   }
 
 //-----------------------------------------------------------------------------
-private: // Variables
+private: // variables
 
   Version botVersion;
   std::string botName;
@@ -57,12 +62,20 @@ private: // Variables
   ShellProcess proc;
 
 //-----------------------------------------------------------------------------
-public: // Constructors
+public: // constructors
     ShellBot(const std::string& shellCommand);
     ShellBot(ShellBot&&) = delete;
     ShellBot(const ShellBot&) = delete;
     ShellBot& operator=(ShellBot&&) = delete;
     ShellBot& operator=(const ShellBot&) = delete;
+
+//-----------------------------------------------------------------------------
+public: // methods
+    void yourBoard(const std::string& boardDescriptor);
+    std::string newGame(const Configuration& gameConfig,
+                        const Version& serverVersion,
+                        const unsigned playersJoined,
+                        const bool gameStarted);
 };
 
 } // namespace nlpcore

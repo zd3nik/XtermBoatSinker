@@ -102,7 +102,7 @@ void BotRunner::run() {
 }
 
 //-----------------------------------------------------------------------------
-void BotRunner::newGame(const Configuration& config) {
+std::string BotRunner::newGame(const Configuration& config) {
   game.clear().setConfiguration(config);
   myBoard.reset(new Board("me", config));
   if (staticBoard.size()) {
@@ -116,6 +116,7 @@ void BotRunner::newGame(const Configuration& config) {
     Throw() << "Failed to generate random ship placement for "
             << getPlayerName() << " board" << XX;
   }
+  return myBoard->getDescriptor();
 }
 
 //-----------------------------------------------------------------------------
@@ -157,16 +158,33 @@ void BotRunner::startGame(const std::vector<std::string>& playerOrder) {
   if (!game.start()) {
     Throw() << "Game cannot start" << XX;
   }
-  // TODO log game start
+  Logger::debug() << "Game '" << game.getTitle() << "' started";
 }
 
 //-----------------------------------------------------------------------------
-void BotRunner::finishGame(const std::string& /*state*/,
-                                   const unsigned /*turnCount*/,
-                                   const unsigned /*playerCount*/)
+void BotRunner::finishGame(const std::string& state,
+                           const unsigned turnCount,
+                           const unsigned playerCount)
 {
-  // TODO log results
   game.finish();
+  Logger::debug() << "Game '" << game.getTitle()
+                  << "' finished, state: " << state
+                  << ", turns: " << turnCount
+                  << ", players: " << playerCount;
+}
+
+//-----------------------------------------------------------------------------
+void BotRunner::playerResult(const std::string& player,
+                             const unsigned score,
+                             const unsigned skips,
+                             const unsigned turns,
+                             const std::string& status)
+{
+  Logger::debug() << "Player '" << player
+                  << "' score: " << score
+                  << ", skips: " << skips
+                  << ", turns: " << turns
+                  << ", status: " << status;
 }
 
 //-----------------------------------------------------------------------------
@@ -241,6 +259,43 @@ bool BotRunner::waitForGameStart() {
 }
 
 //-----------------------------------------------------------------------------
+void BotRunner::handleBoardMessage() {
+  const std::string player = input.getStr(1);
+  const std::string status = input.getStr(2);
+  const std::string desc = input.getStr(3);
+  const unsigned score = input.getUInt(4);
+  const unsigned skips = input.getUInt(5);
+  if (player.empty() || desc.empty()) {
+    Throw() << "Invalid board message: " << input.getLine() << XX;
+  }
+  updateBoard(player, status, desc, score, skips);
+}
+
+//-----------------------------------------------------------------------------
+void BotRunner::handleGameFinishedMessage() {
+  const std::string state = input.getStr(1);
+  const unsigned turnCount = input.getUInt(2);
+  const unsigned playerCount = input.getUInt(3);
+  if (state.empty()) {
+    Throw() << "Invalid game finished message: " << input.getLine() << XX;
+  }
+  for (unsigned i = 0; i < playerCount; ++i) {
+    readln(input);
+    if (input.getStr() != "R") {
+      Throw() << "Expected player result message, got: " << input.getLine()
+              << XX;
+    }
+    const std::string player = input.getStr(1);
+    const unsigned score = input.getUInt(2);
+    const unsigned skips = input.getUInt(3);
+    const unsigned turns = input.getUInt(4);
+    const std::string status = input.getStr(5);
+    updateBoard(player, status, "", score, skips, turns);
+  }
+  finishGame(state, turnCount, playerCount);
+}
+
+//-----------------------------------------------------------------------------
 void BotRunner::handleGameInfoMessage() {
   Configuration config;
   bool gameStarted = false;
@@ -248,7 +303,7 @@ void BotRunner::handleGameInfoMessage() {
   Version serverVersion;
 
   config.load(input, gameStarted, playersJoined, serverVersion);
-  if (!isCompatibleServer(serverVersion)) {
+  if (!isCompatibleWith(serverVersion)) {
     Throw() << getBotName() << " is incompatible with server version: "
             << serverVersion << XX;
   }
@@ -294,43 +349,6 @@ void BotRunner::handleGameInfoMessage() {
   } else {
     Throw() << "Expected join message, got: " << msg << XX;
   }
-}
-
-//-----------------------------------------------------------------------------
-void BotRunner::handleBoardMessage() {
-  const std::string player = input.getStr(1);
-  const std::string status = input.getStr(2);
-  const std::string desc = input.getStr(3);
-  const unsigned score = input.getUInt(4);
-  const unsigned skips = input.getUInt(5);
-  if (player.empty() || desc.empty()) {
-    Throw() << "Invalid board message: " << input.getLine() << XX;
-  }
-  updateBoard(player, status, desc, score, skips);
-}
-
-//-----------------------------------------------------------------------------
-void BotRunner::handleGameFinishedMessage() {
-  const std::string state = input.getStr(1);
-  const unsigned turnCount = input.getUInt(2);
-  const unsigned playerCount = input.getUInt(3);
-  if (state.empty()) {
-    Throw() << "Invalid game finished message: " << input.getLine() << XX;
-  }
-  for (unsigned i = 0; i < playerCount; ++i) {
-    readln(input);
-    if (input.getStr() != "R") {
-      Throw() << "Expected player result message, got: " << input.getLine()
-              << XX;
-    }
-    const std::string player = input.getStr(1);
-    const unsigned score = input.getUInt(2);
-    const unsigned skips = input.getUInt(3);
-    const unsigned turns = input.getUInt(4);
-    const std::string status = input.getStr(5);
-    updateBoard(player, status, "", score, skips, turns);
-  }
-  finishGame(state, turnCount, playerCount);
 }
 
 //-----------------------------------------------------------------------------

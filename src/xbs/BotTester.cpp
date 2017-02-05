@@ -219,14 +219,16 @@ Coordinate BotTester::printStart(
 //-----------------------------------------------------------------------------
 void BotTester::newTargetBoard(
     Bot& bot,
-    Board& board) const
+    Board& targetBoard) const
 {
   if (staticBoard.size()) {
-    if (!board.updateDescriptor(staticBoard) || !board.matchesConfig(config)) {
+    if (!targetBoard.updateDescriptor(staticBoard) ||
+        !targetBoard.matchesConfig(config))
+    {
       Throw() << "Invalid test board descriptor [" << staticBoard << ']'
               << XX;
     }
-  } else if (!board.addRandomShips(config, minSurfaceArea)) {
+  } else if (!targetBoard.addRandomShips(config, minSurfaceArea)) {
     Throw() << "Failed random boat placement" << XX;
   }
 
