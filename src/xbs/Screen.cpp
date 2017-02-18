@@ -133,7 +133,7 @@ Screen& Screen::flush() {
 
 //-----------------------------------------------------------------------------
 Screen& Screen::str(const std::string& x) {
-  if (fwrite(x.c_str(), x.size(), 1, stdout) != 1) {
+  if (fwrite(x.c_str(), x.size(), 1, stdout) < 0) {
     Throw() << "Failed to print to screen: " << toError(errno) << XX;
   }
   return (*this);
