@@ -527,7 +527,7 @@ std::string toError(const int errorNumber) {
 
 //-----------------------------------------------------------------------------
 std::string trimStr(const char* str) {
-  return str ? trimStr(str) : "";
+  return str ? trimStr(std::string(str)) : "";
 }
 
 //-----------------------------------------------------------------------------
