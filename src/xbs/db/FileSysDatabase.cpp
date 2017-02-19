@@ -5,6 +5,7 @@
 #include "FileSysDatabase.h"
 #include "FileSysDBRecord.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "StringUtils.h"
 #include "Throw.h"
 #include <sys/stat.h>
@@ -33,19 +34,17 @@ void FileSysDatabase::closeDir() noexcept {
 //-----------------------------------------------------------------------------
 void FileSysDatabase::openDir(const std::string& path) {
   if (dir) {
-    Throw() << "FileSysDatabase.openDir() dir is already open" << XX;
+    Throw("FileSysDatabase.openDir() dir is already open");
   } else if (isEmpty(path)) {
-    Throw(InvalidArgument) << "FileSysDatabase.openDir() empty path" << XX;
+    Throw("FileSysDatabase.openDir() empty path");
   }
 
   int noents = 0;
   while (!(dir = opendir(path.c_str()))) {
     if ((errno != ENOENT) || (++noents > 1)) {
-      Throw() << "opendir(" << path << ") failed: " << toError(errno)
-              << XX;
+      Throw(Msg() << "opendir(" << path << ") failed: " << toError(errno));
     } else if (mkdir(path.c_str(), 0750) != 0) {
-      Throw() << "mkdir(" << path << ") failed: " << toError(errno)
-              << XX;
+      Throw(Msg() << "mkdir(" << path << ") failed: " << toError(errno));
     }
   }
 
@@ -70,7 +69,7 @@ FileSysDatabase& FileSysDatabase::open(const std::string& dbURI) {
 //-----------------------------------------------------------------------------
 void FileSysDatabase::loadCache() {
   if (!dir) {
-    Throw() << "FileSysDatabase.loadCache() dir not open" << XX;
+    Throw("FileSysDatabase.loadCache() dir not open");
   }
   for (dirent* entry = readdir(dir); entry; entry = readdir(dir)) {
     std::string name = entry->d_name;
@@ -123,12 +122,12 @@ bool FileSysDatabase::remove(const std::string& recordID) {
     try {
       auto rec = it->second;
       if (!rec) {
-        Throw() << "Null " << (*this) << " record" << XX;
+        Throw(Msg() << "Null" << (*this) << "record");
       } else if (rec->getFilePath().empty()) {
-        Throw() << "Empty " << (*rec) << " file path" << XX;
+        Throw(Msg() << "Empty" << (*rec) << "file path");
       } else if (unlink(rec->getFilePath().c_str()) != 0) {
-        Throw() << "unlink(" << rec->getFilePath() << ") failed: "
-                << toError(errno) << XX;
+        Throw(Msg() << "unlink(" << rec->getFilePath() << ") failed:"
+              << toError(errno));
       }
       ok = true;
     }

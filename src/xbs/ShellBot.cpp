@@ -3,7 +3,9 @@
 // Copyright (c) 2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "ShellBot.h"
-#include "CSV.h"
+#include "CSVReader.h"
+#include "CSVWriter.h"
+#include "Msg.h"
 #include "StringUtils.h"
 #include "Throw.h"
 
@@ -17,22 +19,22 @@ ShellBot::ShellBot(const std::string& cmd)
   proc.validate();
   proc.run();
   if (!proc.isRunning()) {
-    Throw() << "Unabled to run bot command: '" << cmd << "'" << XX;
+    Throw(Msg() << "Unabled to run bot command:" << cmd);
   }
 
   std::string line = trimStr(proc.readln(1000));
   if (line.empty()) {
-    Throw() << "No info message from bot command: '" << cmd << "'" << XX;
+    Throw(Msg() << "No info message from bot command:" << cmd);
   }
 
-  std::vector<std::string> info = CSV(line, '|', true).readCells();
+  std::vector<std::string> info = CSVReader(line, '|', true).readCells();
   if ((info.size() < 3) ||
       (info[0] != "I") ||
       info[1].empty() ||
       info[2].empty())
   {
-    Throw() << "Invalid info message (" << line
-            << ") from bot command: '" << cmd << "'" << XX;
+    Throw(Msg() << "Invalid info message (" << line
+          << ") from bot command:" << cmd);
   }
 
   botName = info[1];
@@ -44,13 +46,13 @@ ShellBot::ShellBot(const std::string& cmd)
 std::string ShellBot::getBestShot(Coordinate& bestShot) {
   std::string line = trimStr(proc.readln(3000));
   if (line.empty()) {
-    Throw() << "No shot message from bot: '" << botName << "'" << XX;
+    Throw(Msg() << "No shot message from bot:" << botName);
   }
 
-  std::vector<std::string> info = CSV(line, '|', true).readCells();
+  std::vector<std::string> info = CSVReader(line, '|', true).readCells();
   if (info.empty() || ((info[0] != "S") && (info[0] != "K"))) {
-    Throw() << "Invalid shot message (" << line
-            << ") from bot: '" << botName << "'" << XX;
+    Throw(Msg() << "Invalid shot message (" << line
+          << ") from bot:" << botName);
   }
 
   if (info[0] == "K") {
@@ -63,11 +65,11 @@ std::string ShellBot::getBestShot(Coordinate& bestShot) {
       !isUInt(info[2]) ||
       !isUInt(info[3]))
   {
-    Throw() << "Invalid shot message (" << line
-            << ") from bot: '" << botName << "'" << XX;
+    Throw(Msg() << "Invalid shot message (" << line
+          << ") from bot:" << botName);
   }
 
-  bestShot.set(toUInt(info[2]), toUInt(info[3]));
+  bestShot.set(toUInt32(info[2]), toUInt32(info[3]));
   return info[1];
 }
 
@@ -83,7 +85,7 @@ std::string ShellBot::newGame(const Configuration& config,
                               const unsigned playersJoined,
                               const bool gameStarted)
 {
-  CSV msg = MSG('G')
+  CSVWriter msg = Msg('G')
       << serverVersion
       << config.getName()
       << (gameStarted ? 'Y' : 'N')
@@ -99,21 +101,21 @@ std::string ShellBot::newGame(const Configuration& config,
     msg << ship.toString();
   }
 
-  proc.sendln(msg.toString());
+  proc.sendln(msg);
 
   std::string line = proc.readln(1000);
   if (line.empty()) {
-    Throw() << "No join message from bot: '" << botName << "'" << XX;
+    Throw(Msg() << "No join message from bot:" << botName);
   }
 
-  std::vector<std::string> info = CSV(line, '|', true).readCells();
+  std::vector<std::string> info = CSVReader(line, '|', true).readCells();
   if ((info.size() != (2U + !gameStarted)) ||
       (info[0] != "J") ||
       (info[1] != playerName) ||
       (!gameStarted && info[2].empty()))
   {
-    Throw() << "Invalid join message (" << line
-            << ") from bot: '" << botName << "'" << XX;
+    Throw(Msg() << "Invalid join message (" << line
+          << ") from bot:" << botName);
   }
 
   return gameStarted ? "" : info[2];
@@ -121,23 +123,21 @@ std::string ShellBot::newGame(const Configuration& config,
 
 //-----------------------------------------------------------------------------
 void ShellBot::yourBoard(const std::string& boardDescriptor) {
-  CSV msg = MSG('Y') << boardDescriptor;
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('Y') << boardDescriptor);
 }
 
 //-----------------------------------------------------------------------------
 void ShellBot::playerJoined(const std::string& player) {
-  CSV msg = MSG('J') << player;
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('J') << player);
 }
 
 //-----------------------------------------------------------------------------
 void ShellBot::startGame(const std::vector<std::string>& playerOrder) {
-  CSV msg = MSG('S');
+  CSVWriter msg = Msg('S');
   for (auto& player : playerOrder) {
     msg << player;
   }
-  proc.sendln(msg.toString());
+  proc.sendln(msg);
 }
 
 //-----------------------------------------------------------------------------
@@ -145,8 +145,7 @@ void ShellBot::finishGame(const std::string& state,
                           const unsigned turnCount,
                           const unsigned playerCount)
 {
-  CSV msg = MSG('F') << state << turnCount << playerCount;
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('F') << state << turnCount << playerCount);
 }
 
 //-----------------------------------------------------------------------------
@@ -156,8 +155,7 @@ void ShellBot::playerResult(const std::string& player,
                             const unsigned turns,
                             const std::string& status)
 {
-  CSV msg = MSG('R') << player << score << skips << turns << status;
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('R') << player << score << skips << turns << status);
 }
 
 //-----------------------------------------------------------------------------
@@ -168,28 +166,25 @@ void ShellBot::updateBoard(const std::string& player,
                            const unsigned skips,
                            const unsigned turns)
 {
-  CSV msg = MSG('B')
-      << player
-      << status
-      << boardDescriptor
-      << score
-      << skips
-      << ((turns == ~0U) ? 0 : turns);
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('B')
+              << player
+              << status
+              << boardDescriptor
+              << score
+              << skips
+              << ((turns == ~0U) ? 0 : turns));
 }
 
 //-----------------------------------------------------------------------------
 void ShellBot::skipPlayerTurn(const std::string& player,
                               const std::string& reason)
 {
-  CSV msg = MSG('K') << player << reason;
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('K') << player << reason);
 }
 
 //-----------------------------------------------------------------------------
 void ShellBot::updatePlayerToMove(const std::string& player) {
-  CSV msg = MSG('N') << player;
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('N') << player);
 }
 
 //-----------------------------------------------------------------------------
@@ -197,8 +192,7 @@ void ShellBot::messageFrom(const std::string& from,
                            const std::string& message,
                            const std::string& group)
 {
-  CSV msg = MSG('M') << from << message << group;
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('M') << from << message << group);
 }
 
 //-----------------------------------------------------------------------------
@@ -206,8 +200,7 @@ void ShellBot::hitScored(const std::string& player,
                          const std::string& target,
                          const Coordinate& hitCoordinate)
 {
-  CSV msg = MSG('H') << player << target << hitCoordinate;
-  proc.sendln(msg.toString());
+  proc.sendln(Msg('H') << player << target << hitCoordinate);
 }
 
 } // namespace xbs

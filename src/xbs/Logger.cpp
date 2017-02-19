@@ -1,20 +1,20 @@
-//-----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 // Logger.cpp
-// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
-//-----------------------------------------------------------------------------
+// Copyright (c) 2017 Shawn Chidester, All Rights Reserved.
+//----------------------------------------------------------------------------
 #include "Logger.h"
 #include "CommandArgs.h"
-#include "Input.h"
 #include "StringUtils.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-static std::unique_ptr<Logger> instance;
+static thread_local std::unique_ptr<Logger> instance;
 
 //-----------------------------------------------------------------------------
-Logger& Logger::getInstance() {
+Logger&
+Logger::getInstance() {
   if (!instance) {
     instance.reset(new Logger());
   }
@@ -24,20 +24,26 @@ Logger& Logger::getInstance() {
 //-----------------------------------------------------------------------------
 Logger::Logger()
   : logLevel(INFO),
-    stream(&std::cout)
+    stream(&std::cerr)
 {
   const CommandArgs& args = CommandArgs::getInstance();
 
-  const std::string level = args.getValueOf({"-l", "--log-level"});
+  std::string level = args.getStrAfter({"-l", "--log-level"});
+  if (isEmpty(level)) {
+    level = trimStr(getenv("LOG_LEVEL"));
+  }
   if (level.size()) {
     setLogLevel(level);
   }
 
-  const std::string file = args.getValueOf({"-f", "--log-file"});
+  std::string file = args.getStrAfter({"-f", "--log-file"});
   if (isEmpty(file)) {
-    appendToFile(args.getProgramName() + ".log");
+    file = trimStr(getenv("LOG_FILE"));
+  }
+  if (file.empty()) {
+    setLogFile(args.getProgramName() + ".log");
   } else {
-    appendToFile(file);
+    setLogFile(file);
   }
 }
 
@@ -49,8 +55,9 @@ Logger::~Logger() {
 }
 
 //-----------------------------------------------------------------------------
-Logger& Logger::appendToFile(const std::string& file) {
-  stream = &std::cout;
+Logger&
+Logger::setLogFile(const std::string& file) {
+  stream = &std::cerr;
   logFile.clear();
   try {
     if (fileStream.is_open()) {
@@ -68,13 +75,15 @@ Logger& Logger::appendToFile(const std::string& file) {
 }
 
 //-----------------------------------------------------------------------------
-Logger& Logger::setLogLevel(const LogLevel logLevel) {
-  this->logLevel = logLevel;
+Logger&
+Logger::setLogLevel(const LogLevel level) noexcept {
+  logLevel = level;
   return (*this);
 }
 
 //-----------------------------------------------------------------------------
-Logger& Logger::setLogLevel(const std::string& level) {
+Logger&
+Logger::setLogLevel(const std::string& level) {
   if (iEqual(level, "DEBUG")) {
     return setLogLevel(DEBUG);
   } else if (iEqual(level, "INFO")) {
@@ -89,3 +98,4 @@ Logger& Logger::setLogLevel(const std::string& level) {
 }
 
 } // namespace xbs
+

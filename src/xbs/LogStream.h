@@ -1,13 +1,12 @@
 //-----------------------------------------------------------------------------
 // LogStream.h
-// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
+// Copyright (c) 2017 Shawn Chidester, All Rights Reserved.
 //-----------------------------------------------------------------------------
 #ifndef XBS_LOGSTREAM_H
 #define XBS_LOGSTREAM_H
 
 #include "Platform.h"
-#include "Printable.h"
-#include "Screen.h"
+#include <iostream>
 
 namespace xbs
 {
@@ -28,17 +27,17 @@ public: // constructors
   LogStream& operator=(const LogStream&) = delete;
 
   explicit LogStream(std::ostream* stream,
-                     const char* hdr = nullptr,
+                     const std::string& hdr = "",
                      const bool print = false)
     : stream(stream),
-      print(print && (stream != &(std::cout)))
+      print(print && (stream != &(std::cerr)))
   {
-    if (hdr) {
+    if (hdr.size()) {
       if (stream) {
         (*stream) << hdr;
       }
       if (print) {
-        Screen::print() << EL << ClearLine << Red << hdr;
+        std::cerr << hdr;
       }
     }
   }
@@ -51,19 +50,31 @@ public: // destructor
       stream->flush();
     }
     if (print) {
-      Screen::print() << DefaultColor << EL << Flush;
+      std::cerr << std::endl;
     }
   }
 
 //-----------------------------------------------------------------------------
 public: // operator overloads
+  LogStream& operator<<(const char* x) {
+    if (x && (*x)) {
+      if (stream) {
+        (*stream) << x;
+      }
+      if (print) {
+        std::cerr << x;
+      }
+    }
+    return (*this);
+  }
+
   template<class T>
   LogStream& operator<<(const T& x) {
     if (stream) {
       (*stream) << x;
     }
     if (print) {
-      Screen::print() << x;
+      std::cerr << x;
     }
     return (*this);
   }
@@ -72,3 +83,4 @@ public: // operator overloads
 } // namespace xbs
 
 #endif // XBS_LOGSTREAM_H
+

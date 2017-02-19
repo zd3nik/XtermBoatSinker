@@ -6,7 +6,7 @@
 #define XBS_COORDINATE_H
 
 #include "Platform.h"
-#include "CSV.h"
+#include "CSVReader.h"
 #include "Movement.h"
 #include "Printable.h"
 
@@ -110,17 +110,17 @@ public: // methods
   bool fromString(const std::string& str) {
     std::string xCell;
     std::string yCell;
-    CSV(str) >> xCell >> yCell;
+    CSVReader(str) >> xCell >> yCell;
     if (isUInt(xCell) && isUInt(yCell)) {
-      x = static_cast<unsigned>(toUInt(xCell));
-      y = static_cast<unsigned>(toUInt(yCell));
+      x = toUInt32(xCell);
+      y = toUInt32(yCell);
       return true;
     }
     if (yCell.empty() && (xCell.size() > 1) && isalpha(xCell[0]) &&
         isUInt(xCell.substr(1)))
     {
       x = static_cast<unsigned>(tolower(xCell[0]) - 'a' + 1);
-      y = static_cast<unsigned>(toUInt(xCell.substr(1)));
+      y = toUInt32(xCell.substr(1));
       return true;
     }
     return false;

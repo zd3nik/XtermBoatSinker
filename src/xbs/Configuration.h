@@ -18,10 +18,6 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Configuration {
 //-----------------------------------------------------------------------------
-public: // static methods
-  static Configuration getDefaultConfiguration();
-
-  //-----------------------------------------------------------------------------
 private: // variables
   std::string name;
   unsigned minPlayers = 0;
@@ -30,6 +26,10 @@ private: // variables
   unsigned maxSurfaceArea = 0;
   Rectangle shipArea;
   std::vector<Ship> ships;
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static Configuration getDefaultConfiguration();
 
 //-----------------------------------------------------------------------------
 public: // methods

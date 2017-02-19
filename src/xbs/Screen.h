@@ -40,12 +40,6 @@ enum ScreenFlag {
 //-----------------------------------------------------------------------------
 class Screen : public Rectangle {
 //-----------------------------------------------------------------------------
-public: // static methods
-  static Screen& get(const bool update = false);
-  static Screen& print() { return get(false); }
-  static const char* colorCode(const ScreenColor);
-
-//-----------------------------------------------------------------------------
 private: // constructors
   Screen() = delete;
   Screen(Screen&&) = delete;
@@ -56,6 +50,12 @@ private: // constructors
   explicit Screen(const Rectangle& container)
     : Rectangle(container)
   { }
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static Screen& get(const bool update = false);
+  static Screen& print() { return get(false); }
+  static const char* colorCode(const ScreenColor);
 
 //-----------------------------------------------------------------------------
 public: // methods

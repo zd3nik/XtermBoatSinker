@@ -16,22 +16,6 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class FileSysDatabase : public Database {
 //-----------------------------------------------------------------------------
-public: // Database::Printable implementation
-  virtual std::string toString() const { return homeDir; }
-
-//-----------------------------------------------------------------------------
-public: // Database implementation
-  virtual void sync();
-  virtual bool remove(const std::string& recordID);
-  virtual std::vector<std::string> getRecordIDs();
-  virtual std::shared_ptr<DBRecord> get(const std::string& recordID,
-                                        const bool add);
-
-//-----------------------------------------------------------------------------
-private: // static constants
-  static const std::string DEFAULT_HOME_DIR;
-
-//-----------------------------------------------------------------------------
 private: // variables
   DIR* dir = nullptr;
   std::string homeDir = DEFAULT_HOME_DIR;
@@ -48,6 +32,22 @@ public: // constructors
 //-----------------------------------------------------------------------------
 public: // destructor
   virtual ~FileSysDatabase() noexcept { close(); }
+
+//-----------------------------------------------------------------------------
+private: // static constants
+  static const std::string DEFAULT_HOME_DIR;
+
+//-----------------------------------------------------------------------------
+public: // Database::Printable implementation
+  virtual std::string toString() const { return homeDir; }
+
+//-----------------------------------------------------------------------------
+public: // Database implementation
+  virtual void sync();
+  virtual bool remove(const std::string& recordID);
+  virtual std::vector<std::string> getRecordIDs();
+  virtual std::shared_ptr<DBRecord> get(const std::string& recordID,
+                                        const bool add);
 
 //-----------------------------------------------------------------------------
 public: // methods

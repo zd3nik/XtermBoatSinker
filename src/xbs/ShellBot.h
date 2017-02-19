@@ -16,6 +16,21 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class ShellBot : public Bot {
 //-----------------------------------------------------------------------------
+private: // variables
+  Version botVersion;
+  std::string botName;
+  std::string playerName;
+  ShellProcess proc;
+
+//-----------------------------------------------------------------------------
+public: // constructors
+  ShellBot(const std::string& shellCommand);
+  ShellBot(ShellBot&&) = delete;
+  ShellBot(const ShellBot&) = delete;
+  ShellBot& operator=(ShellBot&&) = delete;
+  ShellBot& operator=(const ShellBot&) = delete;
+
+//-----------------------------------------------------------------------------
 public: // Bot implementation
   virtual Version getVersion() const { return botVersion; }
   virtual std::string getBotName() const { return botName; }
@@ -54,28 +69,12 @@ public: // Bot implementation
   }
 
 //-----------------------------------------------------------------------------
-private: // variables
-
-  Version botVersion;
-  std::string botName;
-  std::string playerName;
-  ShellProcess proc;
-
-//-----------------------------------------------------------------------------
-public: // constructors
-    ShellBot(const std::string& shellCommand);
-    ShellBot(ShellBot&&) = delete;
-    ShellBot(const ShellBot&) = delete;
-    ShellBot& operator=(ShellBot&&) = delete;
-    ShellBot& operator=(const ShellBot&) = delete;
-
-//-----------------------------------------------------------------------------
 public: // methods
-    void yourBoard(const std::string& boardDescriptor);
-    std::string newGame(const Configuration& gameConfig,
-                        const Version& serverVersion,
-                        const unsigned playersJoined,
-                        const bool gameStarted);
+  void yourBoard(const std::string& boardDescriptor);
+  std::string newGame(const Configuration& gameConfig,
+                      const Version& serverVersion,
+                      const unsigned playersJoined,
+                      const bool gameStarted);
 };
 
 } // namespace nlpcore

@@ -47,15 +47,6 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Board : public Rectangle {
 //-----------------------------------------------------------------------------
-public: // Rectangle::Printable implementation
-  virtual std::string toString() const;
-
-//-----------------------------------------------------------------------------
-public: // static methods
-  static std::string toString(const std::string& descriptor,
-                              const unsigned width);
-
-//-----------------------------------------------------------------------------
 private: // variables
   bool toMove = false;
   unsigned score = 0;
@@ -86,6 +77,15 @@ public: // constructors
                  TcpSocket&& sock = TcpSocket())
     : Board(name, c.getBoardWidth(), c.getBoardHeight(), std::move(sock))
   { }
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static std::string toString(const std::string& descriptor,
+                              const unsigned width);
+
+//-----------------------------------------------------------------------------
+public: // Rectangle::Printable implementation
+  virtual std::string toString() const;
 
 //-----------------------------------------------------------------------------
 public: // methods

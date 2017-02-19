@@ -103,7 +103,7 @@ public: // methods
     if ((str.size() > 1) && isValidID(str[0])) {
       const std::string lenStr = str.substr(1);
       if (isUInt(lenStr)) {
-        unsigned len = toUInt(lenStr);
+        unsigned len = toUInt32(lenStr);
         if (len > 0) {
           id = str[0];
           length = len;

@@ -1,17 +1,26 @@
 //-----------------------------------------------------------------------------
 // Timer.cpp
-// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
+// Copyright (c) 2017 Shawn Chidester, All Rights Reserved.
 //-----------------------------------------------------------------------------
 #include "Timer.h"
+#include <thread>
+#include <chrono>
 #include <iomanip>
-#include "sys/time.h"
+#include <sstream>
+#include <sys/time.h>
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-std::string Timer::toString() const {
-  const Milliseconds ms = elapsed();
+const Milliseconds Timer::ZERO_MS = Milliseconds(0);
+
+//-----------------------------------------------------------------------------
+const Timestamp Timer::BAD_TIME = Timestamp(-1);
+
+//-----------------------------------------------------------------------------
+std::string
+Timer::toString(const Milliseconds ms) {
   const Milliseconds h = (ms / ONE_HOUR);
   const Milliseconds m = ((ms % ONE_HOUR) / ONE_MINUTE);
   const Milliseconds s = ((ms % ONE_MINUTE) / ONE_SECOND);
@@ -25,7 +34,20 @@ std::string Timer::toString() const {
 }
 
 //-----------------------------------------------------------------------------
-Timestamp Timer::now() noexcept {
+std::string
+Timer::toString() const {
+  return toString(elapsed());
+}
+
+//-----------------------------------------------------------------------------
+void
+Timer::sleep(const Milliseconds ms) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+//-----------------------------------------------------------------------------
+Timestamp
+Timer::now() noexcept {
   timeval tv;
   if (gettimeofday(&tv, nullptr) < 0) {
     return BAD_TIME;
@@ -33,28 +55,5 @@ Timestamp Timer::now() noexcept {
   return static_cast<Timestamp>((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
 }
 
-//-----------------------------------------------------------------------------
-Timer& Timer::operator+=(const Milliseconds ms) noexcept {
-  startTime += ms;
-  lastTick = startTime;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Timer& Timer::operator-=(const Milliseconds ms) noexcept {
-  startTime -= ms;
-  lastTick = startTime;
-  return (*this);
-}
-
-//-----------------------------------------------------------------------------
-Timer Timer::operator+(const Milliseconds ms) const noexcept {
-  return Timer(startTime + ms);
-}
-
-//-----------------------------------------------------------------------------
-Timer Timer::operator-(const Milliseconds ms) const noexcept {
-  return Timer(startTime - ms);
-}
-
 } // namespace xbs
+

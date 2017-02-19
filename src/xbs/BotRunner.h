@@ -15,12 +15,34 @@
 #include "TcpSocket.h"
 #include "Throw.h"
 #include "Version.h"
+#include <iostream>
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
 class BotRunner : public Bot {
+//-----------------------------------------------------------------------------
+protected: // variables
+  double minSurfaceArea = 0;
+  bool debugMode = false;
+  int port = 0;
+  std::string host;
+  std::string botName;
+  std::string playerName;
+  std::string staticBoard;
+  std::unique_ptr<Board> myBoard;
+  TcpSocket sock;
+  Game game;
+
+//-----------------------------------------------------------------------------
+public: // constructors
+  BotRunner(const std::string& botName);
+  BotRunner(BotRunner&&) = delete;
+  BotRunner(const BotRunner&) = delete;
+  BotRunner& operator=(BotRunner&&) = delete;
+  BotRunner& operator=(const BotRunner&) = delete;
+
 //-----------------------------------------------------------------------------
 public: // Bot implementation
   virtual std::string getBotName() const { return botName; }
@@ -54,27 +76,6 @@ public: // Bot implementation
                          const Coordinate& /*hitCoordinate*/) { }
 
 //-----------------------------------------------------------------------------
-protected: // variables
-  double minSurfaceArea = 0;
-  bool debugMode = false;
-  int port = 0;
-  std::string host;
-  std::string botName;
-  std::string playerName;
-  std::string staticBoard;
-  std::unique_ptr<Board> myBoard;
-  TcpSocket sock;
-  Game game;
-
-//-----------------------------------------------------------------------------
-public: // constructors
-  BotRunner(const std::string& botName);
-  BotRunner(BotRunner&&) = delete;
-  BotRunner(const BotRunner&) = delete;
-  BotRunner& operator=(BotRunner&&) = delete;
-  BotRunner& operator=(const BotRunner&) = delete;
-
-//-----------------------------------------------------------------------------
 public: // virtual methods
   virtual void run();
 
@@ -88,7 +89,7 @@ protected: // virtual methods
 private: // methods
   std::string readln(Input& input) {
     if (!input.readln(host.empty() ? STDIN_FILENO : sock.getHandle())) {
-      Throw() << "No input data" << XX;
+      Throw("No input data");
     }
     return input.getLine();
   }

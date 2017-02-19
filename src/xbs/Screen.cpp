@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "Screen.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "StringUtils.h"
 #include "Throw.h"
 #include <sys/ioctl.h>
@@ -18,7 +19,7 @@ static std::unique_ptr<Screen> instance;
 static Rectangle GetScreenDimensions() {
   struct winsize max;
   if (ioctl(0, TIOCGWINSZ , &max) < 0) {
-    Throw() << "Failed to get screen dimensions: " << toError(errno) << XX;
+    Throw(Msg() << "Failed to get screen dimensions:" << toError(errno));
   }
 
   Coordinate topLeft(1, 1);
@@ -26,8 +27,8 @@ static Rectangle GetScreenDimensions() {
                          static_cast<unsigned>(max.ws_row));
 
   if (!bottomRight) {
-    Throw() << "Invalid screen dimensions: " << bottomRight.getX()
-            << 'x' << bottomRight.getY() << XX;
+    Throw(Msg() << "Invalid screen dimensions:" << bottomRight.getX()
+          << 'x' << bottomRight.getY());
   }
 
   return Rectangle(topLeft, bottomRight);
@@ -126,7 +127,7 @@ Screen& Screen::flag(const ScreenFlag flag) {
 //-----------------------------------------------------------------------------
 Screen& Screen::flush() {
   if (fflush(stdout)) {
-    Throw() << "Screen flush failed: " << toError(errno) << XX;
+    Throw(Msg() << "Screen flush failed:" << toError(errno));
   }
   return (*this);
 }
@@ -134,7 +135,7 @@ Screen& Screen::flush() {
 //-----------------------------------------------------------------------------
 Screen& Screen::str(const std::string& x) {
   if (fwrite(x.c_str(), x.size(), 1, stdout) < 0) {
-    Throw() << "Failed to print to screen: " << toError(errno) << XX;
+    Throw(Msg() << "Failed to print to screen:" << toError(errno));
   }
   return (*this);
 }
@@ -142,7 +143,7 @@ Screen& Screen::str(const std::string& x) {
 //-----------------------------------------------------------------------------
 Screen& Screen::ch(const char x) {
   if (x && (fputc(x, stdout) != x)) {
-    Throw() << "Failed to print to screen: " << toError(errno) << XX;
+    Throw(Msg() << "Failed to print to screen:" << toError(errno));
   }
   return (*this);
 }

@@ -1,37 +1,30 @@
 //-----------------------------------------------------------------------------
-// Client.cpp
-// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
+// Platform.h
+// Copyright (c) 2017 Shawn Chidester, All Rights Reserved.
 //-----------------------------------------------------------------------------
 #ifndef XBS_PLATFORM_H
 #define XBS_PLATFORM_H
 
-#ifdef WIN32
-#error "Windows platforms not supported"
-#endif
-
 #include <unistd.h>
-#include <cinttypes>
-#include <cassert>
-#include <cerrno>
-
 #include <algorithm>
-#include <fstream>
-#include <iostream>
+#include <cassert>
+#include <cinttypes>
 #include <map>
 #include <memory>
 #include <set>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#define ASSERT assert
-#define UNUSED(x) [&x]{}()
+#define NULLSTR static_cast<const char*>(nullptr)
+#define UNUSED(var) [&var]{}()
+#define NOOP(expr) while (false) { expr; }
+#define ASSERT(expr) assert(expr)
 
 #ifndef NDEBUG
-#define VERIFY ASSERT
+#define VERIFY(expr) ASSERT(expr)
 #else
-#define VERIFY(x) x
+#define VERIFY(expr) expr
 #endif
 
 namespace xbs {
@@ -45,3 +38,4 @@ namespace xbs {
 }
 
 #endif // XBS_PLATFORM_H
+

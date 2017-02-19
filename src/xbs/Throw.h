@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
-// ThrowError.h
-// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
+// Throw.h
+// Copyright (c) 2017 Shawn Chidester, All Rights Reserved.
 //-----------------------------------------------------------------------------
 #ifndef XBS_THROW_H
 #define XBS_THROW_H
@@ -11,93 +11,21 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-enum ExceptionTrigger { XX };
-
-//-----------------------------------------------------------------------------
-enum ThrowType {
-  RuntimeError,
-  LogicError,
-  DomainError,
-  InvalidArgument,
-  LengthError,
-  OutOfRange,
-  RangeError,
-  OverflowError,
-  UnderflowError
-};
-
-//-----------------------------------------------------------------------------
 class Throw {
 //-----------------------------------------------------------------------------
-private: // variables
-  const ThrowType type;
-  std::stringstream ss;
-  bool thrown = false;
-
-//-----------------------------------------------------------------------------
 public: // constructors
+  Throw() = delete;
   Throw(Throw&&) = delete;
   Throw(const Throw&) = delete;
   Throw& operator=(Throw&&) = delete;
   Throw& operator=(const Throw&) = delete;
 
-  explicit Throw(const ThrowType type = RuntimeError)
-    : type(type)
-  { }
-
-//-----------------------------------------------------------------------------
-public: // destructor
-  ~Throw() {
-    // throwing exceptions from the descructor can cause undefined behavior
-    // always terminate Throw() with << XX to prevent this from happening
-    //   good: Throw() << "this is OK" << XX;
-    //    bad: Throw() << "this is missing XX terminator!";
-    if (!thrown) {
-      ss << " [WARNING: Thrown from destructor! Missing << XX somewhere]";
-      doThrow();
-    }
-  }
-
-//-----------------------------------------------------------------------------
-public: // operator overloads
-  Throw& operator<<(const ExceptionTrigger&) {
-    doThrow();
-    return (*this);
-  }
-
-  template<typename T>
-  Throw& operator<<(const T& x) {
-    ss << x;
-    return (*this);
-  }
-
-//-----------------------------------------------------------------------------
-private: // methods
-  void doThrow() {
-    thrown = true;
-    switch (type) {
-    case LogicError:
-      throw std::logic_error(ss.str());
-    case DomainError:
-      throw std::domain_error(ss.str());
-    case InvalidArgument:
-      throw std::invalid_argument(ss.str());
-    case LengthError:
-      throw std::length_error(ss.str());
-    case OutOfRange:
-      throw std::out_of_range(ss.str());
-    case RangeError:
-      throw std::range_error(ss.str());
-    case OverflowError:
-      throw std::overflow_error(ss.str());
-    case UnderflowError:
-      throw std::underflow_error(ss.str());
-    default:
-      throw std::runtime_error(ss.str());
-    }
+  Throw(const std::string& message) {
+    throw std::runtime_error(message);
   }
 };
 
 } // namespace xbs
 
 #endif // XBS_THROW_H
+

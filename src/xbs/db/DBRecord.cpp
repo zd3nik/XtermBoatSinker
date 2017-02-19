@@ -14,14 +14,14 @@ std::vector<int> DBRecord::getInts(const std::string& fld) const {
   std::vector<int> values;
   values.reserve(strValues.size());
   for (const auto& str : strValues) {
-    values.push_back(toInt(str));
+    values.push_back(toInt32(str));
   }
   return values;
 }
 
 //-----------------------------------------------------------------------------
 int DBRecord::getInt(const std::string& fld) const {
-  return toInt(getString(fld));
+  return toInt32(getString(fld));
 }
 
 //-----------------------------------------------------------------------------
@@ -57,14 +57,14 @@ std::vector<unsigned> DBRecord::getUInts(const std::string& fld) const {
   std::vector<unsigned> values;
   values.reserve(strValues.size());
   for (const auto& str : strValues) {
-    values.push_back(toUInt(str));
+    values.push_back(toUInt32(str));
   }
   return values;
 }
 
 //-----------------------------------------------------------------------------
 unsigned DBRecord::getUInt(const std::string& fld) const {
-  return toUInt(getString(fld));
+  return toUInt32(getString(fld));
 }
 
 //-----------------------------------------------------------------------------

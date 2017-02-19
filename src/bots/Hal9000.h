@@ -1,9 +1,9 @@
 //-----------------------------------------------------------------------------
-// RandomRufus.h
+// Hal9000.h
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef XBS_RANDOM_RUFUS_H
-#define XBS_RANDOM_RUFUS_H
+#ifndef XBS_HAL_9000_H
+#define XBS_HAL_9000_H
 
 #include "Platform.h"
 #include "BotRunner.h"
@@ -13,14 +13,15 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class RandomRufus : public BotRunner {
+class Hal9000 : public BotRunner
+{
 //-----------------------------------------------------------------------------
 private: // variables
-  bool parity = random(2);
+    bool parity = random(2);
 
 //-----------------------------------------------------------------------------
 public: // constructors
-  RandomRufus() : BotRunner("RandomRufus") { }
+    Hal9000() : BotRunner("Hal-9000") { }
 
 //-----------------------------------------------------------------------------
 public: // BotRunner::Bot implementation
@@ -38,4 +39,4 @@ private: // methods
 
 } // namespace xbs
 
-#endif // XBS_RANDOM_RUFUS_H
+#endif // XBS_HAL_9000_H

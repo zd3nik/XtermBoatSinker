@@ -14,17 +14,6 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class FileSysDBRecord : public DBRecord {
 //-----------------------------------------------------------------------------
-public: // DBRecord implementation
-  virtual std::string getID() const { return recordID; }
-  virtual std::string getString(const std::string& fld) const;
-  virtual std::vector<std::string> getStrings(const std::string& fld) const;
-  virtual void clear(const std::string& fld);
-  virtual void setString(const std::string& fld, const std::string& val);
-  virtual unsigned addString(const std::string& fld, const std::string& val);
-  virtual unsigned addStrings(const std::string& fld,
-                              const std::vector<std::string>& values);
-
-//-----------------------------------------------------------------------------
 private: // variables
   std::string recordID;
   std::string filePath;
@@ -40,6 +29,17 @@ public: // constructors
 
   explicit FileSysDBRecord(const std::string& recordID,
                            const std::string& filePath);
+
+//-----------------------------------------------------------------------------
+public: // DBRecord implementation
+  virtual std::string getID() const { return recordID; }
+  virtual std::string getString(const std::string& fld) const;
+  virtual std::vector<std::string> getStrings(const std::string& fld) const;
+  virtual void clear(const std::string& fld);
+  virtual void setString(const std::string& fld, const std::string& val);
+  virtual unsigned addString(const std::string& fld, const std::string& val);
+  virtual unsigned addStrings(const std::string& fld,
+                              const std::vector<std::string>& values);
 
 //-----------------------------------------------------------------------------
 public: // methods

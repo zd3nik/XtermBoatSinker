@@ -1,12 +1,13 @@
-//-----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 // Logger.h
-// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
-//-----------------------------------------------------------------------------
+// Copyright (c) 2017 Shawn Chidester, All Rights Reserved.
+//----------------------------------------------------------------------------
 #ifndef XBS_LOGGER_H
 #define XBS_LOGGER_H
 
 #include "Platform.h"
 #include "LogStream.h"
+#include <fstream>
 
 namespace xbs
 {
@@ -23,33 +24,9 @@ public: // enums
   };
 
 //-----------------------------------------------------------------------------
-public: // static methods
-  static Logger& getInstance();
-
-  static inline LogStream printError() {
-    return getInstance().log(ERROR, "ERROR: ", true);
-  }
-
-  static inline LogStream error() {
-    return getInstance().log(ERROR, "ERROR: ");
-  }
-
-  static inline LogStream warn() {
-    return getInstance().log(WARN, "WARN: ");
-  }
-
-  static inline LogStream info() {
-    return getInstance().log(INFO, "INFO: ");
-  }
-
-  static inline LogStream debug() {
-    return getInstance().log(DEBUG, "DEBUG: ");
-  }
-
-//-----------------------------------------------------------------------------
 private: // variables
-  LogLevel logLevel;
-  std::ostream* stream;
+  LogLevel logLevel = INFO;
+  std::ostream* stream = nullptr;
   std::ofstream fileStream;
   std::string logFile;
 
@@ -66,28 +43,46 @@ public: // destructor
   ~Logger();
 
 //-----------------------------------------------------------------------------
-public: // methods
-  Logger& setLogLevel(const LogLevel logLevel);
-  Logger& setLogLevel(const std::string& logLevelStr);
-  Logger& appendToFile(const std::string& filePath);
+public: // static methods
+  static Logger& getInstance();
 
-  LogStream log(const char* hdr = nullptr) const {
+  static inline LogStream printError() {
+    return error(true);
+  }
+
+  static inline LogStream error(const bool printToStdErr = false) {
+    return getInstance().log(ERROR, "ERROR: ", printToStdErr);
+  }
+
+  static inline LogStream warn() {
+    return getInstance().log(WARN, "WARN: ");
+  }
+
+  static inline LogStream info() {
+    return getInstance().log(INFO, "INFO: ");
+  }
+
+  static inline LogStream debug() {
+    return getInstance().log(DEBUG, "DEBUG: ");
+  }
+
+//-----------------------------------------------------------------------------
+public: // methods
+  Logger& setLogLevel(const LogLevel level) noexcept;
+  Logger& setLogLevel(const std::string& logLevelStr);
+  Logger& setLogFile(const std::string& filePath);
+  LogLevel getLogLevel() const noexcept { return logLevel; }
+  std::string getLogFile() const { return logFile; }
+
+  LogStream log(const std::string& hdr = "") const {
     return LogStream(stream, hdr);
   }
 
   LogStream log(const LogLevel level,
-                const char* hdr = nullptr,
-                const bool print = false) const
+      const std::string& hdr = nullptr,
+      const bool print = false) const
   {
     return (logLevel >= level) ? LogStream(stream, hdr, print) : LogStream();
-  }
-
-  std::string getLogFile() const {
-    return logFile;
-  }
-
-  LogLevel getLogLevel() const {
-    return logLevel;
   }
 };
 

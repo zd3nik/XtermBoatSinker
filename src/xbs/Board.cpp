@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "Board.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "Screen.h"
 #include "StringUtils.h"
 #include "Throw.h"
@@ -48,8 +49,8 @@ Board::Board(const std::string& name,
 //-----------------------------------------------------------------------------
 Board& Board::stealConnectionFrom(Board&& other) {
   if (socket) {
-    Throw() << (*this) << "stealConnectionFrom(" << other
-            << ") socket already set" << XX;
+    Throw(Msg() << (*this) << "stealConnectionFrom(" << other
+          << ") socket already set");
   }
   const std::string name = socket.getLabel(); // retain current name
   socket = std::move(other.socket);

@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // StringUtils.cpp
-// Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
+// Copyright (c) 2017 Shawn Chidester, All Rights Reserved.
 //-----------------------------------------------------------------------------
 #include "StringUtils.h"
 #include <cstring>
@@ -9,37 +9,44 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-bool contains(const std::string& str, const char ch) noexcept {
+bool
+contains(const std::string& str, const char ch) noexcept {
   return (str.find(ch) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------
-bool contains(const std::string& str, const std::string& pattern) noexcept {
-  return (str.find(pattern) != std::string::npos);
+bool
+contains(const std::string& str, const std::string& substr) noexcept {
+  return (str.find(substr) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------
-bool containsAny(const std::string& str, const std::string& pattern) noexcept {
-  return (str.find_first_of(pattern) != std::string::npos);
+bool
+containsAny(const std::string& str, const std::string& substr) noexcept {
+  return (str.find_first_of(substr) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------
-bool iContains(const std::string& str, const char ch) {
+bool
+iContains(const std::string& str, const char ch) {
   return (toUpper(str).find(toupper(ch)) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------
-bool iContains(const std::string& str, const std::string& pattern) {
-  return (toUpper(str).find(toUpper(pattern).c_str()) != std::string::npos);
+bool
+iContains(const std::string& str, const std::string& substr) {
+  return (toUpper(str).find(toUpper(substr)) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------
-bool iContainsAny(const std::string& str, const std::string& pattern) {
-  return (toUpper(str).find_first_of(toUpper(pattern)) != std::string::npos);
+bool
+iContainsAny(const std::string& str, const std::string& substr) {
+  return (toUpper(str).find_first_of(toUpper(substr)) != std::string::npos);
 }
 
 //-----------------------------------------------------------------------------
-bool iEqual(const std::string& a, const std::string& b) noexcept {
+bool
+iEqual(const std::string& a, const std::string& b) noexcept {
   const unsigned len = a.size();
   if (b.size() != len) {
     return false;
@@ -53,7 +60,8 @@ bool iEqual(const std::string& a, const std::string& b) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-bool iEqual(const std::string& a, const std::string& b, unsigned len) noexcept {
+bool
+iEqual(const std::string& a, const std::string& b, unsigned len) noexcept {
   if ((a.size() < len) || (b.size() < len)) {
     return false;
   }
@@ -66,7 +74,25 @@ bool iEqual(const std::string& a, const std::string& b, unsigned len) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-bool isEmpty(const std::string& str, const bool trimWhitespace) noexcept {
+int
+iCompare(const std::string& a, const std::string& b) {
+  for (auto ai = a.begin(), bi = b.begin();
+       (ai != a.end()) && (bi != b.end()); ++ai, ++bi)
+  {
+    const char ac = toupper(*ai);
+    const char bc = toupper(*bi);
+    if (ac < bc) {
+      return -1;
+    } else if (ac > bc) {
+      return 1;
+    }
+  }
+  return (a.size() < b.size()) ? -1 : (a.size() > b.size());
+}
+
+//-----------------------------------------------------------------------------
+bool
+isEmpty(const std::string& str, const bool trimWhitespace) noexcept {
   if (str.empty()) {
     return true;
   }
@@ -82,66 +108,193 @@ bool isEmpty(const std::string& str, const bool trimWhitespace) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-bool iStartsWith(const std::string& str, const char ch) noexcept {
-  return (str.size() && (toupper(str[0]) == toupper(ch)));
+bool
+isEmpty(const std::string* str, const bool trimWhitespace) noexcept {
+  return str ? isEmpty((*str), trimWhitespace) : true;
 }
 
 //-----------------------------------------------------------------------------
-bool iStartsWith(const std::string& str, const std::string& pattern) noexcept {
-  return (pattern.size() && (str.size() >= pattern.size()) &&
-          iEqual(str, pattern, pattern.size()));
+bool
+iStartsWith(const std::string& str,
+            const char ch,
+            const bool trimWhitespace) noexcept
+{
+  if (str.size()) {
+    for (char strChar : str) {
+      if (toupper(strChar) == (ch)) {
+        return true;
+      } else if (!trimWhitespace || !isspace(strChar)) {
+        break;
+      }
+    }
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
-bool startsWith(const std::string& str, const char ch) noexcept {
-  return (str.size() && (str[0] == ch));
+bool
+iStartsWith(const std::string& str,
+            const std::string& substr,
+            const bool trimWhitespace)
+{
+  if (substr.size() && (str.size() >= substr.size())) {
+    unsigned i = 0;
+    if (trimWhitespace) {
+      while ((i < str.size()) && isspace(str[i])) {
+        i++;
+      }
+    }
+    return (((i + substr.size()) <= str.size()) &&
+            iEqual(str.substr(i, substr.size()), substr));
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
-bool startsWith(const std::string& str, const std::string& pattern) {
-  return (pattern.size() && (str.size() >= pattern.size()) &&
-          (str.substr(0, pattern.size()) == pattern));
+bool
+startsWith(const std::string& str,
+           const char ch,
+           const bool trimWhitespace) noexcept
+{
+  if (str.size()) {
+    for (char strChar : str) {
+      if (strChar == ch) {
+        return true;
+      } else if (!trimWhitespace || !isspace(strChar)) {
+        break;
+      }
+    }
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
-bool iEndsWith(const std::string& str, const char ch) noexcept {
-  return (str.size() && (toupper(str[str.size() - 1]) == toupper(ch)));
+bool
+startsWith(const std::string& str,
+           const std::string& substr,
+           const bool trimWhitespace)
+{
+  if (substr.size() && (str.size() >= substr.size())) {
+    unsigned i = 0;
+    if (trimWhitespace) {
+      while ((i < str.size()) && isspace(str[i])) {
+        i++;
+      }
+    }
+    return (((i + substr.size()) <= str.size()) &&
+            (str.substr(i, substr.size()) == substr));
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
-bool iEndsWith(const std::string& str, const std::string& pattern) {
-  return (pattern.size() && (str.size() >= pattern.size()) &&
-          iEqual(str.substr(str.size() - pattern.size()), pattern));
+bool
+iEndsWith(const std::string& str,
+          const char ch,
+          const bool trimWhitespace)
+{
+  if (str.size()) {
+    for (auto it = str.rbegin(); it != str.rend(); ++it) {
+      const char strChar = (*it);
+      if (toupper(strChar) == toupper(ch)) {
+        return true;
+      } else if (!trimWhitespace || !isspace(strChar)) {
+        break;
+      }
+    }
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
-bool endsWith(const std::string& str, const char ch) noexcept {
-  return (str.size() && (str[str.size() - 1] == ch));
+bool
+iEndsWith(const std::string& str,
+          const std::string& substr,
+          const bool trimWhitespace)
+{
+  if (substr.size() && (str.size() >= substr.size())) {
+    unsigned i = (str.size() - 1);
+    if (trimWhitespace) {
+      while ((i > 0) && isspace(str[i])) {
+        i--;
+      }
+    }
+    return ((++i >= substr.size()) &&
+            iEqual(str.substr((i - substr.size()), substr.size()), substr));
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
-bool endsWith(const std::string& str, const std::string& pattern) {
-  return (pattern.size() && (str.size() >= pattern.size()) &&
-          (str.substr(str.size() - pattern.size()) == pattern));
+bool
+endsWith(const std::string& str,
+         const char ch,
+         const bool trimWhitespace) noexcept
+{
+  if (str.size()) {
+    for (auto it = str.rbegin(); it != str.rend(); ++it) {
+      const char strChar = (*it);
+      if (strChar == ch) {
+        return true;
+      } else if (!trimWhitespace || !isspace(strChar)) {
+        break;
+      }
+    }
+  }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
-bool isNumber(const std::string& str) noexcept {
+bool
+endsWith(const std::string& str,
+         const std::string& substr,
+         const bool trimWhitespace)
+{
+  if (substr.size() && (str.size() >= substr.size())) {
+    unsigned i = (str.size() - 1);
+    if (trimWhitespace) {
+      while ((i > 0) && isspace(str[i])) {
+        i--;
+      }
+    }
+    return ((++i >= substr.size()) &&
+            (str.substr((i - substr.size()), substr.size()) == substr));
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool
+startsWithNumber(const std::string& str,
+                 const bool trimWhitespace) noexcept
+{
   if (str.empty()) {
     return false;
-  } else if (isdigit(str[0])) {
-    return true;
-  } else if (str.size() < 2) {
+  }
+
+  unsigned i = 0;
+  if (trimWhitespace) {
+    while ((i < str.size()) && isspace(str[i])) {
+      i++;
+    }
+  }
+
+  if (i >= str.size()) {
     return false;
-  } else if ((str[0] != '+') && (str[0] != '-')) {
+  } else if (isdigit(str[i])) {
+    return true;
+  } else if (str.size() < (2 + i)) {
+    return false;
+  } else if ((str[i] != '+') && (str[i] != '-')) {
     return false;
   } else {
-    return isdigit(str[1]);
+    return isdigit(str[i + 1]);
   }
 }
 
 //-----------------------------------------------------------------------------
-bool isFloat(const std::string& str) noexcept {
+bool
+isFloat(const std::string& str) noexcept {
   unsigned signs = 0;
   unsigned digits = 0;
   unsigned dots = 0;
@@ -164,7 +317,8 @@ bool isFloat(const std::string& str) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-bool isInt(const std::string& str) noexcept {
+bool
+isInt(const std::string& str) noexcept {
   unsigned signs = 0;
   unsigned digits = 0;
   for (const char ch : str) {
@@ -184,7 +338,8 @@ bool isInt(const std::string& str) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-bool isUInt(const std::string& str) noexcept {
+bool
+isUInt(const std::string& str) noexcept {
   unsigned signs = 0;
   unsigned digits = 0;
   for (const char ch : str) {
@@ -204,62 +359,56 @@ bool isUInt(const std::string& str) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-bool isBool(const std::string& str) noexcept {
+bool
+isBool(const std::string& str) noexcept {
   return (iEqual(str, "true") || iEqual(str, "false") ||
           iEqual(str, "yes") || iEqual(str, "no") ||
           iEqual(str, "y") || iEqual(str, "n") ||
-          (str == "0") || (str == "1"));
+          (str == "1") || (str == "0"));
 }
 
 //-----------------------------------------------------------------------------
-int iCompare(const std::string& a, const std::string& b) noexcept {
-  for (auto ai = a.begin(), bi = b.begin();
-       (ai != a.end()) && (bi != b.end()); ++ai, ++bi)
-  {
-    const char ac = toupper(*ai);
-    const char bc = toupper(*bi);
-    if (ac < bc) {
-      return -1;
-    } else if (ac > bc) {
-      return 1;
-    }
-  }
-  return (a.size() < b.size()) ? -1 : (a.size() > b.size());
-}
-
-//-----------------------------------------------------------------------------
-int toInt(const std::string& str, const int def) noexcept {
+template<typename T>
+T convertToInt(const std::string& str, const T def) noexcept {
   if (str.empty()) {
     return def;
   }
-  int sign = 0;
-  int result = 0;
+  T sign = 0;
+  T result = 0;
+  bool started = false;
   for (const char ch : str) {
-    if (ch == '-') {
-      if (sign) {
-        return def;
-      } else {
-        sign = -1;
-      }
-    } else if (ch == '+') {
-      if (sign) {
-        return def;
-      } else {
-        sign = 1;
+    if (isspace(ch)) {
+      if (started) {
+        break;
       }
     } else {
-      if (!sign) {
-        sign = 1;
-      }
-      if (isdigit(ch)) {
-        int tmp = ((10 * result) + (ch - '0'));
-        if (tmp >= result) {
-          result = tmp;
+      started = true;
+      if (ch == '-') {
+        if (sign) {
+          return def;
+        } else {
+          sign = -1;
+        }
+      } else if (ch == '+') {
+        if (sign) {
+          return def;
+        } else {
+          sign = 1;
+        }
+      } else {
+        if (!sign) {
+          sign = 1;
+        }
+        if (isdigit(ch)) {
+          T tmp = ((10 * result) + (ch - '0'));
+          if (tmp >= result) {
+            result = tmp;
+          } else {
+            return def;
+          }
         } else {
           return def;
         }
-      } else {
-        return def;
       }
     }
   }
@@ -267,45 +416,77 @@ int toInt(const std::string& str, const int def) noexcept {
 }
 
 //-----------------------------------------------------------------------------
-unsigned toUInt(const std::string& str, const unsigned def) noexcept {
+int16_t toInt16(const std::string& str, const int16_t def) noexcept {
+  return convertToInt(str, def);
+}
+
+//-----------------------------------------------------------------------------
+int32_t toInt32(const std::string& str, const int32_t def) noexcept {
+  return convertToInt(str, def);
+}
+
+//-----------------------------------------------------------------------------
+int64_t toInt64(const std::string& str, const int64_t def) noexcept {
+  return convertToInt(str, def);
+}
+
+//-----------------------------------------------------------------------------
+template<typename T>
+T convertToUInt(const std::string& str, const T def) noexcept {
   if (str.empty()) {
     return def;
   }
-  unsigned result = 0;
+  T sign = 0;
+  T result = 0;
+  bool started = false;
   for (const char ch : str) {
-    if (isdigit(ch)) {
-      unsigned tmp = ((10 * result) + (ch - '0'));
-      if (tmp >= result) {
-        result = tmp;
-      } else {
-        return def;
+    if (isspace(ch)) {
+      if (started) {
+        break;
       }
     } else {
-      return def;
+      started = true;
+      if (ch == '-') {
+        return def;
+      } else if (ch == '+') {
+        if (sign) {
+          return def;
+        } else {
+          sign = 1;
+        }
+      } else {
+        if (!sign) {
+          sign = 1;
+        }
+        if (isdigit(ch)) {
+          T tmp = ((10 * result) + (ch - '0'));
+          if (tmp >= result) {
+            result = tmp;
+          } else {
+            return def;
+          }
+        } else {
+          return def;
+        }
+      }
     }
   }
   return result;
 }
 
 //-----------------------------------------------------------------------------
+u_int16_t toUInt16(const std::string& str, const u_int16_t def) noexcept {
+  return convertToUInt(str, def);
+}
+
+//-----------------------------------------------------------------------------
+u_int32_t toUInt32(const std::string& str, const u_int32_t def) noexcept {
+  return convertToUInt(str, def);
+}
+
+//-----------------------------------------------------------------------------
 u_int64_t toUInt64(const std::string& str, const u_int64_t def) noexcept {
-  if (str.empty()) {
-    return def;
-  }
-  u_int64_t result = 0;
-  for (const char ch : str) {
-    if (isdigit(ch)) {
-      u_int64_t tmp = ((10 * result) + (ch - '0'));
-      if (tmp >= result) {
-        result = tmp;
-      } else {
-        return def;
-      }
-    } else {
-      return def;
-    }
-  }
-  return result;
+  return convertToUInt(str, def);
 }
 
 //-----------------------------------------------------------------------------
@@ -314,11 +495,17 @@ double toDouble(const std::string& str, const double def) noexcept {
 }
 
 //-----------------------------------------------------------------------------
+float toFloat(const std::string& str, const float def) noexcept {
+  return isFloat(str) ? strtof(str.c_str(), nullptr) : def;
+}
+
+//-----------------------------------------------------------------------------
 bool toBool(const std::string& str, const bool def) noexcept {
   return (iEqual(str, "true") ||
           iEqual(str, "yes") ||
           iEqual(str, "y") ||
-          (isInt(str) ? (toInt(str) != 0) : def));
+          (isInt(str) ? (toInt64(str) != 0)
+                      : isFloat(str) ? (toDouble(str) != 0) : def));
 }
 
 //-----------------------------------------------------------------------------
@@ -336,6 +523,11 @@ std::string toLower(std::string str) {
 //-----------------------------------------------------------------------------
 std::string toError(const int errorNumber) {
   return strerror(errorNumber);
+}
+
+//-----------------------------------------------------------------------------
+std::string trimStr(const char* str) {
+  return str ? trimStr(str) : "";
 }
 
 //-----------------------------------------------------------------------------
@@ -360,25 +552,24 @@ std::string trimStr(const std::string& str) {
 
 //-----------------------------------------------------------------------------
 std::string replace(const std::string& str,
-                    const std::string& pattern,
+                    const std::string& substr,
                     const std::string& replacement)
 {
-  if (pattern.empty() || (pattern.size() > str.size())) {
-    return str;
-  }
-  auto p = str.find(pattern.c_str());
-  if (p == std::string::npos) {
-    return str;
-  }
   std::string result;
-  if (p > 0) {
-    result += str.substr(0, p);
-  }
-  result += replacement;
-  if ((p + pattern.size()) < str.size()) {
-    result += str.substr(p + pattern.size());
+  if (str.size() && substr.size() && (substr.size() <= str.size())) {
+    auto p = str.find(substr);
+    if (p != std::string::npos) {
+      if (p > 0) {
+        result += str.substr(0, p);
+      }
+      result += replacement;
+      if ((p + substr.size()) < str.size()) {
+        result += str.substr(p + substr.size());
+      }
+    }
   }
   return result;
 }
 
 } // namespace xbs
+

@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "CanonicalMode.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "StringUtils.h"
 #include "Throw.h"
 
@@ -16,7 +17,7 @@ CanonicalMode::CanonicalMode(const bool enabled)
 {
   termios ios;
   if (tcgetattr(STDIN_FILENO, &ios) < 0) {
-    Throw() << "tcgetattr failed: " << toError(errno) << XX;
+    Throw(Msg() << "tcgetattr failed:" << toError(errno));
   }
 
   savedTermIOs = ios;
@@ -27,7 +28,7 @@ CanonicalMode::CanonicalMode(const bool enabled)
   }
 
   if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
-    Throw() << "tcsetattr failed: " << toError(errno) << XX;
+    Throw(Msg() << "tcsetattr failed:" << toError(errno));
   }
 
   ok = true;

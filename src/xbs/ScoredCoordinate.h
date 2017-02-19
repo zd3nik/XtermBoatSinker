@@ -2,8 +2,8 @@
 // ScoredCoordinate.h
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef XBS_SCOREDCOORDINATE_H
-#define XBS_SCOREDCOORDINATE_H
+#ifndef XBS_SCORED_COORDINATE_H
+#define XBS_SCORED_COORDINATE_H
 
 #include "Platform.h"
 #include "Coordinate.h"
@@ -65,4 +65,4 @@ public: // operator overloads
 
 } // namespace xbs
 
-#endif // XBS_SCOREDCOORDINATE_H
+#endif // XBS_SCORED_COORDINATE_H

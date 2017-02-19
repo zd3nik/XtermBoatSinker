@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 #include "Game.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "Screen.h"
 #include "StringUtils.h"
 #include "Throw.h"
@@ -27,17 +28,16 @@ Game& Game::clear() noexcept {
 //-----------------------------------------------------------------------------
 Game& Game::addBoard(const BoardPtr& board) {
   if (!board) {
-    Throw() << "Game.addBoard() null board" << XX;
+    Throw("Game.addBoard() null board");
   }
   if (isEmpty(board->getName())) {
-    Throw() << "Game.addBoard() empty name" << XX;
+    Throw("Game.addBoard() empty name");
   }
   if (hasBoard(board->getName())) {
-    Throw() << "Game.addBoard() duplicate name: '" << board->getName() << "'"
-            << XX;
+    Throw(Msg() << "Game.addBoard() duplicate name:" << board->getName());
   }
   if (hasBoard(board->handle())) {
-    Throw() << "Game.addBoard() duplicate handle: " << board->handle() << XX;
+    Throw(Msg() << "Game.addBoard() duplicate handle:" << board->handle());
   }
   boards.push_back(board);
   return (*this);
@@ -60,7 +60,7 @@ BoardPtr Game::boardToMove() {
   if (isStarted() && !isFinished()) {
     auto board = boardAtIndex(toMove);
     if (!board || !board->isToMove()) {
-      Throw() << "Game.getBoardToMove() board.toMove is not in sync!" << XX;
+      Throw("Game.getBoardToMove() board.toMove is not in sync!");
     }
     return board;
   }
@@ -94,7 +94,7 @@ BoardPtr Game::boardForPlayer(const std::string& name, const bool exact) {
   }
 
   if (!exact && isUInt(name)) {
-    const unsigned idx = toUInt(name);
+    const unsigned idx = toUInt32(name);
     if (idx) {
       return boardAtIndex(idx - 1);
     }
@@ -166,10 +166,10 @@ bool Game::start(const bool randomize) {
 //-----------------------------------------------------------------------------
 bool Game::nextTurn() {
   if (!isStarted()) {
-    Throw() << "Game.nextTurn() game has not been started" << XX;
+    Throw("Game.nextTurn() game has not been started");
   }
   if (isFinished()) {
-    Throw() << "Game.nextTurn() game has finished" << XX;
+    Throw("Game.nextTurn() game has finished");
   }
 
   turnCount += !toMove;
@@ -203,13 +203,13 @@ bool Game::nextTurn() {
 //-----------------------------------------------------------------------------
 bool Game::setNextTurn(const std::string& name) {
   if (name.empty()) {
-    Throw() << "Game.nextTurn() empty board name" << XX;
+    Throw("Game.nextTurn() empty board name");
   }
   if (!isStarted()) {
-    Throw() << "Game.nextTurn(" << name << ") game is not started" << XX;
+    Throw(Msg() << "Game.nextTurn(" << name << ") game is not started");
   }
   if (isFinished()) {
-    Throw() << "Game.nextTurn(" << name << ") game is finished" << XX;
+    Throw(Msg() << "Game.nextTurn(" << name << ") game is finished");
   }
 
   unsigned idx = ~0U;
@@ -232,7 +232,7 @@ bool Game::setNextTurn(const std::string& name) {
 //-----------------------------------------------------------------------------
 void Game::disconnectBoard(const std::string& name, const std::string& msg) {
   if (!isStarted()) {
-    Throw() << "Game.disconnectBoard() game has not started" << XX;
+    Throw("Game.disconnectBoard() game has not started");
   }
   auto board = boardForPlayer(name, true);
   if (board) {
@@ -244,7 +244,7 @@ void Game::disconnectBoard(const std::string& name, const std::string& msg) {
 //-----------------------------------------------------------------------------
 void Game::removeBoard(const std::string& name) {
   if (isStarted()) {
-    Throw() << "Game.removeBoard() game has started" << XX;
+    Throw("Game.removeBoard() game has started");
   }
   for (auto it = boards.begin(); it != boards.end(); ++it) {
     if ((*it)->getName() == name) {
@@ -271,7 +271,7 @@ void Game::finish() noexcept {
 //-----------------------------------------------------------------------------
 void Game::saveResults(Database& db) {
   if (!isValid()) {
-    Throw() << "Cannot save invalid game" << XX;
+    Throw("Cannot save invalid game");
   }
 
   unsigned hits = 0;
@@ -295,8 +295,8 @@ void Game::saveResults(Database& db) {
 
   std::shared_ptr<DBRecord> stats = db.get(("game." + getTitle()), true);
   if (!stats) {
-    Throw() << "Failed to get stats record for game title '" << getTitle()
-            << "' from " << db << XX;
+    Throw(Msg() << "Failed to get stats record for game title '" << getTitle()
+          << "' from '" << db << "'");
   }
 
   config.saveTo(*stats);
@@ -331,8 +331,8 @@ void Game::saveResults(Database& db) {
     std::string recordID = ("player." + board->getName());
     std::shared_ptr<DBRecord> player = db.get(recordID, true);
     if (!player) {
-      Throw() << "Failed to get record for player '" << board->getName()
-              << "' from " << db << XX;
+      Throw(Msg() << "Failed to get record for player '" << board->getName()
+            << "' from '" << db << "'");
     }
     board->saveTo(*player, (boards.size() - 1), first, last);
   }
@@ -341,7 +341,7 @@ void Game::saveResults(Database& db) {
 //-----------------------------------------------------------------------------
 void Game::setBoardOrder(const std::vector<std::string>& order) {
   if (isStarted()) {
-    Throw() << "Game.setBoardOrder() game has already started" << XX;
+    Throw("Game.setBoardOrder() game has already started");
   }
 
   std::vector<BoardPtr> tmp;
@@ -350,15 +350,15 @@ void Game::setBoardOrder(const std::vector<std::string>& order) {
   for (auto& name : order) {
     auto board = boardForPlayer(name, true);
     if (!board) {
-      Throw() << "Game.setBoardOrder() board name '" << name << "' not found"
-              << XX;
+      Throw(Msg() << "Game.setBoardOrder() board name '" << name
+            << "' not found");
     }
     tmp.push_back(board);
   }
 
   if (tmp.size() != boards.size()) {
-    Throw() << "Game.setBoardOrder() given board list size (" << tmp.size()
-            << ") doesn't match board size (" << boards.size() << ')' << XX;
+    Throw(Msg() << "Game.setBoardOrder() given board list size (" << tmp.size()
+          << ") doesn't match board size (" << boards.size() << ')');
   }
 
   boards.assign(tmp.begin(), tmp.end());

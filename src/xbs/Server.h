@@ -25,10 +25,6 @@ public: // enums
   };
 
 //-----------------------------------------------------------------------------
-public: // static methods
-  static Version getVersion();
-
-//-----------------------------------------------------------------------------
 private: // variables
   bool quietMode = false;
   bool autoStart = false;
@@ -50,6 +46,10 @@ public: // constructors
 //-----------------------------------------------------------------------------
 public: // destructor
   ~Server() { close(); }
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static Version getVersion();
 
 //-----------------------------------------------------------------------------
 public: // methods

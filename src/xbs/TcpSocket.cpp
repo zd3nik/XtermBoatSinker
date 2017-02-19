@@ -3,11 +3,13 @@
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "TcpSocket.h"
+#include "CSVWriter.h"
 #include "Input.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "StringUtils.h"
 #include "Throw.h"
-#include <cstring> // for memset
+#include <cstring>
 #include <netdb.h>
 #include <arpa/inet.h>
 
@@ -19,7 +21,7 @@ const std::string ANY_ADDRESS("0.0.0.0");
 
 //-----------------------------------------------------------------------------
 std::string TcpSocket::toString() const {
-  CSV params(',', true);
+  CSVWriter params(',', true);
   switch (mode) {
   case Client:
     params << "Client";
@@ -132,7 +134,7 @@ void TcpSocket::close() noexcept {
 //-----------------------------------------------------------------------------
 TcpSocket TcpSocket::accept() const {
   if ((handle < 0) || (mode != Server)) {
-    Throw() << "accept() called on " << (*this) << XX;
+    Throw(Msg() << "accept() called on" << (*this));
   }
 
   while (true) {
@@ -148,12 +150,12 @@ TcpSocket TcpSocket::accept() const {
       } else if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
         return TcpSocket();
       } else {
-        Throw() << (*this) << ".accept() failed: %s" << toError(errno) << XX;
+        Throw(Msg() << (*this) << ".accept() failed:" << toError(errno));
       }
     }
 
     if (newHandle == STDIN_FILENO) {
-      Throw() << (*this) << ".accept() stdin" << XX;
+      Throw(Msg() << (*this) << ".accept() stdin");
     }
 
     TcpSocket sock(inet_ntoa(addr.sin_addr), port, newHandle);
@@ -167,13 +169,12 @@ TcpSocket& TcpSocket::connect(const std::string& hostAddress,
                               const int hostPort)
 {
   if (handle >= 0) {
-    Throw() << "connect(" << hostAddress << ',' << hostPort << ") called on "
-            << (*this) << XX;
+    Throw(Msg() << "connect(" << hostAddress << ',' << hostPort
+          << ") called on" << (*this));
   } else if (isEmpty(hostAddress)) {
-    Throw(InvalidArgument) << "TcpSocket.connect() empty host address" << XX;
+    Throw("TcpSocket.connect() empty host address");
   } else  if (!isValidPort(hostPort)) {
-    Throw(InvalidArgument) << "TcpSocket.connect() invalid port: " << hostPort
-                           << XX;
+    Throw(Msg() << "TcpSocket.connect() invalid port:" << hostPort);
   }
 
   addrinfo hints;
@@ -185,8 +186,8 @@ TcpSocket& TcpSocket::connect(const std::string& hostAddress,
   std::string portStr = toStr(hostPort);
   int err = getaddrinfo(hostAddress.c_str(), portStr.c_str(), &hints, &result);
   if (err) {
-    Throw() << "TcpSocket.connect(" << hostAddress << ',' << hostPort
-            << ") host lookup failed: " << gai_strerror(err) << XX;
+    Throw(Msg() << "TcpSocket.connect(" << hostAddress << ',' << hostPort
+          << ") host lookup failed:" << gai_strerror(err));
   }
 
   for (struct addrinfo* p = result; p; p = p->ai_next) {
@@ -205,8 +206,8 @@ TcpSocket& TcpSocket::connect(const std::string& hostAddress,
   result = nullptr;
 
   if (handle < 0) {
-    Throw() << "TcpSocket.connect(" << hostAddress << ',' << hostPort
-            << ") failed: " << (err ? toError(err) : "unknown reason") << XX;
+    Throw(Msg() << "TcpSocket.connect(" << hostAddress << ',' << hostPort
+          << ") failed: " << (err ? toError(err) : "unknown reason"));
   }
 
   address = hostAddress;
@@ -223,14 +224,12 @@ TcpSocket& TcpSocket::listen(const std::string& bindAddress,
                              const int backlog)
 {
   if (handle >= 0) {
-    Throw() << "listen(" << bindAddress << ',' << bindPort << ',' << backlog
-            << ") called on " << (*this) << XX;
+    Throw(Msg() << "listen(" << bindAddress << ',' << bindPort << ','
+          << backlog << ") called on" << (*this));
   } else if (!isValidPort(bindPort)) {
-    Throw(InvalidArgument) << "TcpSocket.listen() invalid port: " << bindPort
-                           << XX;
+    Throw(Msg() << "TcpSocket.listen() invalid port " << bindPort);
   } else if (backlog < 1) {
-    Throw(InvalidArgument) << "TcpSocket.listen() invalid backlog: " << backlog
-                           << XX;
+    Throw(Msg() << "TcpSocket.listen() invalid backlog:" << backlog);
   }
 
   sockaddr_in addr;
@@ -242,27 +241,27 @@ TcpSocket& TcpSocket::listen(const std::string& bindAddress,
     Logger::warn() << "binding to " << ANY_ADDRESS;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
   } else if (inet_aton(bindAddress.c_str(), &addr.sin_addr) == 0) {
-    Throw(InvalidArgument) << "Invalid bind address: '" << bindAddress << "': "
-            << toError(errno) << XX;
+    Throw(Msg() << "Invalid bind address: '" << bindAddress << "':"
+          << toError(errno));
   }
 
   if ((handle = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    Throw() << "Failed to create socket handle: " << toError(errno) << XX;
+    Throw(Msg() << "Failed to create socket handle:" << toError(errno));
   }
 
   int yes = 1;
   if (setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
-    Throw() << "Failed to set REUSEADDR option: " << toError(errno) << XX;
+    Throw(Msg() << "Failed to set REUSEADDR option:" << toError(errno));
   }
 
   if (bind(handle, (sockaddr*)(&addr), sizeof(addr)) < 0) {
-    Throw() << "Failed to bind socket to " << bindAddress << ':' << bindPort
-            << ": " << toError(errno) << XX;
+    Throw(Msg() << "Failed to bind socket to" << bindAddress << ':' << bindPort
+          << ':' << toError(errno));
   }
 
   if (::listen(handle, backlog) < 0) {
-    Throw() << "Failed to listen on " << bindAddress << ':' << bindPort << ": "
-            << toError(errno) << XX;
+    Throw(Msg() << "Failed to listen on" << bindAddress << ':' << bindPort
+          << ":" << toError(errno));
   }
 
   address = bindAddress;

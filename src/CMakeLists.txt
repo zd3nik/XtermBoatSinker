@@ -16,3 +16,8 @@ project(rufus)
 include_directories(bots)
 add_executable(xbs-rufus "bots/RandomRufus.cpp")
 target_link_libraries(xbs-rufus xbs)
+
+project(hal)
+include_directories(bots)
+add_executable(xbs-hal "bots/Hal9000.cpp")
+target_link_libraries(xbs-hal xbs)

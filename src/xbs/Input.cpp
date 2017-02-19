@@ -3,8 +3,9 @@
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Input.h"
-#include "CSV.h"
+#include "CSVReader.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "StringUtils.h"
 #include "Throw.h"
 #include <sys/select.h>
@@ -15,12 +16,12 @@ namespace xbs
 //-----------------------------------------------------------------------------
 char Input::readChar(const int fd) {
   if (fd < 0) {
-    Throw() << "Input.readChar() invalid handle: " << fd << XX;
+    Throw(Msg() << "Input.readChar() invalid handle:" << fd);
   }
 
   char ch = 0;
   if (read(fd, &ch, 1) != 1) {
-    Throw() << "Input.readChar() failed: " << toError(errno) << XX;
+    Throw(Msg() << "Input.readChar() failed:" << toError(errno));
   }
 
   Logger::debug() << "Received character '" << ch << "' from channel " << fd
@@ -137,7 +138,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
           Logger::debug() << "Input select interrupted";
           return false;
         }
-        Throw() << "Input select failed: " << toError(errno) << XX;
+        Throw(Msg() << "Input select failed:" << toError(errno));
       }
       break;
     }
@@ -157,7 +158,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
 //-----------------------------------------------------------------------------
 unsigned Input::readln(const int fd, const char delimeter) {
   if (fd < 0) {
-    Throw(InvalidArgument) << "Input readln() invalid handle: " << fd << XX;
+    Throw(Msg() << "Input readln() invalid handle:" << fd);
   }
 
   line[0] = 0;
@@ -194,11 +195,7 @@ unsigned Input::readln(const int fd, const char delimeter) {
     return 0;
   }
 
-  CSV csv(line.data(), delimeter, true);
-  for (std::string fld; csv.next(fld); ) {
-    fields.push_back(fld);
-  }
-
+  fields = CSVReader(line.data(), delimeter, true).readCells();
   return fields.size();
 }
 
@@ -280,13 +277,13 @@ std::string Input::getStr(const unsigned index,
 //-----------------------------------------------------------------------------
 int Input::getInt(const unsigned index, const int def) const {
   const std::string str = getStr(index);
-  return isInt(str) ? toInt(str) : def;
+  return isInt(str) ? toInt32(str) : def;
 }
 
 //-----------------------------------------------------------------------------
 unsigned Input::getUInt(const unsigned index, const unsigned def) const {
   const std::string str = getStr(index);
-  return isUInt(str) ? toUInt(str) : def;
+  return isUInt(str) ? toUInt32(str) : def;
 }
 
 //-----------------------------------------------------------------------------
@@ -312,7 +309,7 @@ bool Input::bufferData(const int fd) {
       len[fd] = n;
       break;
     } else {
-      Throw(OverflowError) << "Input buffer overflow!" << XX;
+      Throw("Input buffer overflow!");
     }
   }
   return true;

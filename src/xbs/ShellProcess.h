@@ -15,29 +15,12 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class ShellProcess : public Process {
 //-----------------------------------------------------------------------------
-public: // Process implementation
-  virtual bool isRunning() const noexcept;
-  virtual bool waitForExit(const Milliseconds timeout = 0) noexcept;
-  virtual int getExitStatus() const noexcept { return exitStatus; }
-  virtual int getInputHandle() const;
-  virtual void close() noexcept;
-  virtual void run();
-  virtual void sendln(const std::string& line) const;
-  virtual void validate() const;
-  virtual std::string getAlias() const { return alias; }
-
-//-----------------------------------------------------------------------------
 public: // enums
   enum IOType {
     INPUT_ONLY,
     OUTPUT_ONLY,
     BIDIRECTIONAL
   };
-
-//-----------------------------------------------------------------------------
-public: // static methods
-  static std::string joinStr(const std::vector<std::string>&);
-  static std::vector<std::string> splitStr(const std::string&);
 
 //-----------------------------------------------------------------------------
 private: // variables
@@ -82,6 +65,23 @@ public: // constructors
 //-----------------------------------------------------------------------------
 public: // destructor
   virtual ~ShellProcess() noexcept { close(); }
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static std::string joinStr(const std::vector<std::string>&);
+  static std::vector<std::string> splitStr(const std::string&);
+
+//-----------------------------------------------------------------------------
+public: // Process implementation
+  virtual bool isRunning() const noexcept;
+  virtual bool waitForExit(const Milliseconds timeout = 0) noexcept;
+  virtual int getExitStatus() const noexcept { return exitStatus; }
+  virtual int getInputHandle() const;
+  virtual void close() noexcept;
+  virtual void run();
+  virtual void sendln(const std::string& line) const;
+  virtual void validate() const;
+  virtual std::string getAlias() const { return alias; }
 
 //-----------------------------------------------------------------------------
 public: // methods

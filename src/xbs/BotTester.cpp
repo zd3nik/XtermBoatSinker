@@ -6,6 +6,7 @@
 #include "CommandArgs.h"
 #include "Input.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "Screen.h"
 #include "Throw.h"
 #include "db/FileSysDatabase.h"
@@ -19,21 +20,21 @@ static const std::string TARGET_BOARD_NAME("test");
 //-----------------------------------------------------------------------------
 BotTester::BotTester() {
   const CommandArgs& args = CommandArgs::getInstance();
-  const unsigned height = toUInt(args.getValueOf({"-y", "--height"}));
-  const unsigned width = toUInt(args.getValueOf({"-x", "--width"}));
-  positions = toUInt(args.getValueOf({"-p", "--positions"}), 100000);
-  staticBoard = args.getValueOf({"-s", "--static-board"});
-  watch = (args.indexOf({"-w", "--watch"}) >= 0);
+  const unsigned height = args.getUIntAfter({"-y", "--height"});
+  const unsigned width = args.getUIntAfter({"-x", "--width"});
+  positions = args.getUIntAfter({"-p", "--positions"}, 100000);
+  staticBoard = args.getStrAfter({"-s", "--static-board"});
+  watch = args.has({"-w", "--watch"});
 
-  const std::string msa = args.getValueOf("--msa");
+  const std::string msa = args.getStrAfter("--msa");
   if (msa.size()) {
     minSurfaceArea = toDouble(msa.c_str());
     if (!isFloat(msa) || (minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      Throw(InvalidArgument) << "Invalid min-surface-area ratio: " << msa << XX;
+      Throw(Msg() << "Invalid min-surface-area ratio:" << msa);
     }
   }
 
-  testDB = args.getValueOf({"-d", "--test-db"});
+  testDB = args.getStrAfter({"-d", "--test-db"});
   if (testDB.empty()) {
     testDB = "testDB";
   }
@@ -51,9 +52,9 @@ BotTester::BotTester() {
 //-----------------------------------------------------------------------------
 void BotTester::test(Bot& bot) {
   if (!config) {
-    Throw() << "Invalid test configuration" << XX;
+    Throw("Invalid test configuration");
   } else if (bot.getPlayerName() == TARGET_BOARD_NAME) {
-    Throw() << "Please use a different name for the bot your testing" << XX;
+    Throw("Please use a different name for the bot your testing");
   }
 
   // try to prevent bot from wasting time generating a new board each iteration
@@ -62,7 +63,7 @@ void BotTester::test(Bot& bot) {
   } else {
     Board tmp("tmp", config);
     if (!tmp.addRandomShips(config, minSurfaceArea)) {
-      Throw() << "Unable to generate random board for specified config" << XX;
+      Throw("Unable to generate random board for specified config");
     }
     bot.setStaticBoard(tmp.getDescriptor());
   }
@@ -84,7 +85,7 @@ void BotTester::test(Bot& bot) {
     newTargetBoard(bot, targetBoard);
     uniquePositions.insert(targetBoard.getDescriptor());
     if (!displayBoard.updateDescriptor(targetBoard.maskedDescriptor())) {
-      Throw() << "Failed to mask boat area" << XX;
+      Throw("Failed to mask boat area");
     }
 
     unsigned hits = 0;
@@ -94,15 +95,15 @@ void BotTester::test(Bot& bot) {
       bot.updatePlayerToMove(bot.getPlayerName());
       std::string player = bot.getBestShot(coord);
       if (player != TARGET_BOARD_NAME) {
-        Throw() << bot.getBotName() << " chose to shoot at '" << player
-                << "' instead of " << TARGET_BOARD_NAME << XX;
+        Throw(Msg() << bot.getBotName() << "chose to shoot at '" << player
+              << "' instead of '" << TARGET_BOARD_NAME << "'");
       }
 
       const char id = targetBoard.shootSquare(coord);
       if (!id || Ship::isHit(id) || Ship::isMiss(id)) {
-        Throw() << "Invalid target coord: " << coord << XX;
+        Throw(Msg() << "Invalid target coord:" << coord);
       } else if (++totalShots == 0) {
-        Throw(OverflowError) << "Shot count overflow" << XX;
+        Throw("Shot count overflow");
       } else if (Ship::isValidID(id)) {
         displayBoard.setSquare(coord, Ship::HIT);
         hits++;
@@ -137,8 +138,8 @@ void BotTester::test(Bot& bot) {
     maxShots = std::max(shots, maxShots);
     perfectGames += (shots == hits);
 
-    if (!tested || (timer.tick() >= Timer::ONE_SECOND)) {
-      timer.tock();
+    if (!tested || (timer.tock() >= Timer::ONE_SECOND)) {
+      timer.tick();
       double avg = (double(totalShots) / (tested + 1));
       displayBoard.print(true);
       Screen::print() << statusLine << ClearToScreenEnd << (tested + 1)
@@ -149,7 +150,7 @@ void BotTester::test(Bot& bot) {
   }
 
   if (!totalShots) {
-    Throw() << "No shots taken" << XX;
+    Throw("No shots taken");
   }
 
   const Milliseconds elapsed = timer.elapsed();
@@ -181,7 +182,7 @@ std::shared_ptr<DBRecord> BotTester::newTestRecord(
   FileSysDatabase db;
   std::shared_ptr<DBRecord> rec = db.open(testDB).get(recordID, true);
   if (!rec) {
-    Throw() << "Failed to get " << recordID << " from " << db << XX;
+    Throw(Msg() << "Failed to get" << recordID << "from" << db);
   }
   return rec;
 }
@@ -207,7 +208,7 @@ Coordinate BotTester::printStart(
                   << Flush;
 
   if (!Screen::get().contains(board.shift(South, (statusLine.getY() - 1)))) {
-    Throw() << "Board does not fit in terminal" << XX;
+    Throw("Board does not fit in terminal");
   }
 
   Screen::print() << board.getTopLeft() << ClearToScreenEnd;
@@ -225,11 +226,10 @@ void BotTester::newTargetBoard(
     if (!targetBoard.updateDescriptor(staticBoard) ||
         !targetBoard.matchesConfig(config))
     {
-      Throw() << "Invalid test board descriptor [" << staticBoard << ']'
-              << XX;
+      Throw(Msg() << "Invalid test board descriptor '" << staticBoard << "'");
     }
   } else if (!targetBoard.addRandomShips(config, minSurfaceArea)) {
-    Throw() << "Failed random boat placement" << XX;
+    Throw("Failed random boat placement");
   }
 
   bot.newGame(config);

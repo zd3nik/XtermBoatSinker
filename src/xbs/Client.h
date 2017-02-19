@@ -7,10 +7,10 @@
 
 #include "Platform.h"
 #include "Board.h"
-#include "CSV.h"
 #include "Game.h"
 #include "Input.h"
 #include "Message.h"
+#include "Msg.h"
 #include "ShellBot.h"
 #include "TcpSocket.h"
 #include "Version.h"
@@ -21,11 +21,6 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class Client {
-//-----------------------------------------------------------------------------
-public: // static methods
-  static Version getVersion();
-  static bool isCompatibleWith(const Version& serverVersion) noexcept;
-
 //-----------------------------------------------------------------------------
 private: // variables
   unsigned msgEnd = ~0U;
@@ -55,6 +50,11 @@ public: // constructors
 //-----------------------------------------------------------------------------
 public: // destructor
   ~Client() noexcept { closeSocket(); }
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static Version getVersion();
+  static bool isCompatibleWith(const Version& serverVersion) noexcept;
 
 //-----------------------------------------------------------------------------
 public: // methods

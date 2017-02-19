@@ -16,12 +16,6 @@ namespace xbs
 //-----------------------------------------------------------------------------
 class Rectangle : public Printable {
 //-----------------------------------------------------------------------------
-public: // Printable implementation
-  virtual std::string toString() const {
-    return (toStr(getWidth()) + 'x' + toStr(getHeight()) + " Rectangle");
-  }
-
-//-----------------------------------------------------------------------------
 private: // variables
   Coordinate begin;
   Coordinate end;
@@ -43,6 +37,12 @@ public: // constructors
       width((begin && end) ? (end.getX() - begin.getX() + 1) : 0),
       height((begin && end) ? (end.getY() - begin.getY() + 1) : 0)
   { }
+
+//-----------------------------------------------------------------------------
+public: // Printable implementation
+  virtual std::string toString() const {
+    return (toStr(getWidth()) + 'x' + toStr(getHeight()) + " Rectangle");
+  }
 
 //-----------------------------------------------------------------------------
 public: // methods

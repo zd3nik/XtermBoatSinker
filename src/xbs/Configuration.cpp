@@ -3,6 +3,7 @@
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
 #include "Configuration.h"
+#include "Msg.h"
 #include "Screen.h"
 #include "Throw.h"
 
@@ -97,27 +98,27 @@ Configuration& Configuration::load(Input& input,
   unsigned shipCount  = input.getUInt(n++);
 
   if (str != "G") {
-    Throw() << "Expected game info message, got: " << msg << XX;
+    Throw(Msg() << "Expected game info message, got:" << msg);
   } else if (!serverVersion) {
-    Throw() << "Invalid version in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid version in game info message:" << msg);
   } else if (name.empty()) {
-    Throw() << "Empty title in game info message: " << msg << XX;
+    Throw(Msg() << "Empty title in game info message:" << msg);
   } else if ((started != "Y") && (started != "N")) {
-    Throw() << "Invalid started flag in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid started flag in game info message:" << msg);
   } else if (minPlayers < 2) {
-    Throw() << "Invalid min player count in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid min player count in game info message:" << msg);
   } else if (maxPlayers < minPlayers) {
-    Throw() << "Invalid max player count in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid max player count in game info message:" << msg);
   } else if (playersJoined > maxPlayers) {
-    Throw() << "Invalid joined count in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid joined count in game info message:" << msg);
   } else if (pointGoal < 1) {
-    Throw() << "Invalid point goal in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid point goal in game info message:" << msg);
   } else if (width < 1) {
-    Throw() << "Invalid board width in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid board width in game info message:" << msg);
   } else if (height < 1) {
-    Throw() << "Invalid board height in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid board height in game info message:" << msg);
   } else if (shipCount < 1) {
-    Throw() << "Invalid ship count in game info message: " << msg << XX;
+    Throw(Msg() << "Invalid ship count in game info message:" << msg);
   }
 
   setBoardSize(width, height);
@@ -126,19 +127,18 @@ Configuration& Configuration::load(Input& input,
   unsigned maxPointGoal = 0;
   for (unsigned i = 0; i < shipCount; ++i) {
     if (!ship.fromString(str = input.getStr(n++))) {
-      Throw() << "Invalid ship '" << str << "' in game info message: " << msg
-              << XX;
+      Throw(Msg() << "Invalid ship" << str << "in game info message " << msg);
     }
     maxPointGoal += ship.getLength();
     addShip(ship);
   }
 
   if (getShipCount() != shipCount) {
-    Throw() << "Ship count mismatch in game info message: " << msg << XX;
+    Throw(Msg() << "Ship count mismatch in game info message:" << msg);
   } else if (pointGoal > maxPointGoal) {
-    Throw() << "Impossible point goal in game info message: " << msg << XX;
+    Throw(Msg() << "Impossible point goal in game info message:" << msg);
   } else if (!isValid()) {
-    Throw() << "Invalid game info message: " << msg << XX;
+    Throw(Msg() << "Invalid game info message:" << msg);
   }
 
   gameStarted = (started == "Y");
@@ -226,12 +226,12 @@ void Configuration::loadFrom(const DBRecord& record) {
     if (ship.fromString(str)) {
       ships.push_back(ship);
     } else {
-      Throw() << "Invalid ship string: [" << str << ']' << XX;
+      Throw(Msg() << "Invalid ship string: [" << str << ']');
     }
   }
 
   if (!isValid()) {
-    Throw() << "Invalid configuration in " << record << XX;
+    Throw(Msg() << "Invalid configuration in" << record);
   }
 }
 

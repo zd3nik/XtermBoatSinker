@@ -6,7 +6,6 @@
 #define XBS_TCP_SOCKET_H
 
 #include "Platform.h"
-#include "CSV.h"
 #include "Printable.h"
 
 namespace xbs
@@ -14,16 +13,6 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 class TcpSocket : public Printable {
-//-----------------------------------------------------------------------------
-public: // Printable implementation
-  virtual std::string toString() const;
-
-//-----------------------------------------------------------------------------
-public: // static methods
-  static bool isValidPort(const int port) noexcept {
-    return ((port > 0) && (port <= 0x7FFF));
-  }
-
 //-----------------------------------------------------------------------------
 private: // variables
   std::string label;
@@ -54,6 +43,16 @@ private: // constructors
 //-----------------------------------------------------------------------------
 public: // destructor
   virtual ~TcpSocket() noexcept { close(); }
+
+//-----------------------------------------------------------------------------
+public: // static methods
+  static bool isValidPort(const int port) noexcept {
+    return ((port > 0) && (port <= 0x7FFF));
+  }
+
+//-----------------------------------------------------------------------------
+public: // Printable implementation
+  virtual std::string toString() const;
 
 //-----------------------------------------------------------------------------
 public: // methods

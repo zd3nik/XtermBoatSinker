@@ -6,8 +6,8 @@
 #include "BotTester.h"
 #include "CanonicalMode.h"
 #include "CommandArgs.h"
-#include "CSV.h"
 #include "Logger.h"
+#include "Msg.h"
 #include "Screen.h"
 #include "Server.h"
 #include "StringUtils.h"
@@ -69,18 +69,17 @@ void Client::showHelp() {
 
 //-----------------------------------------------------------------------------
 static std::string getHostArg() {
-  return CommandArgs::getInstance().getValueOf({"-h", "--host"});
+  return CommandArgs::getInstance().getStrAfter({"-h", "--host"});
 }
 
 //-----------------------------------------------------------------------------
 static int getPortArg() {
-  std::string val = CommandArgs::getInstance().getValueOf({"-p", "--port"});
-  return isEmpty(val) ? -1 : toInt(val);
+  return CommandArgs::getInstance().getIntAfter({"-p", "--port"}, -1);
 }
 
 //-----------------------------------------------------------------------------
 static std::string getUserArg() {
-  return CommandArgs::getInstance().getValueOf({"-u", "--user"});
+  return CommandArgs::getInstance().getStrAfter({"-u", "--user"});
 }
 
 //-----------------------------------------------------------------------------
@@ -90,21 +89,21 @@ bool Client::init() {
   Screen::get(true) << args.getProgramName() << " version " << getVersion()
                     << EL << Flush;
 
-  if (args.indexOf("--help") >= 0) {
+  if (args.has("--help")) {
     showHelp();
     return false;
   }
 
   close();
 
-  const std::string tauntFile = args.getValueOf({"-t", "--taunt-file"});
+  const std::string tauntFile = args.getStrAfter({"-t", "--taunt-file"});
   if (tauntFile.size()) {
     taunts.reset(new FileSysDBRecord("taunts", tauntFile));
   }
 
-  staticBoard = args.getValueOf({"-s", "--static-board"});
-  botCommand = args.getValueOf("--bot");
-  test = (args.indexOf("--test") >= 0);
+  staticBoard = args.getStrAfter({"-s", "--static-board"});
+  botCommand = args.getStrAfter("--bot");
+  test = (args.has("--test"));
 
   if (test && isEmpty(botCommand)) {
     showHelp();
@@ -186,7 +185,7 @@ bool Client::run() {
 //-----------------------------------------------------------------------------
 bool Client::runTest() {
   if (!bot) {
-    Throw() << "--test option requires --bot option" << XX;
+    Throw("--test option requires --bot option");
   } else {
     BotTester().test(*bot);
   }
@@ -197,7 +196,7 @@ bool Client::runTest() {
 Board& Client::myBoard() {
   auto board = game.boardForPlayer(userName, true);
   if (!board) {
-    Throw() << "Your are not in the game!" << XX;
+    Throw("Your are not in the game!");
   }
   return (*board);
 }
@@ -265,7 +264,7 @@ bool Client::getUserName(const bool gameStarted) {
   if (bot) {
     userName = bot->getPlayerName();
     if (isEmpty(userName)) {
-      Throw() << "No player name from bot '" << botCommand << "'" << XX;
+      Throw(Msg() << "No player name from bot '" << botCommand << "'");
     }
   } else {
     userName = getUserArg();
@@ -317,7 +316,7 @@ bool Client::joinGame(const bool gameStarted, bool& retry) {
   const Configuration& config = game.getConfiguration();
   if (gameStarted) {
     // rejoining game in progress
-    if (!trySend(MSG('J') << userName)) {
+    if (!trySend(Msg('J') << userName)) {
       Logger::printError() << "Failed to send join message to server";
       return false;
     }
@@ -328,7 +327,7 @@ bool Client::joinGame(const bool gameStarted, bool& retry) {
       Logger::printError() << "Your board is not setup!";
       return false;
     }
-    if (!trySend(MSG('J') << userName << yourBoard->getDescriptor())) {
+    if (!trySend(Msg('J') << userName << yourBoard->getDescriptor())) {
       Logger::printError() << "Failed to send join message to server";
       return false;
     }
@@ -360,14 +359,14 @@ bool Client::joinGame(const bool gameStarted, bool& retry) {
     }
     if (taunts) {
       for (auto& taunt : taunts->getStrings("hit")) {
-        if (!trySend(MSG('T') << "hit" << taunt)) {
+        if (!trySend(Msg('T') << "hit" << taunt)) {
           Logger::printError() << "Failed to send taunt info to server";
           return false;
         }
         yourBoard->addHitTaunt(taunt);
       }
       for (auto& taunt : taunts->getStrings("miss")) {
-        if (!trySend(MSG('T') << "miss" << taunt)) {
+        if (!trySend(Msg('T') << "miss" << taunt)) {
           Logger::printError() << "Failed to send taunt info to server";
           return false;
         }
@@ -522,8 +521,8 @@ bool Client::readGameInfo(bool& gameStarted, unsigned& playersJoined) {
     if (!yourBoard->updateDescriptor(desc) ||
         !yourBoard->matchesConfig(game.getConfiguration()))
     {
-      Throw() << "Invalid bot(" << bot->getPlayerName() << ") board: "
-              << desc << XX;
+      Throw(Msg() << "Invalid bot(" << bot->getPlayerName() << ") board:"
+            << desc);
     }
   }
   return true;
@@ -681,13 +680,13 @@ bool Client::trySend(const std::string& msg) {
 //-----------------------------------------------------------------------------
 bool Client::waitForGameStart() {
   if (isEmpty(userName)) {
-    Throw() << "Username not set!" << XX;
+    Throw("Username not set!");
   } else if (!yourBoard) {
-    Throw() << "Your board is not set!" << XX;
+    Throw("Your board is not set!");
   } else if (yourBoard->getName() != userName) {
-    Throw() << "Your board name doesn't make your user name!" << XX;
+    Throw("Your board name doesn't make your user name!");
   } else if (!yourBoard->matchesConfig(game.getConfiguration())) {
-    Throw() << "Your board setup is invalid!" << XX;
+    Throw("Your board setup is invalid!");
   }
 
   bool ok = true;
@@ -834,10 +833,10 @@ void Client::addMessage() {
 void Client::addPlayer() {
   const std::string name = input.getStr(1);
   if (name.empty()) {
-    Throw() << "Incomplete addPlayer message from server" << XX;
+    Throw("Incomplete addPlayer message from server");
   } else if (game.hasBoard(name)) {
-    Throw() << "Duplicate player name (" << name << ") received from server"
-            << XX;
+    Throw(Msg() << "Duplicate player name (" << name
+          << ") received from server");
   }
   game.addBoard(std::make_shared<Board>(name, game.getConfiguration()));
 
@@ -973,7 +972,7 @@ void Client::handleServerMessage() {
         break;
       }
     }
-    Throw() << "Unexpected server message: '" << input.getLine() << "'" << XX;
+    Throw(Msg() << "Unexpected server message:" << input.getLine());
   }
 }
 
@@ -985,11 +984,11 @@ void Client::hit() {
 
   auto board = game.boardForPlayer(shooter, true);
   if (!board) {
-    Throw() << "Invalid shooter name in hit message from server: "
-            << input.getLine() << XX;
+    Throw(Msg() << "Invalid shooter name in hit message from server: "
+          << input.getLine());
   } else if (target.empty()) {
-    Throw() << "Empty target name in hit message from server: "
-            << input.getLine() << XX;
+    Throw(Msg() << "Empty target name in hit message from server: "
+          << input.getLine());
   }
 
   std::string msg = (shooter + " hit " + target);
@@ -1014,9 +1013,9 @@ void Client::hit() {
 void Client::nextTurn() {
   const std::string name = input.getStr(1);
   if (name.empty()) {
-    Throw() << "Incomplete nextTurn message from server" << XX;
+    Throw("Incomplete nextTurn message from server");
   } else if (!game.setNextTurn(name)) {
-    Throw() << "Invalid nextTurn message: " << input.getLine() << XX;
+    Throw(Msg() << "Invalid nextTurn message:" << input.getLine());
   }
 
   if (bot) {
@@ -1029,9 +1028,9 @@ void Client::nextTurn() {
       Logger::debug() << "bot target: " << target << ", coord: " << shotCoord;
       if (isEmpty(target)) {
         myBoard().incSkips();
-        send(MSG('K') << userName);
+        send(Msg('K') << userName);
       } else {
-        send(MSG('S') << target << shotCoord.getX() << shotCoord.getY());
+        send(Msg('S') << target << shotCoord.getX() << shotCoord.getY());
       }
     }
   }
@@ -1117,9 +1116,9 @@ void Client::redrawScreen() {
 void Client::removePlayer() {
   const std::string name = input.getStr(1);
   if (name.empty()) {
-    Throw() << "Incomplete removePlayer message from server" << XX;
+    Throw("Incomplete removePlayer message from server");
   } else if (game.isStarted()) {
-    Throw() << "Received removePlayer message after game start" << XX;
+    Throw("Received removePlayer message after game start");
   }
   game.removeBoard(name);
 
@@ -1160,7 +1159,7 @@ void Client::scrollUp() noexcept {
 //-----------------------------------------------------------------------------
 void Client::send(const std::string& msg) {
   if (!trySend(msg)) {
-    Throw() << socket << ".send(" << msg << ") failed" << XX;
+    Throw(Msg() << socket << ".send(" << msg << ") failed");
   }
 }
 
@@ -1204,7 +1203,7 @@ void Client::sendMessage(Coordinate coord) {
   }
 
   appendMessage(msg, "me", (name.size() ? name : "All"));
-  send(MSG('M') << name << msg);
+  send(Msg('M') << name << msg);
 }
 
 //-----------------------------------------------------------------------------
@@ -1247,13 +1246,13 @@ void Client::setTaunts() {
     const std::string typeStr = ((type == 'H') ? "hit" : "miss");
     std::string taunt;
     if (mode == 'C') {
-      send(MSG('T') << typeStr);
+      send(Msg('T') << typeStr);
     } else {
       taunt = prompt(coord, "Taunt message? -> ");
       if (taunt.empty()) {
         continue;
       } else {
-        send(MSG('T') << typeStr << taunt);
+        send(Msg('T') << typeStr << taunt);
       }
     }
 
@@ -1321,7 +1320,7 @@ void Client::shoot(Coordinate coord) {
     }
   }
 
-  send(MSG('S') << name << shotCoord.getX() << shotCoord.getY());
+  send(Msg('S') << name << shotCoord.getX() << shotCoord.getY());
 }
 
 //-----------------------------------------------------------------------------
@@ -1331,8 +1330,7 @@ void Client::skip() {
 
   auto board = game.boardForPlayer(user, true);
   if (!board) {
-    Throw() << "Invalid name '" << user << "' in skip message from server"
-            << XX;
+    Throw(Msg() << "Invalid name '" << user << "' in skip message from server");
   }
 
   if (reason.size()) {
@@ -1359,7 +1357,7 @@ void Client::skip(Coordinate coord) {
   std::string str = prompt(coord, "Skip your turn? [y/N] -> ");
   if (iStartsWith(str, 'Y')) {
     board.incSkips();
-    send(MSG('K') << userName);
+    send(Msg('K') << userName);
   }
 }
 
@@ -1367,19 +1365,19 @@ void Client::skip(Coordinate coord) {
 void Client::startGame() {
   unsigned count = (input.getFieldCount() - 1);
   if (count != game.getBoardCount()) {
-    Throw() << "Player count mismatch: boards=" << game.getBoardCount()
-            << ", players=" << count << XX;
+    Throw(Msg() << "Player count mismatch: boards(" << game.getBoardCount()
+          << "), players(" << count << ')');
   }
 
   std::vector<std::string> boardOrder;
   for (unsigned i = 1; i < input.getFieldCount(); ++i) {
     const std::string name = input.getStr(i);
     if (name.empty()) {
-      Throw() << "Empty player name received from server: " << input.getLine()
-              << XX;
+      Throw(Msg() << "Empty player name received from server:"
+            << input.getLine());
     } else if (!game.hasBoard(name)) {
-      Throw() << "Unknown player name (" << name << ") received from server: "
-              << input.getLine() << XX;
+      Throw(Msg() << "Unknown player name (" << name
+            << ") received from server:" << input.getLine());
     } else {
       boardOrder.push_back(name);
     }
@@ -1390,7 +1388,7 @@ void Client::startGame() {
   if (game.start()) {
     redrawScreen();
   } else {
-    Throw() << "Game cannot start" << XX;
+    Throw("Game cannot start");
   }
 
   if (bot) {
@@ -1408,16 +1406,16 @@ void Client::updateBoard() {
 
   auto board = game.boardForPlayer(name, true);
   if (!board || desc.empty()) {
-    Throw() << "Invalid updateBoard message from server: " << input.getLine()
-            << XX;
+    Throw(Msg() << "Invalid updateBoard message from server:"
+          << input.getLine());
   }
 
   board->setStatus(status).setScore(score).setSkips(skips);
 
   if (!board->updateDescriptor(desc)) {
-    Throw() << "Failed to update board descriptor for " << name << XX;
+    Throw(Msg() << "Failed to update board descriptor for" << name);
   } else if ((name == userName) && !yourBoard->addHitsAndMisses(desc)) {
-    Throw() << "Board descriptor mismatch: '" << desc << "'" << XX;
+    Throw(Msg() << "Board descriptor mismatch:" << desc);
   }
 
   if (bot) {
@@ -1431,7 +1429,7 @@ void Client::updateYourBoard() {
   if (!yourBoard->updateDescriptor(desc) ||
       !yourBoard->matchesConfig(game.getConfiguration()))
   {
-    Throw() << "Invalid YourBoard descriptor: '" << desc << "'" << XX;
+    Throw(Msg() << "Invalid YourBoard descriptor:" << desc);
   }
   if (bot) {
     // TODO bot->yourBoard(desc);
@@ -1442,19 +1440,19 @@ void Client::updateYourBoard() {
 void Client::viewBoard(Coordinate coord) {
   Board& board = myBoard();
    if (yourBoard->getDescriptor().size() != board.getDescriptor().size()) {
-    Throw() << "Board descriptor lengths don't match!" << XX;
+    Throw("Board descriptor lengths don't match!");
   }
 
   yourBoard->set(board.getTopLeft(), board.getBottomRight());
   if (!yourBoard->print(false)) {
-    Throw() << "Failed to print your board" << XX;
+    Throw("Failed to print your board");
   }
 
   Screen::print() << coord << ClearToLineEnd << "Press any key" << Flush;
   getKey(coord);
 
   if (!board.print(true, &game.getConfiguration())) {
-    Throw() << "Failed to print your board" << XX;
+    Throw("Failed to print your board");
   }
 }
 
