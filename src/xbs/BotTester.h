@@ -31,6 +31,8 @@ private: // variables
   std::set<std::string> uniquePositions;
   std::string staticBoard;
   std::string testDB;
+  std::string trainingOutputFile;
+  bool trainAdjacentHitsOnly = false;
 
 //-----------------------------------------------------------------------------
 public: // constructors

@@ -24,6 +24,8 @@ BotTester::BotTester() {
   const unsigned width = args.getUIntAfter({"-x", "--width"});
   positions = args.getUIntAfter({"-p", "--positions"}, 100000);
   staticBoard = args.getStrAfter({"-s", "--static-board"});
+  trainingOutputFile = args.getStrAfter("--training-file");
+  trainAdjacentHitsOnly = args.has("--training-adj-only");
   watch = args.has({"-w", "--watch"});
 
   const std::string msa = args.getStrAfter("--msa");
@@ -74,6 +76,11 @@ void BotTester::test(Bot& bot) {
   perfectGames = 0;
   uniquePositions.clear();
 
+  std::ofstream trainingFile;
+  if (trainingOutputFile.size()) {
+    trainingFile.open(trainingOutputFile);
+  }
+
   std::shared_ptr<DBRecord> rec = newTestRecord(bot);
   Board targetBoard(bot.getPlayerName(), config);
   Board displayBoard(bot.getPlayerName(), config);
@@ -105,6 +112,22 @@ void BotTester::test(Bot& bot) {
       } else if (++totalShots == 0) {
         Throw("Shot count overflow");
       } else if (Ship::isValidID(id)) {
+        if (trainingFile &&
+            (!trainAdjacentHitsOnly || displayBoard.adjacentHits(coord)))
+        {
+          unsigned idx = displayBoard.getShipIndex(coord);
+          const std::string desc = targetBoard.getDescriptor();
+          const std::string masked = displayBoard.getDescriptor();
+          trainingFile << masked << ',' << coord << ',' << idx;
+          for (unsigned i = 0; i < desc.size(); ++i) {
+            if ((i != idx) && (masked[i] == Ship::NONE) &&
+                Ship::isShip(desc[i]))
+            {
+              trainingFile << ',' << i;
+            }
+          }
+          trainingFile << std::endl;
+        }
         displayBoard.setSquare(coord, Ship::HIT);
         hits++;
       } else {

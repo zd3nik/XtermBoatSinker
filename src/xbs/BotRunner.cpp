@@ -76,6 +76,8 @@ void BotRunner::help() {
       << EL
       << "TEST OPTIONS:" << EL
       << "  --test                    Test bot and exit" << EL
+      << "  --training-file <file>    Output training data to given file" << EL
+      << "  --training-adj-only       Only generate training data from adjacent hits" << EL
       << "  -c, --count <value>       Set position count for --test mode" << EL
       << "  -x, --width <value>       Set board width for --test mode" << EL
       << "  -y, --height <value>      Set board height for --test mode" << EL
