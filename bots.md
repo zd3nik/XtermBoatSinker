@@ -28,7 +28,7 @@ These bots can run stand-alone or as shell-bots with `xbs-client --bot`.  Runnin
 
 NOTE: The only difference between running `xbs-client` with and without the `--bot` option is when the `--bot` option is used the specified shell-bot will make all the shots for you when your turn comes around.
 
-When one of the bots in [src/bots](src/ships) is run stand-alone (e.g. not run as a shell-bot via `xbs-client --bot`) there is no board display and player messages are not shown.  The bot simply fires shots when its turn comes around and exits when the game ends.
+When the bots in [src/bots](src/ships) are run stand-alone (e.g. not run as a shell-bot via `xbs-client --bot`) there is no board display and player messages are not shown.  The bot simply fires shots when its turn comes around and exits when the game ends.
 
 Run any of the provided bots with the `--help` option to see what command-line options they support.
 
