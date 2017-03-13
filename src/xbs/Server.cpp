@@ -228,6 +228,9 @@ bool Server::getGameTitle(std::string& title) {
       return false;
     }
     title = input.getStr();
+    if (title.empty()) {
+      return false;
+    }
     if (input.getFieldCount() > 1) {
       Screen::print() << "Title may not contain '|' character" << EL << Flush;
       title.clear();
