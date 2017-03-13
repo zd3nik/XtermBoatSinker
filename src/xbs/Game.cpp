@@ -7,7 +7,7 @@
 #include "Msg.h"
 #include "Screen.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 #include "db/DBRecord.h"
 
 namespace xbs
@@ -28,16 +28,18 @@ Game& Game::clear() noexcept {
 //-----------------------------------------------------------------------------
 Game& Game::addBoard(const BoardPtr& board) {
   if (!board) {
-    Throw("Game.addBoard() null board");
+    throw Error("Game.addBoard() null board");
   }
   if (isEmpty(board->getName())) {
-    Throw("Game.addBoard() empty name");
+    throw Error("Game.addBoard() empty name");
   }
   if (hasBoard(board->getName())) {
-    Throw(Msg() << "Game.addBoard() duplicate name:" << board->getName());
+    throw Error(Msg() << "Game.addBoard() duplicate name: "
+                << board->getName());
   }
   if (hasBoard(board->handle())) {
-    Throw(Msg() << "Game.addBoard() duplicate handle:" << board->handle());
+    throw Error(Msg() << "Game.addBoard() duplicate handle: "
+                << board->handle());
   }
   boards.push_back(board);
   return (*this);
@@ -60,7 +62,7 @@ BoardPtr Game::boardToMove() {
   if (isStarted() && !isFinished()) {
     auto board = boardAtIndex(toMove);
     if (!board || !board->isToMove()) {
-      Throw("Game.getBoardToMove() board.toMove is not in sync!");
+      throw Error("Game.getBoardToMove() board.toMove is not in sync!");
     }
     return board;
   }
@@ -166,10 +168,10 @@ bool Game::start(const bool randomize) {
 //-----------------------------------------------------------------------------
 bool Game::nextTurn() {
   if (!isStarted()) {
-    Throw("Game.nextTurn() game has not been started");
+    throw Error("Game.nextTurn() game has not been started");
   }
   if (isFinished()) {
-    Throw("Game.nextTurn() game has finished");
+    throw Error("Game.nextTurn() game has finished");
   }
 
   turnCount += !toMove;
@@ -203,13 +205,13 @@ bool Game::nextTurn() {
 //-----------------------------------------------------------------------------
 bool Game::setNextTurn(const std::string& name) {
   if (name.empty()) {
-    Throw("Game.nextTurn() empty board name");
+    throw Error("Game.nextTurn() empty board name");
   }
   if (!isStarted()) {
-    Throw(Msg() << "Game.nextTurn(" << name << ") game is not started");
+    throw Error(Msg() << "Game.nextTurn(" << name << ") game is not started");
   }
   if (isFinished()) {
-    Throw(Msg() << "Game.nextTurn(" << name << ") game is finished");
+    throw Error(Msg() << "Game.nextTurn(" << name << ") game is finished");
   }
 
   unsigned idx = ~0U;
@@ -232,7 +234,7 @@ bool Game::setNextTurn(const std::string& name) {
 //-----------------------------------------------------------------------------
 void Game::disconnectBoard(const std::string& name, const std::string& msg) {
   if (!isStarted()) {
-    Throw("Game.disconnectBoard() game has not started");
+    throw Error("Game.disconnectBoard() game has not started");
   }
   auto board = boardForPlayer(name, true);
   if (board) {
@@ -244,7 +246,7 @@ void Game::disconnectBoard(const std::string& name, const std::string& msg) {
 //-----------------------------------------------------------------------------
 void Game::removeBoard(const std::string& name) {
   if (isStarted()) {
-    Throw("Game.removeBoard() game has started");
+    throw Error("Game.removeBoard() game has started");
   }
   for (auto it = boards.begin(); it != boards.end(); ++it) {
     if ((*it)->getName() == name) {
@@ -271,7 +273,7 @@ void Game::finish() noexcept {
 //-----------------------------------------------------------------------------
 void Game::saveResults(Database& db) {
   if (!isValid()) {
-    Throw("Cannot save invalid game");
+    throw Error("Cannot save invalid game");
   }
 
   unsigned hits = 0;
@@ -295,8 +297,8 @@ void Game::saveResults(Database& db) {
 
   std::shared_ptr<DBRecord> stats = db.get(("game." + getTitle()), true);
   if (!stats) {
-    Throw(Msg() << "Failed to get stats record for game title '" << getTitle()
-          << "' from '" << db << "'");
+    throw Error(Msg() << "Failed to get stats record for game title '"
+                << getTitle() << "' from '" << db << "'");
   }
 
   config.saveTo(*stats);
@@ -331,8 +333,8 @@ void Game::saveResults(Database& db) {
     std::string recordID = ("player." + board->getName());
     std::shared_ptr<DBRecord> player = db.get(recordID, true);
     if (!player) {
-      Throw(Msg() << "Failed to get record for player '" << board->getName()
-            << "' from '" << db << "'");
+      throw Error(Msg() << "Failed to get record for player '"
+                  << board->getName() << "' from '" << db << "'");
     }
     board->saveTo(*player, (boards.size() - 1), first, last);
   }
@@ -341,7 +343,7 @@ void Game::saveResults(Database& db) {
 //-----------------------------------------------------------------------------
 void Game::setBoardOrder(const std::vector<std::string>& order) {
   if (isStarted()) {
-    Throw("Game.setBoardOrder() game has already started");
+    throw Error("Game.setBoardOrder() game has already started");
   }
 
   std::vector<BoardPtr> tmp;
@@ -350,15 +352,16 @@ void Game::setBoardOrder(const std::vector<std::string>& order) {
   for (auto& name : order) {
     auto board = boardForPlayer(name, true);
     if (!board) {
-      Throw(Msg() << "Game.setBoardOrder() board name '" << name
-            << "' not found");
+      throw Error(Msg() << "Game.setBoardOrder() board name '" << name
+                  << "' not found");
     }
     tmp.push_back(board);
   }
 
   if (tmp.size() != boards.size()) {
-    Throw(Msg() << "Game.setBoardOrder() given board list size (" << tmp.size()
-          << ") doesn't match board size (" << boards.size() << ')');
+    throw Error(Msg() << "Game.setBoardOrder() given board list size ("
+                << tmp.size() << ") doesn't match board size ("
+                << boards.size() << ')');
   }
 
   boards.assign(tmp.begin(), tmp.end());

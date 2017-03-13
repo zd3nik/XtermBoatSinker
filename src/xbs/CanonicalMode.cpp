@@ -6,7 +6,7 @@
 #include "Logger.h"
 #include "Msg.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 
 namespace xbs
 {
@@ -17,7 +17,7 @@ CanonicalMode::CanonicalMode(const bool enabled)
 {
   termios ios;
   if (tcgetattr(STDIN_FILENO, &ios) < 0) {
-    Throw(Msg() << "tcgetattr failed:" << toError(errno));
+    throw Error(Msg() << "tcgetattr failed: " << toError(errno));
   }
 
   savedTermIOs = ios;
@@ -28,7 +28,7 @@ CanonicalMode::CanonicalMode(const bool enabled)
   }
 
   if (tcsetattr(STDIN_FILENO, TCSANOW, &ios) < 0) {
-    Throw(Msg() << "tcsetattr failed:" << toError(errno));
+    throw Error(Msg() << "tcsetattr failed: " << toError(errno));
   }
 
   ok = true;

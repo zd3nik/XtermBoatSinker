@@ -5,7 +5,7 @@
 #include "Pipe.h"
 #include "Msg.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 #include <csignal>
 #include <cstring>
 #include <fcntl.h>
@@ -33,7 +33,8 @@ void Pipe::openSelfPipe() {
     if ((fcntl(fr, F_SETFL, fcntl(fr, F_GETFL) | O_NONBLOCK) < 0) ||
         (fcntl(fw, F_SETFL, fcntl(fw, F_GETFL) | O_NONBLOCK) < 0))
     {
-      Throw(Msg() << "Pipe.openSelfPipe() fcntl failed:" << toError(errno));
+      throw Error(Msg() << "Pipe.openSelfPipe() fcntl failed: "
+                  << toError(errno));
     }
 
     signal(SIGCHLD, selfPipeSignal);
@@ -46,12 +47,12 @@ void Pipe::openSelfPipe() {
 //-----------------------------------------------------------------------------
 void Pipe::open() {
   if ((fdRead >= 0) || (fdWrite >= 0)) {
-    Throw("Pipe.open() already open");
+    throw Error("Pipe.open() already open");
   }
 
   int fd[] = { -1, -1 };
   if (::pipe(fd) < 0) {
-    Throw(Msg() << "Pipe.open() failed:" << toError(errno));
+    throw Error(Msg() << "Pipe.open() failed: " << toError(errno));
   }
 
   fdRead = fd[0];
@@ -83,33 +84,33 @@ void Pipe::closeWrite() noexcept {
 //-----------------------------------------------------------------------------
 void Pipe::mergeRead(const int fd) {
   if (fdRead < 0) {
-    Throw("Pipe.mergeRead() not open");
+    throw Error("Pipe.mergeRead() not open");
   }
   if (fd < 0) {
-    Throw("Pipe.mergeRead() invalid destination descriptor");
+    throw Error("Pipe.mergeRead() invalid destination descriptor");
   }
   if (::dup2(fdRead, fd) != fd) {
-    Throw(Msg() << "Pipe.mergeRead() failed:" << toError(errno));
+    throw Error(Msg() << "Pipe.mergeRead() failed: " << toError(errno));
   }
 }
 
 //-----------------------------------------------------------------------------
 void Pipe::mergeWrite(const int fd) {
   if (fdWrite < 0) {
-    Throw("Pipe.mergeWrite() not open");
+    throw Error("Pipe.mergeWrite() not open");
   }
   if (fd < 0) {
-    Throw("Pipe.mergeWrite() invalid destination descriptor");
+    throw Error("Pipe.mergeWrite() invalid destination descriptor");
   }
   if (::dup2(fdWrite, fd) != fd) {
-    Throw(Msg() << "Pipe.mergeWrite() failed:" << toError(errno));
+    throw Error(Msg() << "Pipe.mergeWrite() failed: " << toError(errno));
   }
 }
 
 //-----------------------------------------------------------------------------
 void Pipe::writeln(const std::string& str) const {
   if (fdWrite < 0) {
-    Throw("Pipe.writeln() not open for writing");
+    throw Error("Pipe.writeln() not open for writing");
   }
 
   std::string line = str;
@@ -118,7 +119,7 @@ void Pipe::writeln(const std::string& str) const {
   }
 
   if (::write(fdWrite, line.c_str(), line.size()) != int(line.size())) {
-    Throw(Msg() << "Pipe.writeln() failed:" << toError(errno));
+    throw Error(Msg() << "Pipe.writeln() failed: " << toError(errno));
   }
 }
 

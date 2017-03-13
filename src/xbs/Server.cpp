@@ -10,7 +10,7 @@
 #include "Msg.h"
 #include "Screen.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 #include "db/FileSysDatabase.h"
 #include "db/FileSysDBRecord.h"
 
@@ -180,7 +180,7 @@ Configuration Server::newGameConfig() {
   if (str.size()) {
     unsigned val = toUInt32(str);
     if (val < 2) {
-      Throw(Msg() << "Invalid --min value:" << str);
+      throw Error(Msg() << "Invalid --min value: " << str);
     } else {
       config.setMaxPlayers(val);
     }
@@ -190,7 +190,7 @@ Configuration Server::newGameConfig() {
   if (str.size()) {
     unsigned val = toUInt32(str);
     if ((val < 2) || (config.getMinPlayers() > val)) {
-      Throw(Msg() << "Invalid --max value:" << str);
+      throw Error(Msg() << "Invalid --max value: " << str);
     } else {
       config.setMaxPlayers(val);
     }
@@ -200,7 +200,7 @@ Configuration Server::newGameConfig() {
   if (str.size()) {
     unsigned val = toUInt32(str);
     if (val < 8) {
-      Throw(Msg() << "Invalid --width value:" << str);
+      throw Error(Msg() << "Invalid --width value: " << str);
     } else {
       config.setBoardSize(val, config.getBoardHeight());
     }
@@ -210,7 +210,7 @@ Configuration Server::newGameConfig() {
   if (str.size()) {
     unsigned val = toUInt32(str);
     if (val < 8) {
-      Throw(Msg() << "Invalid --height value:" << str);
+      throw Error(Msg() << "Invalid --height value: " << str);
     } else {
       config.setBoardSize(config.getBoardWidth(), val);
     }
@@ -344,7 +344,7 @@ void Server::addPlayerHandle() {
   }
 
   if (game.hasBoard(board->handle())) {
-    Throw(Msg() << "Duplicate handle accepted:" << (*board));
+    throw Error(Msg() << "Duplicate handle accepted: " << (*board));
   }
 
   if (blackList.count(ADDRESS_PREFIX + board->getAddress())) {
@@ -450,7 +450,7 @@ void Server::handlePlayerInput(const int handle) {
       : it->second;
 
   if (!board) {
-    Throw(Msg() << "Unknown player handle:" << handle);
+    throw Error(Msg() << "Unknown player handle: " << handle);
   }
 
   if (!input.readln(handle)) {
@@ -505,7 +505,7 @@ bool Server::handleUserInput(Coordinate coord) {
 //-----------------------------------------------------------------------------
 void Server::joinGame(BoardPtr& joiner) {
   if (!joiner) {
-    Throw("Server.joinGame() null board");
+    throw Error("Server.joinGame() null board");
   }
 
   const Configuration& config = game.getConfiguration();
@@ -513,8 +513,8 @@ void Server::joinGame(BoardPtr& joiner) {
   const std::string shipDescriptor = input.getStr(2);
 
   if (game.hasBoard(joiner->handle())) {
-    Throw(Msg() << "duplicate handle (" << joiner->handle()
-          << ") in join command!");
+    throw Error(Msg() << "duplicate handle (" << joiner->handle()
+                << ") in join command!");
   } else if (playerName.empty()) {
     removePlayer((*joiner), PROTOCOL_ERROR);
   } else if (blackList.count(PLAYER_PREFIX + playerName)) {
@@ -592,7 +592,7 @@ void Server::nextTurn() {
     if (toMove) {
       sendToAll(Msg('N') << toMove->getName());
     } else {
-      Throw("Failed to get board to move");
+      throw Error("Failed to get board to move");
     }
   }
 }
@@ -700,7 +700,7 @@ void Server::rejoinGame(Board& joiner) {
   // let rejoining player know who's turn it is
   auto toMove = game.boardToMove();
   if (!toMove) {
-    Throw("Board to move unknown!");
+    throw Error("Board to move unknown!");
   } else if (!send(joiner, Msg('N') << toMove->getName())) {
     return;
   }
@@ -735,7 +735,7 @@ void Server::removePlayer(Board& board, const std::string& msg) {
   auto it = newBoards.find(board.handle());
   if (it != newBoards.end()) {
     if (game.hasBoard(board.handle()) || game.hasBoard(board.getName())) {
-      Throw(Msg() << board << "in game boards and new boards array");
+      throw Error(Msg() << board << " in game boards and new boards array");
     }
     newBoards.erase(it);
     return;
@@ -869,7 +869,7 @@ void Server::sendMessage(Coordinate coord) {
 void Server::sendStart() {
   auto toMove = game.boardToMove();
   if (!toMove) {
-    Throw("No board set to move");
+    throw Error("No board set to move");
   }
 
   // send all boards to all players (N x N)
@@ -928,7 +928,7 @@ void Server::shoot(Board& shooter) {
 
   auto toMove = game.boardToMove();
   if (!toMove) {
-    Throw("Board to move unknown!");
+    throw Error("Board to move unknown!");
   } else if (shooter.getName() != toMove->getName()) {
     send(shooter, "M||it is not your turn!");
     return;
@@ -999,7 +999,7 @@ void Server::skipTurn(Board& board) {
 
   auto toMove = game.boardToMove();
   if (!toMove) {
-    Throw("Board to move unknown!");
+    throw Error("Board to move unknown!");
   } else if (board.getName() != toMove->getName()) {
     send(board, "M||it is not your turn!");
   } else {

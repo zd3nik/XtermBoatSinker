@@ -13,7 +13,7 @@
 #include "Game.h"
 #include "Input.h"
 #include "TcpSocket.h"
-#include "Throw.h"
+#include "Error.h"
 #include "Version.h"
 #include <iostream>
 
@@ -89,7 +89,7 @@ protected: // virtual methods
 private: // methods
   std::string readln(Input& input) {
     if (!input.readln(host.empty() ? STDIN_FILENO : sock.getHandle())) {
-      Throw("No input data");
+      throw Error("No input data");
     }
     return input.getLine();
   }

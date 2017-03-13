@@ -7,7 +7,7 @@
 #include "Logger.h"
 #include "Msg.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 #include <sys/select.h>
 
 namespace xbs
@@ -16,12 +16,12 @@ namespace xbs
 //-----------------------------------------------------------------------------
 char Input::readChar(const int fd) {
   if (fd < 0) {
-    Throw(Msg() << "Input.readChar() invalid handle:" << fd);
+    throw Error(Msg() << "Input.readChar() invalid handle: " << fd);
   }
 
   char ch = 0;
   if (read(fd, &ch, 1) != 1) {
-    Throw(Msg() << "Input.readChar() failed:" << toError(errno));
+    throw Error(Msg() << "Input.readChar() failed: " << toError(errno));
   }
 
   Logger::debug() << "Received character '" << ch << "' from channel " << fd
@@ -138,7 +138,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
           Logger::debug() << "Input select interrupted";
           return false;
         }
-        Throw(Msg() << "Input select failed:" << toError(errno));
+        throw Error(Msg() << "Input select failed: " << toError(errno));
       }
       break;
     }
@@ -158,7 +158,7 @@ bool Input::waitForData(std::set<int>& ready, const int timeout_ms) {
 //-----------------------------------------------------------------------------
 unsigned Input::readln(const int fd, const char delimeter) {
   if (fd < 0) {
-    Throw(Msg() << "Input readln() invalid handle:" << fd);
+    throw Error(Msg() << "Input readln() invalid handle: " << fd);
   }
 
   line[0] = 0;
@@ -309,7 +309,7 @@ bool Input::bufferData(const int fd) {
       len[fd] = n;
       break;
     } else {
-      Throw("Input buffer overflow!");
+      throw Error("Input buffer overflow!");
     }
   }
   return true;

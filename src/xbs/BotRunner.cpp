@@ -24,7 +24,7 @@ BotRunner::BotRunner(const std::string& botName)
   : botName(trimStr(botName))
 {
   if (this->botName.empty()) {
-    Throw("Empty bot name");
+    throw Error("Empty bot name");
   }
 
   const CommandArgs& args = CommandArgs::getInstance();
@@ -37,7 +37,7 @@ BotRunner::BotRunner(const std::string& botName)
   if (msa.size()) {
     minSurfaceArea = toDouble(msa.c_str());
     if (!isFloat(msa) || (minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      Throw(Msg() << "Invalid min-surface-area ratio:" << msa);
+      throw Error(Msg() << "Invalid min-surface-area ratio: " << msa);
     }
   }
 
@@ -106,12 +106,12 @@ std::string BotRunner::newGame(const Configuration& config) {
     if (!myBoard->updateDescriptor(staticBoard) ||
         !myBoard->matchesConfig(config))
     {
-      Throw(Msg() << "Invalid" << getPlayerName() << "board descriptor: '"
-              << staticBoard << "'");
+      throw Error(Msg() << "Invalid " << getPlayerName()
+                  << " board descriptor: '" << staticBoard << "'");
     }
   } else if (!myBoard->addRandomShips(config, minSurfaceArea)) {
-    Throw(Msg() << "Failed to generate random ship placement for '"
-          << getPlayerName() << "' board");
+    throw Error(Msg() << "Failed to generate random ship placement for '"
+                << getPlayerName() << "' board");
   }
   return myBoard->getDescriptor();
 }
@@ -131,16 +131,17 @@ void BotRunner::updateBoard(const std::string& player,
 {
   auto board = game.boardForPlayer(player, true);
   if (!board) {
-    Throw(Msg() << "Unknonwn player name: '" << player << "'");
+    throw Error(Msg() << "Unknonwn player name: '" << player << "'");
   }
   if (boardDescriptor.size()) {
     if (!board->updateDescriptor(boardDescriptor)) {
-      Throw(Msg() << "Failed to update '" << player << "' board descriptor");
+      throw Error(Msg() << "Failed to update '" << player
+                  << "' board descriptor");
     }
     if ((player == getPlayerName()) &&
         !myBoard->addHitsAndMisses(boardDescriptor))
     {
-      Throw(Msg() << "Failed to update '" << player << "' hits/misses");
+      throw Error(Msg() << "Failed to update '" << player << "' hits/misses");
     }
   }
   board->setStatus(status).setScore(score).setSkips(skips);
@@ -153,7 +154,7 @@ void BotRunner::updateBoard(const std::string& player,
 void BotRunner::startGame(const std::vector<std::string>& playerOrder) {
   game.setBoardOrder(playerOrder);
   if (!game.start()) {
-    Throw("Game cannot start");
+    throw Error("Game cannot start");
   }
   Logger::debug() << "Game '" << game.getTitle() << "' started";
 }
@@ -200,8 +201,8 @@ void BotRunner::play() {
         break;
       } else if (type == "G") {
         if (sock) {
-          Throw(Msg() << "Unexpected game info message during game:"
-                << input.getLine());
+          throw Error(Msg() << "Unexpected game info message during game: "
+                      << input.getLine());
         }
         handleGameInfoMessage();
         break; // restart waitForGameStart() loop
@@ -225,7 +226,8 @@ void BotRunner::play() {
           break; // restart waitForGameStart() loop
         }
       } else {
-        Throw(Msg() << "Unexpected message during game:" << input.getLine());
+        throw Error(Msg() << "Unexpected message during game: "
+                    << input.getLine());
       }
     }
   }
@@ -249,7 +251,8 @@ bool BotRunner::waitForGameStart() {
     } else if (type == "S") {
       handleGameStartedMessage();
     } else {
-      Throw(Msg() << "Unexpected message before game:" << input.getLine());
+      throw Error(Msg() << "Unexpected message before game: "
+                  << input.getLine());
     }
   }
   return game.isStarted();
@@ -263,7 +266,7 @@ void BotRunner::handleBoardMessage() {
   const unsigned score = input.getUInt(4);
   const unsigned skips = input.getUInt(5);
   if (player.empty() || desc.empty()) {
-    Throw(Msg() << "Invalid board message:" << input.getLine());
+    throw Error(Msg() << "Invalid board message: " << input.getLine());
   }
   updateBoard(player, status, desc, score, skips);
 }
@@ -274,12 +277,13 @@ void BotRunner::handleGameFinishedMessage() {
   const unsigned turnCount = input.getUInt(2);
   const unsigned playerCount = input.getUInt(3);
   if (state.empty()) {
-    Throw(Msg() << "Invalid game finished message:" << input.getLine());
+    throw Error(Msg() << "Invalid game finished message: " << input.getLine());
   }
   for (unsigned i = 0; i < playerCount; ++i) {
     readln(input);
     if (input.getStr() != "R") {
-      Throw(Msg() << "Expected player result message, got:" << input.getLine());
+      throw Error(Msg() << "Expected player result message, got: "
+                  << input.getLine());
     }
     const std::string player = input.getStr(1);
     const unsigned score = input.getUInt(2);
@@ -300,8 +304,8 @@ void BotRunner::handleGameInfoMessage() {
 
   config.load(input, gameStarted, playersJoined, serverVersion);
   if (!isCompatibleWith(serverVersion)) {
-    Throw(Msg() << getBotName() << "is incompatible with server version:"
-          << serverVersion);
+    throw Error(Msg() << getBotName()
+                << " is incompatible with server version: " << serverVersion);
   }
 
   newGame(config);
@@ -318,32 +322,32 @@ void BotRunner::handleGameInfoMessage() {
   if (str == "J") {
     str = input.getStr(1);
     if (str != getPlayerName()) {
-      Throw(Msg() << "Unexpected join response:" << msg);
+      throw Error(Msg() << "Unexpected join response: " << msg);
     }
     playerJoined(str);
     if (gameStarted) {
       msg = readln(input);
       if (input.getStr() != "Y") {
-        Throw(Msg() << "Expected YourBoard message, got:" << msg);
+        throw Error(Msg() << "Expected YourBoard message, got: " << msg);
       }
       const std::string desc = input.getStr(1);
       if (!myBoard->updateDescriptor(desc) ||
           !myBoard->matchesConfig(game.getConfiguration()))
       {
-        Throw(Msg() << "Invalid YourBoard descriptor:" << desc);
+        throw Error(Msg() << "Invalid YourBoard descriptor: " << desc);
       }
     }
   } else if (str == "E") {
     str = input.getStr(1);
     if (str.empty()) {
-      Throw("Empty error message received");
+      throw Error("Empty error message received");
     } else {
-      Throw(str.c_str());
+      throw Error(str);
     }
   } else if (str.empty()) {
-    Throw("Empty message received");
+    throw Error("Empty message received");
   } else {
-    Throw(Msg() << "Expected join message, got: " << msg);
+    throw Error(Msg() << "Expected join message, got: " << msg);
   }
 }
 
@@ -351,18 +355,18 @@ void BotRunner::handleGameInfoMessage() {
 void BotRunner::handleGameStartedMessage() {
   const unsigned count = (input.getFieldCount() - 1);
   if (count != game.getBoardCount()) {
-    Throw(Msg() << "Invalid player count in game start message:"
-          << input.getLine());
+    throw Error(Msg() << "Invalid player count in game start message: "
+                << input.getLine());
   }
   std::vector<std::string> boardOrder;
   for (unsigned i = 1; i < input.getFieldCount(); ++i) {
     const std::string player = input.getStr(i);
     if (player.empty()) {
-      Throw(Msg() << "Empty player name in game start message:"
-            << input.getLine());
+      throw Error(Msg() << "Empty player name in game start message: "
+                  << input.getLine());
     } else if (!game.hasBoard(player)) {
-      Throw(Msg() << "Unknown player name (" << player
-              << ") in game start message:" << input.getLine());
+      throw Error(Msg() << "Unknown player name (" << player
+                  << ") in game start message: " << input.getLine());
     } else {
       boardOrder.push_back(player);
     }
@@ -376,7 +380,8 @@ void BotRunner::handleHitMessage() {
   const std::string target = input.getStr(2);
   Coordinate coord;
   if (!coord.fromString(input.getStr(3))) {
-    Throw(Msg() << "Invalid coordinates in hit message:" << input.getLine());
+    throw Error(Msg() << "Invalid coordinates in hit message: "
+                << input.getLine());
   }
   hitScored(player, target, coord);
 }
@@ -385,7 +390,7 @@ void BotRunner::handleHitMessage() {
 void BotRunner::handleJoinMessage() {
   const std::string player = input.getStr(1);
   if (player.empty()) {
-    Throw(Msg() << "Invalid player join message:" << input.getLine());
+    throw Error(Msg() << "Invalid player join message: " << input.getLine());
   }
   playerJoined(player);
 }
@@ -409,8 +414,8 @@ void BotRunner::handleSkipTurnMessage() {
   const std::string player = input.getStr(1);
   const std::string reason = input.getStr(2);
   if (!game.hasBoard(player)) {
-    Throw(Msg() << "Invalid player name in skip turn message:"
-          << input.getLine());
+    throw Error(Msg() << "Invalid player name in skip turn message: "
+                << input.getLine());
   }
   skipPlayerTurn(player, reason);
 }
@@ -419,8 +424,8 @@ void BotRunner::handleSkipTurnMessage() {
 void BotRunner::handleNextTurnMessage() {
   const std::string player = input.getStr(1);
   if (!game.hasBoard(player)) {
-    Throw(Msg() << "Invalid player name in next turn message:"
-          << input.getLine());
+    throw Error(Msg() << "Invalid player name in next turn message: "
+                << input.getLine());
   }
   updatePlayerToMove(player);
   if (player == getPlayerName()) {

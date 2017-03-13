@@ -7,7 +7,7 @@
 #include "Logger.h"
 #include "Msg.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 
 namespace xbs
 {
@@ -35,9 +35,9 @@ void FileSysDBRecord::clear() {
 //-----------------------------------------------------------------------------
 void FileSysDBRecord::load() {
   if (recordID.empty()) {
-    Throw(Msg() << "Empty" << (*this) << "record ID");
+    throw Error(Msg() << "Empty " << (*this) << " record ID");
   } else if (filePath.empty()) {
-    Throw(Msg() << "Empty" << (*this) << "file path");
+    throw Error(Msg() << "Empty " << (*this) << " file path");
   }
 
   dirty = false;
@@ -87,7 +87,8 @@ void FileSysDBRecord::store(const bool force) {
   if ((dirty | force) && recordID.size() && filePath.size()) {
     std::ofstream file(filePath.c_str());
     if (!file) {
-      Throw(Msg() << "Failed to open '" << filePath << "':" << toError(errno));
+      throw Error(Msg() << "Failed to open '" << filePath << "': "
+                  << toError(errno));
     }
 
     for (auto it = fieldCache.begin(); it != fieldCache.end(); ++it) {
@@ -97,7 +98,8 @@ void FileSysDBRecord::store(const bool force) {
     }
 
     if (!file.flush()) {
-      Throw(Msg() << "flush(" << (*this) << ") failed:" << toError(errno));
+      throw Error(Msg() << "flush(" << (*this) << ") failed: "
+                  << toError(errno));
     }
   }
   dirty = false;
@@ -174,7 +176,7 @@ unsigned FileSysDBRecord::addStrings(const std::string& fieldName,
   } else {
     for (const auto& value : values) {
       if (contains(value, '\n')) {
-        Throw("Newlines not supported in field values");
+        throw Error("Newlines not supported in field values");
       } else {
         it->second.push_back(value);
       }
@@ -190,11 +192,11 @@ std::string FileSysDBRecord::validate(const std::string& fieldName,
 {
   const std::string fld = trimStr(fieldName);
   if (fld.empty()) {
-    Throw("Empty field names not supported");
+    throw Error("Empty field names not supported");
   } else if (contains(fld, '\n')) {
-    Throw("Newlines not supported in field names");
+    throw Error("Newlines not supported in field names");
   } else if (contains(val, '\n')) {
-    Throw("Newlines not supported in field values");
+    throw Error("Newlines not supported in field values");
   }
   return fld;
 }

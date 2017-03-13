@@ -37,7 +37,7 @@ CSVWriter::operator=(const CSVWriter& other) {
 //-----------------------------------------------------------------------------
 CSVWriter&
 CSVWriter::writeCell(const std::string& str) {
-    if (cellCount++) {
+    if (cellCount++ && delim) {
         row << delim;
     }
     row << str;

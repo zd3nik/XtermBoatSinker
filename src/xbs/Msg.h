@@ -21,7 +21,7 @@ public: // constructors
   Msg& operator=(const Msg&) = default;
 
   Msg()
-    : CSVWriter(' ', true)
+    : CSVWriter(0)
   { }
 
   Msg(const char type)

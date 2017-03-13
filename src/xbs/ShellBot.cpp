@@ -7,7 +7,7 @@
 #include "CSVWriter.h"
 #include "Msg.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 
 namespace xbs
 {
@@ -19,12 +19,12 @@ ShellBot::ShellBot(const std::string& cmd)
   proc.validate();
   proc.run();
   if (!proc.isRunning()) {
-    Throw(Msg() << "Unabled to run bot command:" << cmd);
+    throw Error(Msg() << "Unabled to run bot command: " << cmd);
   }
 
   std::string line = trimStr(proc.readln(1000));
   if (line.empty()) {
-    Throw(Msg() << "No info message from bot command:" << cmd);
+    throw Error(Msg() << "No info message from bot command: " << cmd);
   }
 
   std::vector<std::string> info = CSVReader(line, '|', true).readCells();
@@ -33,8 +33,8 @@ ShellBot::ShellBot(const std::string& cmd)
       info[1].empty() ||
       info[2].empty())
   {
-    Throw(Msg() << "Invalid info message (" << line
-          << ") from bot command:" << cmd);
+    throw Error(Msg() << "Invalid info message (" << line
+                << ") from bot command: " << cmd);
   }
 
   botName = info[1];
@@ -46,13 +46,13 @@ ShellBot::ShellBot(const std::string& cmd)
 std::string ShellBot::getBestShot(Coordinate& bestShot) {
   std::string line = trimStr(proc.readln(3000));
   if (line.empty()) {
-    Throw(Msg() << "No shot message from bot:" << botName);
+    throw Error(Msg() << "No shot message from bot: " << botName);
   }
 
   std::vector<std::string> info = CSVReader(line, '|', true).readCells();
   if (info.empty() || ((info[0] != "S") && (info[0] != "K"))) {
-    Throw(Msg() << "Invalid shot message (" << line
-          << ") from bot:" << botName);
+    throw Error(Msg() << "Invalid shot message (" << line
+                << ") from bot: " << botName);
   }
 
   if (info[0] == "K") {
@@ -65,8 +65,8 @@ std::string ShellBot::getBestShot(Coordinate& bestShot) {
       !isUInt(info[2]) ||
       !isUInt(info[3]))
   {
-    Throw(Msg() << "Invalid shot message (" << line
-          << ") from bot:" << botName);
+    throw Error(Msg() << "Invalid shot message (" << line
+                << ") from bot: " << botName);
   }
 
   bestShot.set(toUInt32(info[2]), toUInt32(info[3]));
@@ -105,7 +105,7 @@ std::string ShellBot::newGame(const Configuration& config,
 
   std::string line = proc.readln(1000);
   if (line.empty()) {
-    Throw(Msg() << "No join message from bot:" << botName);
+    throw Error(Msg() << "No join message from bot: " << botName);
   }
 
   std::vector<std::string> info = CSVReader(line, '|', true).readCells();
@@ -114,8 +114,8 @@ std::string ShellBot::newGame(const Configuration& config,
       (info[1] != playerName) ||
       (!gameStarted && info[2].empty()))
   {
-    Throw(Msg() << "Invalid join message (" << line
-          << ") from bot:" << botName);
+    throw Error(Msg() << "Invalid join message (" << line
+                << ") from bot: " << botName);
   }
 
   return gameStarted ? "" : info[2];

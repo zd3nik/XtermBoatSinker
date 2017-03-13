@@ -6,7 +6,7 @@
 #include "Logger.h"
 #include "Msg.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 #include <sys/ioctl.h>
 
 namespace xbs
@@ -19,7 +19,7 @@ static std::unique_ptr<Screen> instance;
 static Rectangle GetScreenDimensions() {
   struct winsize max;
   if (ioctl(0, TIOCGWINSZ , &max) < 0) {
-    Throw(Msg() << "Failed to get screen dimensions:" << toError(errno));
+    throw Error(Msg() << "Failed to get screen dimensions: " << toError(errno));
   }
 
   Coordinate topLeft(1, 1);
@@ -27,8 +27,8 @@ static Rectangle GetScreenDimensions() {
                          static_cast<unsigned>(max.ws_row));
 
   if (!bottomRight) {
-    Throw(Msg() << "Invalid screen dimensions:" << bottomRight.getX()
-          << 'x' << bottomRight.getY());
+    throw Error(Msg() << "Invalid screen dimensions: " << bottomRight.getX()
+                << 'x' << bottomRight.getY());
   }
 
   return Rectangle(topLeft, bottomRight);
@@ -127,7 +127,7 @@ Screen& Screen::flag(const ScreenFlag flag) {
 //-----------------------------------------------------------------------------
 Screen& Screen::flush() {
   if (fflush(stdout)) {
-    Throw(Msg() << "Screen flush failed:" << toError(errno));
+    throw Error(Msg() << "Screen flush failed: " << toError(errno));
   }
   return (*this);
 }
@@ -135,7 +135,7 @@ Screen& Screen::flush() {
 //-----------------------------------------------------------------------------
 Screen& Screen::str(const std::string& x) {
   if (fwrite(x.c_str(), x.size(), 1, stdout) < 0) {
-    Throw(Msg() << "Failed to print to screen:" << toError(errno));
+    throw Error(Msg() << "Failed to print to screen: " << toError(errno));
   }
   return (*this);
 }
@@ -143,7 +143,7 @@ Screen& Screen::str(const std::string& x) {
 //-----------------------------------------------------------------------------
 Screen& Screen::ch(const char x) {
   if (x && (fputc(x, stdout) != x)) {
-    Throw(Msg() << "Failed to print to screen:" << toError(errno));
+    throw Error(Msg() << "Failed to print to screen: " << toError(errno));
   }
   return (*this);
 }

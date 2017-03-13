@@ -4,11 +4,11 @@
 //-----------------------------------------------------------------------------
 #include "BotTester.h"
 #include "CommandArgs.h"
+#include "Error.h"
 #include "Input.h"
 #include "Logger.h"
 #include "Msg.h"
 #include "Screen.h"
-#include "Throw.h"
 #include "db/FileSysDatabase.h"
 
 namespace xbs
@@ -32,7 +32,7 @@ BotTester::BotTester() {
   if (msa.size()) {
     minSurfaceArea = toDouble(msa.c_str());
     if (!isFloat(msa) || (minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      Throw(Msg() << "Invalid min-surface-area ratio:" << msa);
+      throw Error(Msg() << "Invalid min-surface-area ratio: " << msa);
     }
   }
 
@@ -54,9 +54,9 @@ BotTester::BotTester() {
 //-----------------------------------------------------------------------------
 void BotTester::test(Bot& bot) {
   if (!config) {
-    Throw("Invalid test configuration");
+    throw Error("Invalid test configuration");
   } else if (bot.getPlayerName() == TARGET_BOARD_NAME) {
-    Throw("Please use a different name for the bot your testing");
+    throw Error("Please use a different name for the bot your testing");
   }
 
   // try to prevent bot from wasting time generating a new board each iteration
@@ -65,7 +65,7 @@ void BotTester::test(Bot& bot) {
   } else {
     Board tmp("tmp", config);
     if (!tmp.addRandomShips(config, minSurfaceArea)) {
-      Throw("Unable to generate random board for specified config");
+      throw Error("Unable to generate random board for specified config");
     }
     bot.setStaticBoard(tmp.getDescriptor());
   }
@@ -92,7 +92,7 @@ void BotTester::test(Bot& bot) {
     newTargetBoard(bot, targetBoard);
     uniquePositions.insert(targetBoard.getDescriptor());
     if (!displayBoard.updateDescriptor(targetBoard.maskedDescriptor())) {
-      Throw("Failed to mask boat area");
+      throw Error("Failed to mask boat area");
     }
 
     unsigned hits = 0;
@@ -102,15 +102,15 @@ void BotTester::test(Bot& bot) {
       bot.updatePlayerToMove(bot.getPlayerName());
       std::string player = bot.getBestShot(coord);
       if (player != TARGET_BOARD_NAME) {
-        Throw(Msg() << bot.getBotName() << "chose to shoot at '" << player
-              << "' instead of '" << TARGET_BOARD_NAME << "'");
+        throw Error(Msg() << bot.getBotName() << " chose to shoot at '"
+                    << player << "' instead of '" << TARGET_BOARD_NAME << "'");
       }
 
       const char id = targetBoard.shootSquare(coord);
       if (!id || Ship::isHit(id) || Ship::isMiss(id)) {
-        Throw(Msg() << "Invalid target coord:" << coord);
+        throw Error(Msg() << "Invalid target coord: " << coord);
       } else if (++totalShots == 0) {
-        Throw("Shot count overflow");
+        throw Error("Shot count overflow");
       } else if (Ship::isValidID(id)) {
         if (trainingFile &&
             (!trainAdjacentHitsOnly || displayBoard.adjacentHits(coord)))
@@ -173,7 +173,7 @@ void BotTester::test(Bot& bot) {
   }
 
   if (!totalShots) {
-    Throw("No shots taken");
+    throw Error("No shots taken");
   }
 
   const Milliseconds elapsed = timer.elapsed();
@@ -205,7 +205,7 @@ std::shared_ptr<DBRecord> BotTester::newTestRecord(
   FileSysDatabase db;
   std::shared_ptr<DBRecord> rec = db.open(testDB).get(recordID, true);
   if (!rec) {
-    Throw(Msg() << "Failed to get" << recordID << "from" << db);
+    throw Error(Msg() << "Failed to get " << recordID << " from " << db);
   }
   return rec;
 }
@@ -231,7 +231,7 @@ Coordinate BotTester::printStart(
                   << Flush;
 
   if (!Screen::get().contains(board.shift(South, (statusLine.getY() - 1)))) {
-    Throw("Board does not fit in terminal");
+    throw Error("Board does not fit in terminal");
   }
 
   Screen::print() << board.getTopLeft() << ClearToScreenEnd;
@@ -249,10 +249,11 @@ void BotTester::newTargetBoard(
     if (!targetBoard.updateDescriptor(staticBoard) ||
         !targetBoard.matchesConfig(config))
     {
-      Throw(Msg() << "Invalid test board descriptor '" << staticBoard << "'");
+      throw Error(Msg() << "Invalid test board descriptor '" << staticBoard
+                  << "'");
     }
   } else if (!targetBoard.addRandomShips(config, minSurfaceArea)) {
-    Throw("Failed random boat placement");
+    throw Error("Failed random boat placement");
   }
 
   bot.newGame(config);

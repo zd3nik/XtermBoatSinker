@@ -8,7 +8,7 @@
 #include "Logger.h"
 #include "Msg.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 #include <cstring>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -134,7 +134,7 @@ void TcpSocket::close() noexcept {
 //-----------------------------------------------------------------------------
 TcpSocket TcpSocket::accept() const {
   if ((handle < 0) || (mode != Server)) {
-    Throw(Msg() << "accept() called on" << (*this));
+    throw Error(Msg() << "accept() called on " << (*this));
   }
 
   while (true) {
@@ -150,12 +150,12 @@ TcpSocket TcpSocket::accept() const {
       } else if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
         return TcpSocket();
       } else {
-        Throw(Msg() << (*this) << ".accept() failed:" << toError(errno));
+        throw Error(Msg() << (*this) << ".accept() failed: " << toError(errno));
       }
     }
 
     if (newHandle == STDIN_FILENO) {
-      Throw(Msg() << (*this) << ".accept() stdin");
+      throw Error(Msg() << (*this) << ".accept() stdin");
     }
 
     TcpSocket sock(inet_ntoa(addr.sin_addr), port, newHandle);
@@ -169,12 +169,12 @@ TcpSocket& TcpSocket::connect(const std::string& hostAddress,
                               const int hostPort)
 {
   if (handle >= 0) {
-    Throw(Msg() << "connect(" << hostAddress << ',' << hostPort
-          << ") called on" << (*this));
+    throw Error(Msg() << "connect(" << hostAddress << ',' << hostPort
+                << ") called on " << (*this));
   } else if (isEmpty(hostAddress)) {
-    Throw("TcpSocket.connect() empty host address");
+    throw Error("TcpSocket.connect() empty host address");
   } else  if (!isValidPort(hostPort)) {
-    Throw(Msg() << "TcpSocket.connect() invalid port:" << hostPort);
+    throw Error(Msg() << "TcpSocket.connect() invalid port: " << hostPort);
   }
 
   addrinfo hints;
@@ -186,8 +186,8 @@ TcpSocket& TcpSocket::connect(const std::string& hostAddress,
   std::string portStr = toStr(hostPort);
   int err = getaddrinfo(hostAddress.c_str(), portStr.c_str(), &hints, &result);
   if (err) {
-    Throw(Msg() << "TcpSocket.connect(" << hostAddress << ',' << hostPort
-          << ") host lookup failed:" << gai_strerror(err));
+    throw Error(Msg() << "TcpSocket.connect(" << hostAddress << ',' << hostPort
+                << ") host lookup failed: " << gai_strerror(err));
   }
 
   for (struct addrinfo* p = result; p; p = p->ai_next) {
@@ -206,8 +206,8 @@ TcpSocket& TcpSocket::connect(const std::string& hostAddress,
   result = nullptr;
 
   if (handle < 0) {
-    Throw(Msg() << "TcpSocket.connect(" << hostAddress << ',' << hostPort
-          << ") failed: " << (err ? toError(err) : "unknown reason"));
+    throw Error(Msg() << "TcpSocket.connect(" << hostAddress << ',' << hostPort
+                << ") failed: " << (err ? toError(err) : "unknown reason"));
   }
 
   address = hostAddress;
@@ -224,12 +224,12 @@ TcpSocket& TcpSocket::listen(const std::string& bindAddress,
                              const int backlog)
 {
   if (handle >= 0) {
-    Throw(Msg() << "listen(" << bindAddress << ',' << bindPort << ','
-          << backlog << ") called on" << (*this));
+    throw Error(Msg() << "listen(" << bindAddress << ',' << bindPort << ','
+          << backlog << ") called on " << (*this));
   } else if (!isValidPort(bindPort)) {
-    Throw(Msg() << "TcpSocket.listen() invalid port " << bindPort);
+    throw Error(Msg() << "TcpSocket.listen() invalid port: " << bindPort);
   } else if (backlog < 1) {
-    Throw(Msg() << "TcpSocket.listen() invalid backlog:" << backlog);
+    throw Error(Msg() << "TcpSocket.listen() invalid backlog: " << backlog);
   }
 
   sockaddr_in addr;
@@ -241,27 +241,27 @@ TcpSocket& TcpSocket::listen(const std::string& bindAddress,
     Logger::warn() << "binding to " << ANY_ADDRESS;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
   } else if (inet_aton(bindAddress.c_str(), &addr.sin_addr) == 0) {
-    Throw(Msg() << "Invalid bind address: '" << bindAddress << "':"
-          << toError(errno));
+    throw Error(Msg() << "Invalid bind address: '" << bindAddress << "': "
+                << toError(errno));
   }
 
   if ((handle = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    Throw(Msg() << "Failed to create socket handle:" << toError(errno));
+    throw Error(Msg() << "Failed to create socket handle: " << toError(errno));
   }
 
   int yes = 1;
   if (setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
-    Throw(Msg() << "Failed to set REUSEADDR option:" << toError(errno));
+    throw Error(Msg() << "Failed to set REUSEADDR option: " << toError(errno));
   }
 
   if (bind(handle, (sockaddr*)(&addr), sizeof(addr)) < 0) {
-    Throw(Msg() << "Failed to bind socket to" << bindAddress << ':' << bindPort
-          << ':' << toError(errno));
+    throw Error(Msg() << "Failed to bind socket to " << bindAddress << ':'
+                << bindPort << ": " << toError(errno));
   }
 
   if (::listen(handle, backlog) < 0) {
-    Throw(Msg() << "Failed to listen on" << bindAddress << ':' << bindPort
-          << ":" << toError(errno));
+    throw Error(Msg() << "Failed to listen on " << bindAddress << ':'
+                << bindPort << ": " << toError(errno));
   }
 
   address = bindAddress;

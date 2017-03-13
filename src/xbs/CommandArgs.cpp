@@ -3,7 +3,7 @@
 // Copyright (c) 2017 Shawn Chidester, All Rights Reserved.
 //-----------------------------------------------------------------------------
 #include "CommandArgs.h"
-#include "Throw.h"
+#include "Error.h"
 #include <mutex>
 
 namespace xbs

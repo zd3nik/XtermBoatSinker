@@ -12,6 +12,11 @@ project(client)
 add_executable(xbs-client "UserClient.cpp")
 target_link_libraries(xbs-client xbs)
 
+project(skipper)
+include_directories(bots)
+add_executable(xbs-skipper "bots/Skipper.cpp")
+target_link_libraries(xbs-skipper xbs)
+
 project(rufus)
 include_directories(bots)
 add_executable(xbs-rufus "bots/RandomRufus.cpp")

@@ -7,7 +7,7 @@
 #include "Msg.h"
 #include "Screen.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 
 namespace xbs
 {
@@ -49,7 +49,7 @@ Board::Board(const std::string& name,
 //-----------------------------------------------------------------------------
 Board& Board::stealConnectionFrom(Board&& other) {
   if (socket) {
-    Throw(Msg() << (*this) << "stealConnectionFrom(" << other
+    throw Error(Msg() << (*this) << " stealConnectionFrom(" << other
           << ") socket already set");
   }
   const std::string name = socket.getLabel(); // retain current name

@@ -8,7 +8,7 @@
 #include "Logger.h"
 #include "Msg.h"
 #include "StringUtils.h"
-#include "Throw.h"
+#include "Error.h"
 #include <csignal>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -96,28 +96,28 @@ static bool unsafe(const std::string& str) {
 //-----------------------------------------------------------------------------
 void ShellProcess::validate() const {
   if (isEmpty(alias)) {
-    Throw("ShellProcess() empty alias");
+    throw Error("ShellProcess() empty alias");
   }
 
   if (isEmpty(shellExecutable)) {
-    Throw(Msg() << "ShellProcess(" << alias << ") empty executable");
+    throw Error(Msg() << "ShellProcess(" << alias << ") empty executable");
   }
 
   struct stat st;
   if (::stat(shellExecutable.c_str(), &st) || !S_ISREG(st.st_mode)) {
-    Throw(Msg() << "ShellProcess(" << alias << ") executable '"
-          << shellExecutable << "' not found or not a file");
+    throw Error(Msg() << "ShellProcess(" << alias << ") executable '"
+                << shellExecutable << "' not found or not a file");
   }
 
   if (unsafe(shellExecutable)) {
-    Throw(Msg() << "ShellProcess(" << alias << ") executable '"
-          << shellExecutable << "' has unsafe characters");
+    throw Error(Msg() << "ShellProcess(" << alias << ") executable '"
+                << shellExecutable << "' has unsafe characters");
   }
 
   for (auto& arg : commandArgs) {
     if (unsafe(arg)) {
-      Throw(Msg() << "ShellProcess(" << alias << ") argument '" << arg
-            << "' has unsafe characters");
+      throw Error(Msg() << "ShellProcess(" << alias << ") argument '" << arg
+                  << "' has unsafe characters");
     }
   }
 }
@@ -125,8 +125,8 @@ void ShellProcess::validate() const {
 //-----------------------------------------------------------------------------
 void ShellProcess::run() {
   if (childPid >= 0) {
-    Throw(Msg() << "ShellProcess(" << alias << ") is already running on PID"
-          << childPid);
+    throw Error(Msg() << "ShellProcess(" << alias
+                << ") is already running on PID " << childPid);
   }
 
   if (ioType != OUTPUT_ONLY) {
@@ -141,8 +141,8 @@ void ShellProcess::run() {
 
   childPid = ::fork();
   if (childPid < 0) {
-    Throw(Msg() << "ShellProcess(" << alias << ").run() failed to fork:"
-          << toError(errno));
+    throw Error(Msg() << "ShellProcess(" << alias << ").run() failed to fork: "
+                << toError(errno));
   }
 
   if (childPid == 0) {
@@ -249,9 +249,8 @@ const {
       if (errno == EINTR) {
         continue;
       } else {
-        Throw(Msg() << "ShellProcess(" << alias
-              << ").readln(" << fd
-              << ") select failed:" << toError(errno));
+        throw Error(Msg() << "ShellProcess(" << alias << ").readln(" << fd
+                    << ") select failed: " << toError(errno));
       }
     }
 
@@ -300,8 +299,8 @@ void ShellProcess::runParent() {
   // wait for start message from child process
   const std::string msg = readln(inPipe.getReadHandle(), 3000);
   if (msg.empty()) {
-    Throw(Msg() << "ShellProcess(" << alias << ").runParent(" << childPid
-          << ") no start message from child process");
+    throw Error(Msg() << "ShellProcess(" << alias << ").runParent(" << childPid
+                << ") no start message from child process");
   }
 
   // verify start message
@@ -311,22 +310,20 @@ void ShellProcess::runParent() {
   if (!csv.readCell(label) || (label != "STARTED") ||
       !csv.readCell(pidStr) || (toInt32(pidStr) != childPid))
   {
-    Throw(Msg() << "ShellProcess(" << alias << ").runParent(" << childPid
-          << ") invalid start message from child process:" << msg);
+    throw Error(Msg() << "ShellProcess(" << alias << ").runParent(" << childPid
+                << ") invalid start message from child process: " << msg);
   }
 }
 
 //-----------------------------------------------------------------------------
 void ShellProcess::sendln(const std::string& line) const {
   if (childPid <= 0) {
-    Throw(Msg() << "ShellProcess(" << alias << ").sendln(" << childPid
-          << ',' << line.substr(0, 20)
-          << ") process is not running");
+    throw Error(Msg() << "ShellProcess(" << alias << ").sendln(" << childPid
+                << ',' << line.substr(0, 20) << ") process is not running");
   }
   if (ioType == INPUT_ONLY) {
-    Throw(Msg() << "ShellProcess(" << alias << ").sendln(" << childPid
-          << ',' << line.substr(0, 20)
-          << ") IOType = INPUT_ONLY");
+    throw Error(Msg() << "ShellProcess(" << alias << ").sendln(" << childPid
+                << ',' << line.substr(0, 20) << ") IOType = INPUT_ONLY");
   }
 
   std::string data = line;
@@ -343,18 +340,18 @@ void ShellProcess::sendln(const std::string& line) const {
 //-----------------------------------------------------------------------------
 int ShellProcess::getInputHandle() const {
   if (childPid <= 0) {
-    Throw(Msg() << "ShellProcess(" << alias
-          << ").getInputHandle() process is not running");
+    throw Error(Msg() << "ShellProcess(" << alias
+                << ").getInputHandle() process is not running");
   }
   if (ioType == INPUT_ONLY) {
-    Throw(Msg() << "ShellProcess(" << alias << ").getInputHandle(" << childPid
-          << ") IOType = WRITE_ONLY");
+    throw Error(Msg() << "ShellProcess(" << alias << ").getInputHandle("
+                << childPid << ") IOType = WRITE_ONLY");
   }
 
   const int handle = inPipe.getReadHandle();
   if (handle < 0) {
-    Throw(Msg() << "ShellProcess(" << alias << ").getInputHandle(" << childPid
-          << ") handle is not open!");
+    throw Error(Msg() << "ShellProcess(" << alias << ").getInputHandle("
+                << childPid << ") handle is not open!");
   }
 
   return handle;
