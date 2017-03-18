@@ -24,18 +24,51 @@ Provided Bots
 
 The bots provided in the [src/bots](src/bots) directory are built by default when you run `make`.
 
-These bots can run stand-alone or as shell-bots with `xbs-client --bot`.  Running as a shell-bot with `xbs-client --bot` provides you with a view of the game boards and user messages as the game progresses.  In this mode you can also post messages and setup automatic taunts.
+These bots can run stand-alone (just run the bot) or as a shell-bot (run the bot with `xbs-client --bot`).  Running as a shell-bot with `xbs-client --bot` provides you with a view of the game boards and user messages as the game progresses.  In this mode you can also post messages and setup automatic taunts.
 
 NOTE: The only difference between running `xbs-client` with and without the `--bot` option is when the `--bot` option is used the specified shell-bot will make all the shots for you when your turn comes around.
 
-When the bots in [src/bots](src/ships) are run stand-alone (e.g. not run as a shell-bot via `xbs-client --bot`) there is no board display and player messages are not shown.  The bot simply fires shots when its turn comes around and exits when the game ends.
+When the bots in [src/bots](src/bots) are run stand-alone there is no board display and player messages are not shown.  The bot simply fires shots when its turn comes around and exits when the game ends.
+
+For example, to run the Random Rufus bot in `stand-alone` mode and a game server running on localhost:
+
+    ./xbs-rufus --host localhost
+
+To run Random Rufus as a `shell-bot` with `xbs-client --bot` and a game server running on localhost:
+
+    ./xbs-client --host localhost --bot ./xbs-rufus
+
+To run Random Rufus as a `shell-bot` with a custom player name (notice the use of quote `"` marks to encapsulate the `xbs-rufus` command line):
+
+    ./xbs-client --host localhost --bot "./xbs-rufus --name fred"
 
 Run any of the provided bots with the `--help` option to see what command-line options they support.
+
+    ./xbs-rufus --help
 
 Testing
 -------
 
-The bots provided in the [src/bots](src/bots) directory all have a `--test` mode.  This gives you a general idea of the strength and speed of the bot.  The test generates a number of boards with random ship placement and lets the bot take shots at each board until it has achieved the point goal.  Bots that consistently reach the point goal with fewer shots are generally stronger.  The number of test iterations can be set with the `--postitions` command-line parameter.
+The bots provided in the [src/bots](src/bots) directory all have a `--test` mode.  This gives you a general idea of the strength and speed of the bot.  The test generates a number of boards with random ship placement and lets the bot take shots at each board until it has achieved the point goal on each board.  Bots that consistently reach the point goal with fewer shots are generally stronger.  The number of test boards used can be set with the `--postitions` command-line parameter.
+
+### Testing Shell-Bots
+
+If you write a shell-bot you can use the `--test` option that is built-in to `xbs-client` to perform the same kind of testing described above on your bot.  Just be aware that testing this way will likely be much slower than a test mode built directly into your bot.
+
+For example, to use the testing mode built-in to Random Rufus:
+
+    ./xbs-rufus --test
+
+To test Random Rufus as a `shell-bot` with `xbs-client --bot`:
+
+    ./xbs-client --test --bot ./xbs-rufus
+
+### Why test?
+
+You should test your bots for at least 2 reasons:
+
+1. To make sure it works
+2. To gauge its playing strength
 
 There are 2 primary aspects of a player's skill that determine their playing strength:
 
@@ -44,19 +77,18 @@ There are 2 primary aspects of a player's skill that determine their playing str
 
 An *open* hit is any hit that has at least one adjacent square that has not already been shot at.  In other words an *open* hit is any hit that is not surrounded on all sides by misses, the edge of the board, or other hits.
 
-In `--test` mode the standard number and size of ships is always used, regardless of board size.  So you can increase the board size to better judge a bot's search method.  The size of the board can effect a bot's destroy method, but usually to a lesser degree than it effects the search method.
+### Stressing your bot's search method
+
+In `--test` mode the standard number and size of ships is always used, regardless of board size.  However, you can increase the board size to better judge a bot's search method.  The size of the board can effect a bot's destroy method, but usually to a lesser degree than it effects the search method.
 
 Use the `--width` and `--height` command-line options to change the `--test` board size.
 
-### Testing Shell-Bots
+Testing with Skipper
+--------------------
 
-If you write a shell-bot you can use the `--test` option that is built-in to `xbs-client` to perform the same kind of testing described above on your bot.  Just be aware that testing this way will likely be much slower than a test mode built directly into your bot.
+The `xbs-skipper` bot provided in this project can be used to test bots in much the same way the `--test` mode described above does.
 
-### Testing with Skipper
-
-The `xbs-skipper` bot provided in this project can be used to test bots in much the same way that the `--test` mode does.
-
-Skipper does nothing but skip its turn, every time.  You can setup a match between your bot and Skipper to see how many shots your bot needs to reach the point goal because you don't need to worry about Skipper reaching the point goal first.  This is essentially the same thing the `--test` mode described above does: it determines the average number of shots a bot needs to atain the point goal on randomly generated boards.
+Skipper does nothing but skip its turn, every time.  You can setup a match between your bot and Skipper to see how many shots your bot needs to reach the point goal because you don't need to worry about Skipper reaching the point goal first.  This is essentially the same thing the `--test` mode described above does: it determines the average number of shots your bot needs to attain the point goal on randomly generated boards.
 
 To run multiple matches between your bot and Skipper you can do the following (assuming the terminal shell you're using is `bash` or something similar):
 
@@ -72,14 +104,14 @@ To run multiple matches between your bot and Skipper you can do the following (a
 
     `for i in {1..200}; do (command to run your bot); sleep 0.1; done`
 
- * When done check the `db/game.Game Title.ini` file for stats (replace *Game Title* with the actual game title used).  Use *total turns taken by your bot* divided by *game count* to calculate the average number of turns your bot needed to atain the point goal.  The lower the average the stronger your bot is!
+ * When done check the `db/game.Game Title.ini` file for stats (replace *Game Title* with the actual game title used).  Use *total turns taken by your bot* divided by *game count* to calculate the average number of turns your bot needed to attain the point goal.  The lower the average the stronger your bot is!
 
-NOTE: This testing approach will run much slower than any built in test mode.
+NOTE: This testing approach will run much slower than a built in test mode or shell-bot testing with xbs-client --bot.
 
 Writing Your Own Bot
 --------------------
 
-Writing your own bot is easy.  The [Communication Protocol](protocol.md) is simple and you only need to handle a sub-set of the full protocol to write a bot.  For example, your bot doesn't need to handle user messages, or set taunt configurations, etc.  Your bot only needs to know how to:
+Writing your own bot is easy.  The [Communication Protocol](protocol.md) is simple and **you only need to handle a sub-set of the full protocol to write a bot**.  For example, your bot doesn't need to handle user messages, or set taunt configurations, etc.  Your bot only needs to know how to:
 
 1. Connect
 2. Join the game
@@ -93,7 +125,7 @@ In a shell bot there is no connection.  Instead you write an `I` (bot info) mess
 
 In a stand-alone bot you simply open a TCP socket to the game server.  How you get the host address and port of the game server is up to you. Command-line parameters are a good way to get such information.
 
-Once you've connected you will receive a `G` (game info) message.  This tells you whether the game you are attempting to join is already started, the dimensions of the game board, the size and number of ships, the game server version, etc.  With this information you can decide to continue to the next step (join the game) or disconnect.
+Once you've connected you will receive a `G` (game info) message.  This tells you whether the game you are attempting to join is already started, the dimensions of the game board, the size and number of ships, the game server version, etc.  With this information your bot can decide to continue to the next step (join the game) or disconnect.
 
 ### Step 2. Join the game
 

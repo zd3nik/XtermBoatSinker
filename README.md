@@ -30,9 +30,9 @@ How to start a game
 
 The server and client binaries produced by this project are console applications compatible with terminal emulators that support VT100 (such as Xterm).  To start a game server run the `xbs-server` binary.  Players may then join the game by running the `xbs-client` binary in separate terminals.
 
-Run `xbs-server --help` to see a list of command-line options for the server.
+Run `./xbs-server --help` to see a list of command-line options for the server.
 
-Run `xbs-client --help` to see a list of command-line options for the client.
+Run `./xbs-client --help` to see a list of command-line options for the client.
 
 Custom Clients
 --------------
@@ -44,7 +44,7 @@ If you don't like using a text based client like `xbs-client` you can write your
 Bots!
 -----
 
-This project comes with several bots.  The bot source files are in [src/bots](src/bots).  These bots are written in C++ and leverage common classes in the XtermBoatSinker project.  However, using the [Communication Protocol Guide] you can easily write your own bot in any language that supports TCP sockets.  If your language of choice doesn't support TCP sockets or you would rather write your bot to use stdin and stdout instead of a TCP socket connection to the game server you can write a `shell-bot` and use `xbs-client --bot` to run your bot.
+This project comes with several bots.  The bot source files are in [src/bots](src/bots).  These bots are written in C++ and leverage common classes in the XtermBoatSinker project.  However, using the [Communication Protocol Guide](protocol.md) you can easily write your own `stand-alone` bot using any language that supports TCP sockets.  If your language of choice doesn't support TCP sockets or you would rather write your bot to use stdin and stdout you can write a `shell-bot` and use `xbs-client --bot` to run your bot.
 
 See the [Bot Guide](bots.md) for more details, including details about writing shell-bots vs stand-alone bots.
 

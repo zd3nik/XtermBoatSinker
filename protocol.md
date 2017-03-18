@@ -17,7 +17,7 @@ An example message type is `S` - the shoot message.  A shoot message has 3 value
 
  * `player` = the name of the player being shot at
  * `X` = the column being shot at
- * `Y` = the row begin shot at
+ * `Y` = the row being shot at
 
 So a shoot message that targets player `fred`, column 4, row 7 looks like this:
 
@@ -70,7 +70,7 @@ More info:
     S|player|X|Y   |  Fire a shot at specified player board at specified X,Y coordinates.
                    |    Use numbers for X and Y values.
                    |    Coordinate values start at 1 (not 0).
-                   |    So coordinate (A1) = (1,1), (C7) = (3,7), etc
+                   |    So coordinate (A1) = (1|1), (C7) = (3|7), etc
     ---------------|-------------------------------------------------------------------------
     K|reason       |  Skip your turn.  Ignored if it is not your turn.  Reason is optional.
     ---------------|-------------------------------------------------------------------------
@@ -123,8 +123,8 @@ More info:
     N|player         |  Sets the current player to move.
     -----------------|-------------------------------------------------------------------------
     H|plyr|targt|xy  |  Sent when a player gets a hit.
-                     |    The "plyr" value is the name of the player that got the hit.
-                     |    The "targt" value is the name of the player that got hit.
+                     |    The "plyr" value is the name of the player that scored the hit.
+                     |    The "targt" value is the name of the player that was hit.
                      |    The "xy" value is the alpha/numeric coordinate of the hit.
     -----------------|-------------------------------------------------------------------------
     L|player|reason  |  The specified player has left the game.  Reason is optional.
@@ -132,7 +132,7 @@ More info:
     M|from|txt|grp   |  Specified "text" message was sent by "from" player.
                      |    This message is sent to intended recipients only.
                      |    If the message was sent to more than 1 player "grp" name is set.
-                     |    if "from" is empty the message is from the server, not a player.
+                     |    If "from" is empty the message is from the server, not a player.
     -----------------|-------------------------------------------------------------------------
     K|player|reson   |  The specified player has skipped their turn.  Reason is optional.
     -----------------|-------------------------------------------------------------------------
@@ -147,7 +147,7 @@ More info:
 
 ### Game Info Message
 
-The Game info message is sent from the server to clients the moment they connect or upon request via the `G` message.
+The game info message is sent from the server to clients the moment they connect or upon request via the `G` message.
 
 The game info message has the following values:
 
@@ -270,7 +270,7 @@ Type `F` message has the following values:
 
     #  |  Value
     ===|=======================================================================
-    1  |  Game state ("Finished" or "aborted")
+    1  |  Game state ("finished" or "aborted")
     2  |  Number of turns taken
     3  |  Number of players (this is the number of type `R` messages to expect)
 
