@@ -32,14 +32,14 @@ public: // constructors
 
 //-----------------------------------------------------------------------------
 public: // DBRecord implementation
-  virtual std::string getID() const { return recordID; }
-  virtual std::string getString(const std::string& fld) const;
-  virtual std::vector<std::string> getStrings(const std::string& fld) const;
-  virtual void clear(const std::string& fld);
-  virtual void setString(const std::string& fld, const std::string& val);
-  virtual unsigned addString(const std::string& fld, const std::string& val);
-  virtual unsigned addStrings(const std::string& fld,
-                              const std::vector<std::string>& values);
+  std::string getID() const override { return recordID; }
+  std::string getString(const std::string& fld) const override;
+  std::vector<std::string> getStrings(const std::string& fld) const override;
+  void clear(const std::string& fld) override;
+  void setString(const std::string& fld, const std::string& val) override;
+  unsigned addString(const std::string& fld, const std::string& val) override;
+  unsigned addStrings(const std::string& fld,
+                      const std::vector<std::string>& values) override;
 
 //-----------------------------------------------------------------------------
 public: // methods

@@ -39,15 +39,15 @@ private: // static constants
 
 //-----------------------------------------------------------------------------
 public: // Database::Printable implementation
-  virtual std::string toString() const { return homeDir; }
+  std::string toString() const override { return homeDir; }
 
 //-----------------------------------------------------------------------------
 public: // Database implementation
-  virtual void sync();
-  virtual bool remove(const std::string& recordID);
-  virtual std::vector<std::string> getRecordIDs();
-  virtual std::shared_ptr<DBRecord> get(const std::string& recordID,
-                                        const bool add);
+  void sync() override;
+  bool remove(const std::string& recordID) override;
+  std::vector<std::string> getRecordIDs() override;
+  std::shared_ptr<DBRecord> get(const std::string& recordID,
+                                const bool add) override;
 
 //-----------------------------------------------------------------------------
 public: // methods

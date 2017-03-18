@@ -15,7 +15,7 @@ namespace xbs
 class DBRecord : public Printable {
 //-----------------------------------------------------------------------------
 public: // Printable implementation
-  virtual std::string toString() const { return getID(); }
+  std::string toString() const override { return getID(); }
 
 //-----------------------------------------------------------------------------
 public: // abstract methods

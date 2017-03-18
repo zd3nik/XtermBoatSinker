@@ -85,7 +85,7 @@ public: // static methods
 
 //-----------------------------------------------------------------------------
 public: // Rectangle::Printable implementation
-  virtual std::string toString() const;
+  std::string toString() const override;
 
 //-----------------------------------------------------------------------------
 public: // methods

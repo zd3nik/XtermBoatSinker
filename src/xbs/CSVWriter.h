@@ -49,7 +49,7 @@ public: // constructors
 
  //-----------------------------------------------------------------------------
 public: // Printable implementation
-  virtual std::string toString() const { return row.str(); }
+  std::string toString() const override { return row.str(); }
 
 //-----------------------------------------------------------------------------
 public: // getters

@@ -73,15 +73,15 @@ public: // static methods
 
 //-----------------------------------------------------------------------------
 public: // Process implementation
-  virtual bool isRunning() const noexcept;
-  virtual bool waitForExit(const Milliseconds timeout = 0) noexcept;
-  virtual int getExitStatus() const noexcept { return exitStatus; }
-  virtual int getInputHandle() const;
-  virtual void close() noexcept;
-  virtual void run();
-  virtual void sendln(const std::string& line) const;
-  virtual void validate() const;
-  virtual std::string getAlias() const { return alias; }
+  bool isRunning() const noexcept override;
+  bool waitForExit(const Milliseconds timeout = 0) noexcept override;
+  int getExitStatus() const noexcept override { return exitStatus; }
+  int getInputHandle() const override;
+  void close() noexcept override;
+  void run() override;
+  void sendln(const std::string& line) const override;
+  void validate() const override;
+  std::string getAlias() const override { return alias; }
 
 //-----------------------------------------------------------------------------
 public: // methods

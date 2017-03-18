@@ -1,9 +1,9 @@
 Xterm Boat Sinker
 =================
 
-This is a multi-player battleship game.  2 to 9 players per game is supported.
+This is a multi-player battleship game.  2 or more players per game is supported.
 
-Each player has one board and a set of ships to place on their board.  The board size, ship count, and ship sizes are the same for all players.  Before the game starts each player places their ships on their board in locations unknown to the other players.  Each ship spans 2 or more coordinates in a straight line.  The objective of the game is to hit ships on opponent boards by firing shots at their boards using row/column coordinates (such as `C5` for row `C` column `5`).  If an opponent ship occupies a coordinate you shoot at you score a HIT.  Hits are worth 1 point each.  Misses are worth 0 points.
+Each player has one board and a set of ships to place on their board.  The board size, ship count, and ship sizes are the same for all players.  Before the game starts each player places their ships on their board in locations unknown to the other players.  Each ship spans 2 or more coordinates in a straight line.  The objective of the game is to hit ships on opponent boards by firing shots at their boards using column (X) and row (Y) coordinates such as `C5` for column `C` row `5`.  If an opponent ship occupies a coordinate you shoot at you score a HIT.  Hits are worth 1 point each.  Misses are worth 0 points.
 
 Once a game has started players take turns shooting at each other's boards (you are not allowed to shoot at your own board).  The game ends when at least one player has obtained the game's point goal and all players have had an equal number of turns.  By default the point goal is equal to the number of coordinates occupied by a single player's ships.  That is 17 in the default game configuration which has one 5 point ship, one 4 point ship, two 3 point ships, and one 2 point ship (5 + 4 + 3 + 3 + 2 = 17).  All players get the same number of turns so it is possible for more than one player to obtain the point goal.  In other words, it is possible for 2 or more players to tie for first place.
 

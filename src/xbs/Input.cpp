@@ -191,7 +191,16 @@ unsigned Input::readln(const int fd, const char delimeter) {
                     << "' from channel " << fd << " " << getHandleLabel(fd);
   }
 
-  if (!line[0]) {
+  unsigned newLineCount = 0;
+  for (unsigned i = 0; i < n; ++i) {
+    if ((line[0] == '\n') || (line[0] == '\r')) {
+      newLineCount++;
+    } else {
+      break;
+    }
+  }
+
+  if (!line[0] || (newLineCount == n)) {
     return 0;
   }
 

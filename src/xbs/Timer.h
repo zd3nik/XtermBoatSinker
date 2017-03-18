@@ -45,7 +45,7 @@ public: // constructors
 
 //-----------------------------------------------------------------------------
 public: // Printable implementation
-  virtual std::string toString() const;
+  std::string toString() const override;
 
 //-----------------------------------------------------------------------------
 public: // static constants

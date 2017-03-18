@@ -52,7 +52,7 @@ public: // static methods
 
 //-----------------------------------------------------------------------------
 public: // Printable implementation
-  virtual std::string toString() const;
+  std::string toString() const override;
 
 //-----------------------------------------------------------------------------
 public: // methods

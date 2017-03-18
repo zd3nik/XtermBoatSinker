@@ -45,35 +45,35 @@ public: // constructors
 
 //-----------------------------------------------------------------------------
 public: // Bot implementation
-  virtual std::string getBotName() const { return botName; }
-  virtual std::string getPlayerName() const { return playerName; }
-  virtual std::string newGame(const Configuration& gameConfig);
-  virtual void setStaticBoard(const std::string& desc) { staticBoard = desc; }
-  virtual void playerJoined(const std::string& player);
-  virtual void startGame(const std::vector<std::string>& playerOrder);
-  virtual void finishGame(const std::string& state,
-                          const unsigned turnCount,
-                          const unsigned playerCount);
-  virtual void playerResult(const std::string& player,
-                            const unsigned score,
-                            const unsigned skips,
-                            const unsigned turns,
-                            const std::string& status);
-  virtual void updateBoard(const std::string& player,
-                           const std::string& status,
-                           const std::string& boardDescriptor,
-                           const unsigned score,
-                           const unsigned skips,
-                           const unsigned turns = ~0U);
-  virtual void skipPlayerTurn(const std::string& /*player*/,
-                              const std::string& /*reason*/) { }
-  virtual void updatePlayerToMove(const std::string& /*player*/) { }
-  virtual void messageFrom(const std::string& /*from*/,
-                           const std::string& /*msg*/,
-                           const std::string& /*group*/) { }
-  virtual void hitScored(const std::string& /*player*/,
-                         const std::string& /*target*/,
-                         const Coordinate& /*hitCoordinate*/) { }
+  std::string getBotName() const override { return botName; }
+  std::string getPlayerName() const override { return playerName; }
+  std::string newGame(const Configuration& gameConfig) override;
+  void setStaticBoard(const std::string& desc) override { staticBoard = desc; }
+  void playerJoined(const std::string& player) override;
+  void startGame(const std::vector<std::string>& playerOrder) override;
+  void finishGame(const std::string& state,
+                  const unsigned turnCount,
+                  const unsigned playerCount) override;
+  void playerResult(const std::string& player,
+                    const unsigned score,
+                    const unsigned skips,
+                    const unsigned turns,
+                    const std::string& status) override;
+  void updateBoard(const std::string& player,
+                   const std::string& status,
+                   const std::string& boardDescriptor,
+                   const unsigned score,
+                   const unsigned skips,
+                   const unsigned turns = ~0U) override;
+  void skipPlayerTurn(const std::string& /*player*/,
+                      const std::string& /*reason*/) override { }
+  void updatePlayerToMove(const std::string& /*player*/) override { }
+  void messageFrom(const std::string& /*from*/,
+                   const std::string& /*msg*/,
+                   const std::string& /*group*/) override { }
+  void hitScored(const std::string& /*player*/,
+                 const std::string& /*target*/,
+                 const Coordinate& /*hitCoordinate*/) override { }
 
 //-----------------------------------------------------------------------------
 public: // virtual methods
