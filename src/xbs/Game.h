@@ -49,10 +49,10 @@ public: // methods
   Game& setConfiguration(const Configuration&);
   Game& setTitle(const std::string&);
 
-  BoardPtr boardAtIndex(const unsigned index);
-  BoardPtr boardForHandle(const int handle);
-  BoardPtr boardForPlayer(const std::string& name, const bool exact);
-  BoardPtr boardToMove();
+  BoardPtr boardAtIndex(const unsigned index) const;
+  BoardPtr boardForHandle(const int handle) const;
+  BoardPtr boardForPlayer(const std::string& name, const bool exact) const;
+  BoardPtr boardToMove() const;
 
   bool hasOpenBoard() const;
   bool nextTurn();
@@ -78,11 +78,11 @@ public: // methods
     return finished ? (finished - started) : aborted ? (aborted - started) : 0;
   }
 
-  bool hasBoard(const std::string& name) {
+  bool hasBoard(const std::string& name) const {
     return static_cast<bool>(boardForPlayer(name, true));
   }
 
-  bool hasBoard(const int handle) {
+  bool hasBoard(const int handle) const {
     return static_cast<bool>(boardForHandle(handle));
   }
 

@@ -201,7 +201,7 @@ std::shared_ptr<DBRecord> BotTester::newTestRecord(
                           toStr(config.getBoardWidth()) + "x" +
                           toStr(config.getBoardHeight()) + "." +
                           bot.getPlayerName() + "-" +
-                          bot.getVersion().toString());
+                          bot.getBotVersion().toString());
   FileSysDatabase db;
   std::shared_ptr<DBRecord> rec = db.open(testDB).get(recordID, true);
   if (!rec) {
@@ -220,7 +220,7 @@ Coordinate BotTester::printStart(
   Screen::get(true).clear();
   Screen::print() << statusLine
                   << "Testing " << bot.getBotName()
-                  << " version " << bot.getVersion()
+                  << " version " << bot.getBotVersion()
                   << ", " << positions << " test positions"
                   << ", msa " << minSurfaceArea
                   << Flush;

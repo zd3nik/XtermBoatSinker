@@ -17,14 +17,12 @@ namespace xbs
 class ShellBot : public Bot {
 //-----------------------------------------------------------------------------
 private: // variables
-  Version botVersion;
-  std::string botName;
-  std::string playerName;
   ShellProcess proc;
 
 //-----------------------------------------------------------------------------
 public: // constructors
   ShellBot(const std::string& shellCommand);
+  ShellBot() = delete;
   ShellBot(ShellBot&&) = delete;
   ShellBot(const ShellBot&) = delete;
   ShellBot& operator=(ShellBot&&) = delete;
@@ -32,12 +30,8 @@ public: // constructors
 
 //-----------------------------------------------------------------------------
 public: // Bot implementation
-  Version getVersion() const override { return botVersion; }
-  std::string getBotName() const override { return botName; }
-  std::string getPlayerName() const override { return playerName; }
-  std::string getBestShot(Coordinate&) override;
   std::string newGame(const Configuration& gameConfig) override;
-  void setStaticBoard(const std::string& /*desc*/) override { }
+  std::string getBestShot(Coordinate&) override;
   void playerJoined(const std::string& player) override;
   void startGame(const std::vector<std::string>& playerOrder) override;
   void finishGame(const std::string& state,
@@ -63,10 +57,6 @@ public: // Bot implementation
   void hitScored(const std::string& player,
                  const std::string& target,
                  const Coordinate& hitCoordinate) override;
-
-  bool isCompatibleWith(const Version& serverVersion) const override {
-    return (serverVersion >= Version(1, 1));
-  }
 
 //-----------------------------------------------------------------------------
 public: // methods

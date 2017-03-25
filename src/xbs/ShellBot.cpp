@@ -14,7 +14,8 @@ namespace xbs
 
 //-----------------------------------------------------------------------------
 ShellBot::ShellBot(const std::string& cmd)
-  : proc("ShellBot", cmd)
+  : Bot("shellBot", Version("1.0")),
+    proc("ShellBot", cmd)
 {
   proc.validate();
   proc.run();
@@ -37,46 +38,16 @@ ShellBot::ShellBot(const std::string& cmd)
                 << ") from bot command: " << cmd);
   }
 
-  botName = info[1];
-  botVersion = info[2];
-  playerName = ((info.size() < 4) || info[3].empty()) ? botName : info[3];
+  setBotName(info[1]);
+  setBotVersion(Version(info[2]));
+  setPlayerName(((info.size() < 4) || info[3].empty())
+      ? getBotName()
+      : info[3]);
 }
 
 //-----------------------------------------------------------------------------
-std::string ShellBot::getBestShot(Coordinate& bestShot) {
-  std::string line = trimStr(proc.readln(3000));
-  if (line.empty()) {
-    throw Error(Msg() << "No shot message from bot: " << botName);
-  }
-
-  std::vector<std::string> info = CSVReader(line, '|', true).readCells();
-  if (info.empty() || ((info[0] != "S") && (info[0] != "K"))) {
-    throw Error(Msg() << "Invalid shot message (" << line
-                << ") from bot: " << botName);
-  }
-
-  if (info[0] == "K") {
-    bestShot.clear();
-    return "";
-  }
-
-  if ((info.size() < 4) ||
-      info[1].empty() ||
-      !isUInt(info[2]) ||
-      !isUInt(info[3]))
-  {
-    throw Error(Msg() << "Invalid shot message (" << line
-                << ") from bot: " << botName);
-  }
-
-  bestShot.set(toUInt32(info[2]), toUInt32(info[3]));
-  return info[1];
-}
-
-
-//-----------------------------------------------------------------------------
-std::string ShellBot::newGame(const Configuration& config) {
-  return newGame(config, Version(1, 1), 0, false);
+void ShellBot::yourBoard(const std::string& boardDescriptor) {
+  proc.sendln(Msg('Y') << boardDescriptor);
 }
 
 //-----------------------------------------------------------------------------
@@ -105,25 +76,56 @@ std::string ShellBot::newGame(const Configuration& config,
 
   std::string line = proc.readln(1000);
   if (line.empty()) {
-    throw Error(Msg() << "No join message from bot: " << botName);
+    throw Error(Msg() << "No join message from bot: " << getBotName());
   }
 
   std::vector<std::string> info = CSVReader(line, '|', true).readCells();
   if ((info.size() != (2U + !gameStarted)) ||
       (info[0] != "J") ||
-      (info[1] != playerName) ||
+      (info[1] != getPlayerName()) ||
       (!gameStarted && info[2].empty()))
   {
     throw Error(Msg() << "Invalid join message (" << line
-                << ") from bot: " << botName);
+                << ") from bot: " << getBotName());
   }
 
   return gameStarted ? "" : info[2];
 }
 
 //-----------------------------------------------------------------------------
-void ShellBot::yourBoard(const std::string& boardDescriptor) {
-  proc.sendln(Msg('Y') << boardDescriptor);
+std::string ShellBot::newGame(const Configuration& config) {
+  return newGame(config, Version(1, 1), 0, false);
+}
+
+//-----------------------------------------------------------------------------
+std::string ShellBot::getBestShot(Coordinate& bestShot) {
+  std::string line = trimStr(proc.readln(3000));
+  if (line.empty()) {
+    throw Error(Msg() << "No shot message from bot: " << getBotName());
+  }
+
+  std::vector<std::string> info = CSVReader(line, '|', true).readCells();
+  if (info.empty() || ((info[0] != "S") && (info[0] != "K"))) {
+    throw Error(Msg() << "Invalid shot message (" << line
+                << ") from bot: " << getBotName());
+  }
+
+  if (info[0] == "K") {
+    bestShot.clear();
+    return "";
+  }
+
+  if ((info.size() < 4) ||
+      info[1].empty() ||
+      !isUInt(info[2]) ||
+      !isUInt(info[3]))
+  {
+    throw Error(Msg() << "Invalid shot message (" << line
+                << ") from bot: " << getBotName());
+  }
+
+  bestShot.set(toUInt32(info[2]), toUInt32(info[3]));
+  return info[1];
 }
 
 //-----------------------------------------------------------------------------

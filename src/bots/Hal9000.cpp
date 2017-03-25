@@ -10,64 +10,20 @@
 namespace xbs {
 
 //-----------------------------------------------------------------------------
-std::string Hal9000::getBestShot(Coordinate& shotCoord) {
-  std::vector<Board*> boards;
-  for (auto& board : game.getBoards()) {
-    if (board && (board->getName() != getPlayerName())) {
-      boards.push_back(board.get());
-    }
-  }
-
-  Board* bestBoard = nullptr;
-  ScoredCoordinate bestCoord;
-
-  std::random_shuffle(boards.begin(), boards.end());
-  for (auto& board : boards) {
-    ScoredCoordinate coord(bestShotOn(*board));
-    if (coord && (!bestBoard || (coord.getScore() > bestCoord.getScore()))) {
-      bestBoard = board;
-      bestCoord = coord;
-    }
-  }
-
-  shotCoord = bestCoord;
-  return bestBoard ? bestBoard->getName() : "";
+void Hal9000::frenzyScore(const Board& board,
+                          ScoredCoordinate& coord,
+                          const unsigned)
+{
+  const unsigned len = board.maxInlineHits(coord);
+  coord.setScore(floor(std::min<unsigned>(longShip, len) * boardWeight));
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Hal9000::bestShotOn(const Board& board) {
-  const std::string desc = board.getDescriptor();
-  std::vector<ScoredCoordinate> openHits;
-  std::vector<ScoredCoordinate> candidates;
-  candidates.reserve(desc.size() / 2);
-
-  for (unsigned i = 0; i < desc.size(); ++i) {
-    if (desc[i] == Ship::NONE) {
-      const ScoredCoordinate coord(board.getShipCoord(i));
-      if (board.adjacentHits(coord)) {
-        openHits.push_back(coord);
-        candidates.clear();
-      } else if (openHits.empty() && (coord.parity() == parity) &&
-                 board.adjacentFree(coord))
-      {
-        candidates.push_back(coord);
-      }
-    }
-  }
-
-  if (openHits.size()) {
-    candidates.assign(openHits.begin(), openHits.end());
-  } else if (candidates.empty()) {
-    return ScoredCoordinate();
-  }
-
-  double hitGoal = game.getConfiguration().getPointGoal();
-  double hitCount = board.hitCount();
-  double boardWeight = std::log(hitGoal - hitCount + 1);
-  double optionsWeight = (desc.size() - candidates.size());
-  double score = (boardWeight * optionsWeight);
-
-  return candidates[random(candidates.size())].setScore(score);
+void Hal9000::searchScore(const Board&,
+                          ScoredCoordinate& coord,
+                          const unsigned)
+{
+  coord.setScore(floor(boardWeight / 2));
 }
 
 } // namespace xbs

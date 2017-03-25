@@ -7,7 +7,6 @@
 
 #include "Platform.h"
 #include "BotRunner.h"
-#include "ScoredCoordinate.h"
 
 namespace xbs
 {
@@ -16,16 +15,11 @@ namespace xbs
 class Skipper : public BotRunner {
 //-----------------------------------------------------------------------------
 public: // constructors
-  Skipper() : BotRunner("Skipper") { }
+  Skipper() : BotRunner("Skipper", Version("2.0.x")) { }
 
 //-----------------------------------------------------------------------------
 public: // BotRunner::Bot implementation
-  Version getVersion() const override { return Version("2.0.x"); }
   std::string getBestShot(Coordinate&) override { return ""; }
-
-  virtual bool isCompatibleWith(const Version& serverVersion) const {
-      return (serverVersion >= Version(1, 1));
-  }
 };
 
 } // namespace xbs

@@ -1,9 +1,9 @@
 //-----------------------------------------------------------------------------
-// RandomRufus.h
+// Sal9000.h
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef XBS_RANDOM_RUFUS_H
-#define XBS_RANDOM_RUFUS_H
+#ifndef XBS_SAL_9000_H
+#define XBS_SAL_9000_H
 
 #include "Platform.h"
 #include "BotRunner.h"
@@ -12,10 +12,10 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class RandomRufus : public BotRunner {
+class Sal9000 : public BotRunner {
 //-----------------------------------------------------------------------------
 public: // constructors
-  RandomRufus() : BotRunner("RandomRufus", Version("2.0.x")) { }
+  Sal9000() : BotRunner("Sal-9000", Version("2.0.x")) { }
 
 //-----------------------------------------------------------------------------
 protected: // Bot implementation
@@ -25,4 +25,4 @@ protected: // Bot implementation
 
 } // namespace xbs
 
-#endif // XBS_RANDOM_RUFUS_H
+#endif // XBS_SAL_9000_H

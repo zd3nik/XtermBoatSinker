@@ -20,40 +20,10 @@ namespace xbs
 static Input input;
 
 //-----------------------------------------------------------------------------
-BotRunner::BotRunner(const std::string& botName)
-  : botName(trimStr(botName))
-{
-  if (this->botName.empty()) {
-    throw Error("Empty bot name");
-  }
-
-  const CommandArgs& args = CommandArgs::getInstance();
-  staticBoard = args.getStrAfter({"-s", "--static-board"});
-  debugMode = args.has("--debug");
-  host = args.getStrAfter({"-h", "--host"});
-  port = args.getIntAfter({"-p", "--port"}, Server::DEFAULT_PORT);
-
-  const std::string msa = args.getStrAfter("--msa");
-  if (msa.size()) {
-    minSurfaceArea = toDouble(msa.c_str());
-    if (!isFloat(msa) || (minSurfaceArea < 0) || (minSurfaceArea > 100)) {
-      throw Error(Msg() << "Invalid min-surface-area ratio: " << msa);
-    }
-  }
-
-  const std::string name = args.getStrAfter({"-n", "--name"});
-  if (name.size()) {
-    playerName = name;
-  } else {
-    playerName = this->botName;
-  }
-}
-
-//-----------------------------------------------------------------------------
 void BotRunner::help() {
   const CommandArgs& args = CommandArgs::getInstance();
   Screen::print()
-      << getBotName() << " version " << getVersion() << EL
+      << getBotName() << " version " << getBotVersion() << EL
       << EL
       << "usage: " << args.getProgramName() << " [OPTIONS]" << EL
       << EL
@@ -87,6 +57,31 @@ void BotRunner::help() {
 }
 
 //-----------------------------------------------------------------------------
+BotRunner::BotRunner(const std::string& botName, const Version& botVersion)
+  : Bot(botName, botVersion)
+{
+  const CommandArgs& args = CommandArgs::getInstance();
+  setStaticBoard(args.getStrAfter({"-s", "--static-board"}));
+  setDebugMode(args.has("--debug"));
+  host = args.getStrAfter({"-h", "--host"});
+  port = args.getIntAfter({"-p", "--port"}, Server::DEFAULT_PORT);
+
+  const std::string msa = args.getStrAfter("--msa");
+  if (msa.size()) {
+    const double val = toDouble(msa.c_str());
+    if (!isFloat(msa) || (val < 0) || (val > 100)) {
+      throw Error(Msg() << "Invalid min-surface-area ratio: " << msa);
+    }
+    setMinSurfaceArea(val);
+  }
+
+  const std::string name = args.getStrAfter({"-n", "--name"});
+  if (name.size()) {
+    setPlayerName(name);
+  }
+}
+
+//-----------------------------------------------------------------------------
 void BotRunner::run() {
   const xbs::CommandArgs& args = xbs::CommandArgs::getInstance();
   if (args.has("--help")) {
@@ -99,93 +94,6 @@ void BotRunner::run() {
 }
 
 //-----------------------------------------------------------------------------
-std::string BotRunner::newGame(const Configuration& config) {
-  game.clear().setConfiguration(config);
-  myBoard.reset(new Board("me", config));
-  if (staticBoard.size()) {
-    if (!myBoard->updateDescriptor(staticBoard) ||
-        !myBoard->matchesConfig(config))
-    {
-      throw Error(Msg() << "Invalid " << getPlayerName()
-                  << " board descriptor: '" << staticBoard << "'");
-    }
-  } else if (!myBoard->addRandomShips(config, minSurfaceArea)) {
-    throw Error(Msg() << "Failed to generate random ship placement for '"
-                << getPlayerName() << "' board");
-  }
-  return myBoard->getDescriptor();
-}
-
-//-----------------------------------------------------------------------------
-void BotRunner::playerJoined(const std::string& player) {
-  game.addBoard(std::make_shared<Board>(player, game.getConfiguration()));
-}
-
-//-----------------------------------------------------------------------------
-void BotRunner::updateBoard(const std::string& player,
-                                    const std::string& status,
-                                    const std::string& boardDescriptor,
-                                    const unsigned score,
-                                    const unsigned skips,
-                                    const unsigned turns)
-{
-  auto board = game.boardForPlayer(player, true);
-  if (!board) {
-    throw Error(Msg() << "Unknonwn player name: '" << player << "'");
-  }
-  if (boardDescriptor.size()) {
-    if (!board->updateDescriptor(boardDescriptor)) {
-      throw Error(Msg() << "Failed to update '" << player
-                  << "' board descriptor");
-    }
-    if ((player == getPlayerName()) &&
-        !myBoard->addHitsAndMisses(boardDescriptor))
-    {
-      throw Error(Msg() << "Failed to update '" << player << "' hits/misses");
-    }
-  }
-  board->setStatus(status).setScore(score).setSkips(skips);
-  if (turns != ~0U) {
-    board->setTurns(turns);
-  }
-}
-
-//-----------------------------------------------------------------------------
-void BotRunner::startGame(const std::vector<std::string>& playerOrder) {
-  game.setBoardOrder(playerOrder);
-  if (!game.start()) {
-    throw Error("Game cannot start");
-  }
-  Logger::debug() << "Game '" << game.getTitle() << "' started";
-}
-
-//-----------------------------------------------------------------------------
-void BotRunner::finishGame(const std::string& state,
-                           const unsigned turnCount,
-                           const unsigned playerCount)
-{
-  game.finish();
-  Logger::debug() << "Game '" << game.getTitle()
-                  << "' finished, state: " << state
-                  << ", turns: " << turnCount
-                  << ", players: " << playerCount;
-}
-
-//-----------------------------------------------------------------------------
-void BotRunner::playerResult(const std::string& player,
-                             const unsigned score,
-                             const unsigned skips,
-                             const unsigned turns,
-                             const std::string& status)
-{
-  Logger::debug() << "Player '" << player
-                  << "' score: " << score
-                  << ", skips: " << skips
-                  << ", turns: " << turns
-                  << ", status: " << status;
-}
-
-//-----------------------------------------------------------------------------
 void BotRunner::test() {
   BotTester().test(*this);
 }
@@ -194,7 +102,7 @@ void BotRunner::test() {
 void BotRunner::play() {
   login();
   while (waitForGameStart()) {
-    while (!game.isFinished()) {
+    while (!getGame().isFinished()) {
       readln(input);
       const std::string type = input.getStr();
       if (type == "Q") {
@@ -235,7 +143,7 @@ void BotRunner::play() {
 
 //-----------------------------------------------------------------------------
 bool BotRunner::waitForGameStart() {
-  while (!game.isStarted()) {
+  while (!getGame().isStarted()) {
     readln(input);
     const std::string type = input.getStr();
     if (type == "Q") {
@@ -255,7 +163,7 @@ bool BotRunner::waitForGameStart() {
                   << input.getLine());
     }
   }
-  return game.isStarted();
+  return getGame().isStarted();
 }
 
 //-----------------------------------------------------------------------------
@@ -332,7 +240,7 @@ void BotRunner::handleGameInfoMessage() {
       }
       const std::string desc = input.getStr(1);
       if (!myBoard->updateDescriptor(desc) ||
-          !myBoard->matchesConfig(game.getConfiguration()))
+          !myBoard->matchesConfig(getGameConfig()))
       {
         throw Error(Msg() << "Invalid YourBoard descriptor: " << desc);
       }
@@ -354,7 +262,7 @@ void BotRunner::handleGameInfoMessage() {
 //-----------------------------------------------------------------------------
 void BotRunner::handleGameStartedMessage() {
   const unsigned count = (input.getFieldCount() - 1);
-  if (count != game.getBoardCount()) {
+  if (count != getGame().getBoardCount()) {
     throw Error(Msg() << "Invalid player count in game start message: "
                 << input.getLine());
   }
@@ -364,7 +272,7 @@ void BotRunner::handleGameStartedMessage() {
     if (player.empty()) {
       throw Error(Msg() << "Empty player name in game start message: "
                   << input.getLine());
-    } else if (!game.hasBoard(player)) {
+    } else if (!getGame().hasBoard(player)) {
       throw Error(Msg() << "Unknown player name (" << player
                   << ") in game start message: " << input.getLine());
     } else {
@@ -413,7 +321,7 @@ void BotRunner::handleMessageMessage() {
 void BotRunner::handleSkipTurnMessage() {
   const std::string player = input.getStr(1);
   const std::string reason = input.getStr(2);
-  if (!game.hasBoard(player)) {
+  if (!getGame().hasBoard(player)) {
     throw Error(Msg() << "Invalid player name in skip turn message: "
                 << input.getLine());
   }
@@ -423,7 +331,7 @@ void BotRunner::handleSkipTurnMessage() {
 //-----------------------------------------------------------------------------
 void BotRunner::handleNextTurnMessage() {
   const std::string player = input.getStr(1);
-  if (!game.hasBoard(player)) {
+  if (!getGame().hasBoard(player)) {
     throw Error(Msg() << "Invalid player name in next turn message: "
                 << input.getLine());
   }
@@ -446,7 +354,7 @@ void BotRunner::login() {
     sock.connect(host, port);
   } else {
     // running as a shell-bot, send bot info
-    sendln(Msg('I') << getBotName() << getVersion() << getPlayerName());
+    sendln(Msg('I') << getBotName() << getBotVersion() << getPlayerName());
   }
 
   Logger::debug() << "Waiting for game info message";

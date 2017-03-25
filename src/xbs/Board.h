@@ -154,6 +154,7 @@ public: // methods
   unsigned distToEdge(Coordinate, const Direction) const noexcept;
   unsigned freeCount(const unsigned idx, const Direction) const noexcept;
   unsigned freeCount(Coordinate, const Direction) const noexcept;
+  unsigned splatCount() const noexcept;
   unsigned hitCount() const noexcept;
   unsigned hitCount(const unsigned idx, const Direction) const noexcept;
   unsigned hitCount(Coordinate, const Direction) const noexcept;

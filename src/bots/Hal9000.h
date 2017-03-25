@@ -7,34 +7,20 @@
 
 #include "Platform.h"
 #include "BotRunner.h"
-#include "ScoredCoordinate.h"
 
 namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Hal9000 : public BotRunner
-{
-//-----------------------------------------------------------------------------
-private: // variables
-    bool parity = random(2);
-
+class Hal9000 : public BotRunner {
 //-----------------------------------------------------------------------------
 public: // constructors
-    Hal9000() : BotRunner("Hal-9000") { }
+  Hal9000() : BotRunner("Hal-9000", Version("2.0.x")) { }
 
 //-----------------------------------------------------------------------------
-public: // BotRunner::Bot implementation
-  Version getVersion() const override { return Version("2.0.x"); }
-  std::string getBestShot(Coordinate&) override;
-
-  virtual bool isCompatibleWith(const Version& serverVersion) const {
-      return (serverVersion >= Version(1, 1));
-  }
-
-//-----------------------------------------------------------------------------
-private: // methods
-  ScoredCoordinate bestShotOn(const Board&);
+protected: // Bot implementation
+  void frenzyScore(const Board&, ScoredCoordinate&, const unsigned) override;
+  void searchScore(const Board&, ScoredCoordinate&, const unsigned) override;
 };
 
 } // namespace xbs

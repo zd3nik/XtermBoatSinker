@@ -462,6 +462,17 @@ unsigned Board::freeCount(Coordinate coord,
 }
 
 //-----------------------------------------------------------------------------
+unsigned Board::splatCount() const noexcept {
+  unsigned count = 0;
+  for (const char ch : descriptor) {
+    if (ch != Ship::NONE) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+//-----------------------------------------------------------------------------
 unsigned Board::hitCount() const noexcept {
   unsigned count = 0;
   for (const char ch : descriptor) {

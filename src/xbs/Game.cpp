@@ -58,7 +58,7 @@ Game& Game::setTitle(const std::string& value) {
 }
 
 //-----------------------------------------------------------------------------
-BoardPtr Game::boardToMove() {
+BoardPtr Game::boardToMove() const {
   if (isStarted() && !isFinished()) {
     auto board = boardAtIndex(toMove);
     if (!board || !board->isToMove()) {
@@ -70,7 +70,7 @@ BoardPtr Game::boardToMove() {
 }
 
 //-----------------------------------------------------------------------------
-BoardPtr Game::boardAtIndex(const unsigned index) {
+BoardPtr Game::boardAtIndex(const unsigned index) const {
   if (index < boards.size()) {
     return boards[index];
   }
@@ -78,7 +78,7 @@ BoardPtr Game::boardAtIndex(const unsigned index) {
 }
 
 //-----------------------------------------------------------------------------
-BoardPtr Game::boardForHandle(const int handle) {
+BoardPtr Game::boardForHandle(const int handle) const {
   if (handle >= 0) {
     for (auto& board : boards) {
       if (board->handle() == handle) {
@@ -90,7 +90,7 @@ BoardPtr Game::boardForHandle(const int handle) {
 }
 
 //-----------------------------------------------------------------------------
-BoardPtr Game::boardForPlayer(const std::string& name, const bool exact) {
+BoardPtr Game::boardForPlayer(const std::string& name, const bool exact) const {
   if (name.empty()) {
     return nullptr;
   }
