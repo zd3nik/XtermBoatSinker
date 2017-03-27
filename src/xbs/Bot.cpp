@@ -198,7 +198,7 @@ std::string Bot::getBestShot(Coordinate& shotCoord) {
 
   std::random_shuffle(boards.begin(), boards.end());
   for (auto& board : boards) {
-    ScoredCoordinate coord(bestShotOn(*board));
+    ScoredCoordinate coord(getTargetCoordinate(*board));
     if (coord && (!bestBoard || (coord.getScore() > bestCoord.getScore()))) {
       bestBoard = board;
       bestCoord = coord;
@@ -210,7 +210,7 @@ std::string Bot::getBestShot(Coordinate& shotCoord) {
 }
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate Bot::bestShotOn(const Board& board) {
+ScoredCoordinate Bot::getTargetCoordinate(const Board& board) {
   const std::string desc = board.getDescriptor();
   if (desc.empty() || (desc.size() != boardSize)) {
     throw std::runtime_error("Incorrect board descriptor size");
@@ -248,40 +248,50 @@ ScoredCoordinate Bot::bestShotOn(const Board& board) {
     return ScoredCoordinate();
   }
 
-  remain = (getGameConfig().getPointGoal() - hitCount);
-  boardWeight = (100 * std::log(remain + 1));
-  optionsWeight = std::log((splatCount / coords.size()) + 1);
+  if (!(remain = (getGameConfig().getPointGoal() - hitCount))) {
+    return getRandomCoord().setScore(0);
+  }
+
+  return bestShotOn(board);
+}
+
+//-----------------------------------------------------------------------------
+ScoredCoordinate Bot::bestShotOn(const Board& board) {
+  const double weight = (100 * std::log(remain + 1));
 
   for (ScoredCoordinate& coord : coords) {
     const unsigned i = board.getShipIndex(coord);
     if (adjacentHits[i]) {
-      frenzyScore(board, coord, i);
+      frenzyScore(board, coord, weight);
     } else {
-      searchScore(board, coord, i);
+      searchScore(board, coord, weight);
     }
   }
 
-  ScoredCoordinate best = getBestCoord();
-  best.setScore(floor(best.getScore() * (1 + optionsWeight)));
-  return std::move(best);
+  return getBestCoord();
+
+//  ScoredCoordinate best(getBestCoord());
+//  optionsWeight = std::log((splatCount / coords.size()) + 1);
+//  best.setScore(floor(best.getScore() * (1 + optionsWeight)));
+//  return std::move(best);
 }
 
 //-----------------------------------------------------------------------------
 void Bot::frenzyScore(const Board&,
                       ScoredCoordinate&,
-                      const unsigned)
+                      const double)
 {
 }
 
 //-----------------------------------------------------------------------------
 void Bot::searchScore(const Board&,
                       ScoredCoordinate&,
-                      const unsigned)
+                      const double)
 {
 }
 
 //-----------------------------------------------------------------------------
-const ScoredCoordinate& Bot::getBestCoord() {
+ScoredCoordinate& Bot::getBestCoord() {
   ASSERT(coords.size());
   std::random_shuffle(coords.begin(), coords.end());
   unsigned best = 0;
@@ -294,7 +304,7 @@ const ScoredCoordinate& Bot::getBestCoord() {
 }
 
 //-----------------------------------------------------------------------------
-const ScoredCoordinate& Bot::getRandomCoord() {
+ScoredCoordinate& Bot::getRandomCoord() {
   ASSERT(coords.size());
   return coords[random(coords.size())];
 }

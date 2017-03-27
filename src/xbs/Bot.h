@@ -37,8 +37,6 @@ protected: // variables
   unsigned splatCount = 0;
   unsigned hitCount = 0;
   unsigned remain = 0;
-  double boardWeight = 0;
-  double optionsWeight = 0;
   std::vector<ScoredCoordinate> coords;
   std::vector<unsigned> adjacentHits;
   std::vector<unsigned> adjacentFree;
@@ -63,6 +61,7 @@ public: // destructor
 public: // virtual methods
   virtual std::string newGame(const Configuration& gameConfig);
   virtual std::string getBestShot(Coordinate&);
+  virtual ScoredCoordinate getTargetCoordinate(const Board&);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void finishGame(const std::string& state,
@@ -119,13 +118,13 @@ public: // setters
 //-----------------------------------------------------------------------------
 protected: // virtual methods
   virtual ScoredCoordinate bestShotOn(const Board&);
-  virtual void frenzyScore(const Board&, ScoredCoordinate&, const unsigned idx);
-  virtual void searchScore(const Board&, ScoredCoordinate&, const unsigned idx);
+  virtual void frenzyScore(const Board&, ScoredCoordinate&, const double weight);
+  virtual void searchScore(const Board&, ScoredCoordinate&, const double weight);
 
 //-----------------------------------------------------------------------------
 protected: // methods
-  const ScoredCoordinate& getBestCoord();
-  const ScoredCoordinate& getRandomCoord();
+  ScoredCoordinate& getBestCoord();
+  ScoredCoordinate& getRandomCoord();
 };
 
 } // namespace xbs

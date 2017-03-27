@@ -12,24 +12,23 @@ namespace xbs {
 //-----------------------------------------------------------------------------
 void Sal9000::frenzyScore(const Board& board,
                           ScoredCoordinate& coord,
-                          const unsigned)
+                          const double weight)
 {
   const unsigned len = board.maxInlineHits(coord);
-  coord.setScore(floor(std::min<unsigned>(longShip, len) * boardWeight));
+  coord.setScore(floor(std::min<unsigned>(longShip, len) * weight));
 }
 
 //-----------------------------------------------------------------------------
 void Sal9000::searchScore(const Board& board,
                           ScoredCoordinate& coord,
-                          const unsigned)
+                          const double weight)
 {
   const double north = board.freeCount(coord, Direction::North);
   const double south = board.freeCount(coord, Direction::South);
   const double east  = board.freeCount(coord, Direction::East);
   const double west  = board.freeCount(coord, Direction::West);
   const double score = ((north + south + east + west) / (4 * maxLen));
-  ASSERT(score < 1);
-  coord.setScore(floor(score * boardWeight));
+  coord.setScore(floor(score * weight));
 }
 
 } // namespace xbs

@@ -31,3 +31,13 @@ project(sal)
 include_directories(bots)
 add_executable(xbs-sal "bots/Sal9000.cpp")
 target_link_libraries(xbs-sal xbs)
+
+project(edgar)
+include_directories(bots)
+add_executable(xbs-edgar "bots/Edgar.cpp")
+target_link_libraries(xbs-edgar xbs)
+
+project(jane)
+include_directories(bots)
+add_executable(xbs-jane "bots/Jane.cpp")
+target_link_libraries(xbs-jane xbs)

@@ -672,7 +672,7 @@ bool Board::placeShips(std::string& desc,
   }
 
   if (msa) {
-    // is it possible to atain desired msa with remaining ships?
+    // is it possible to attain desired msa with remaining ships?
     const std::string savedDesc = descriptor;
     descriptor = desc;
     unsigned sa = surfaceArea();

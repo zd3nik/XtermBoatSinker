@@ -11,19 +11,9 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-void RandomRufus::frenzyScore(const Board&,
-                              ScoredCoordinate& coord,
-                              const unsigned)
-{
-  coord.setScore(boardWeight);
-}
-
-//-----------------------------------------------------------------------------
-void RandomRufus::searchScore(const Board&,
-                              ScoredCoordinate& coord,
-                              const unsigned)
-{
-  coord.setScore(boardWeight);
+ScoredCoordinate RandomRufus::bestShotOn(const Board&) {
+  const double weight = floor(100 * std::log(remain + 1));
+  return getRandomCoord().setScore(weight);
 }
 
 } // namespace xbs

@@ -19,8 +19,7 @@ public: // constructors
 
 //-----------------------------------------------------------------------------
 protected: // Bot implementation
-  void frenzyScore(const Board&, ScoredCoordinate&, const unsigned) override;
-  void searchScore(const Board&, ScoredCoordinate&, const unsigned) override;
+  ScoredCoordinate bestShotOn(const Board&) override;
 };
 
 } // namespace xbs

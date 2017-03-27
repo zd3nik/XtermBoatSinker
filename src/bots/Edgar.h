@@ -1,9 +1,9 @@
 //-----------------------------------------------------------------------------
-// Sal9000.h
+// Edgar.h
 // Copyright (c) 2016-2017 Shawn Chidester, All rights reserved
 //-----------------------------------------------------------------------------
-#ifndef XBS_SAL_9000_H
-#define XBS_SAL_9000_H
+#ifndef XBS_EDGAR_H
+#define XBS_EDGAR_H
 
 #include "Platform.h"
 #include "BotRunner.h"
@@ -12,10 +12,10 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-class Sal9000 : public BotRunner {
+class Edgar : public BotRunner {
 //-----------------------------------------------------------------------------
 public: // constructors
-  Sal9000() : BotRunner("Sal-9000", Version("2.0.x")) { }
+  Edgar() : BotRunner("Edgar", Version("2.0.x")) { }
 
 //-----------------------------------------------------------------------------
 protected: // Bot implementation
@@ -25,4 +25,4 @@ protected: // Bot implementation
 
 } // namespace xbs
 
-#endif // XBS_SAL_9000_H
+#endif // XBS_EDGAR_H

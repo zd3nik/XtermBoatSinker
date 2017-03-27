@@ -12,18 +12,18 @@ namespace xbs {
 //-----------------------------------------------------------------------------
 void Hal9000::frenzyScore(const Board& board,
                           ScoredCoordinate& coord,
-                          const unsigned)
+                          const double weight)
 {
   const unsigned len = board.maxInlineHits(coord);
-  coord.setScore(floor(std::min<unsigned>(longShip, len) * boardWeight));
+  coord.setScore(floor(std::min<unsigned>(longShip, len) * weight));
 }
 
 //-----------------------------------------------------------------------------
 void Hal9000::searchScore(const Board&,
                           ScoredCoordinate& coord,
-                          const unsigned)
+                          const double weight)
 {
-  coord.setScore(floor(boardWeight / 2));
+  coord.setScore(floor(weight / 2));
 }
 
 } // namespace xbs
