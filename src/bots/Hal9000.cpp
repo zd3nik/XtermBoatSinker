@@ -11,7 +11,7 @@ namespace xbs {
 
 //-----------------------------------------------------------------------------
 void Hal9000::frenzyScore(const Board& board,
-                          ScoredCoordinate& coord,
+                          Coordinate& coord,
                           const double weight)
 {
   const unsigned len = board.maxInlineHits(coord);
@@ -20,7 +20,7 @@ void Hal9000::frenzyScore(const Board& board,
 
 //-----------------------------------------------------------------------------
 void Hal9000::searchScore(const Board&,
-                          ScoredCoordinate& coord,
+                          Coordinate& coord,
                           const double weight)
 {
   coord.setScore(floor(weight / 2));

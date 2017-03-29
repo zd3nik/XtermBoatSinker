@@ -11,7 +11,7 @@ namespace xbs {
 
 //-----------------------------------------------------------------------------
 void Edgar::frenzyScore(const Board& board,
-                        ScoredCoordinate& coord,
+                        Coordinate& coord,
                         const double weight)
 {
   // if 1 shot left it's guaranteed to be adjacent to an existing hit
@@ -143,7 +143,7 @@ void Edgar::frenzyScore(const Board& board,
 
 //-----------------------------------------------------------------------------
 void Edgar::searchScore(const Board& board,
-                        ScoredCoordinate& coord,
+                        Coordinate& coord,
                         const double weight)
 {
   const double north = board.freeCount(coord, Direction::North);

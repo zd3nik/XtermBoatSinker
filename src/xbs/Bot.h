@@ -10,7 +10,6 @@
 #include "Configuration.h"
 #include "Coordinate.h"
 #include "Game.h"
-#include "ScoredCoordinate.h"
 #include "Version.h"
 
 namespace xbs
@@ -37,7 +36,7 @@ protected: // variables
   unsigned splatCount = 0;
   unsigned hitCount = 0;
   unsigned remain = 0;
-  std::vector<ScoredCoordinate> coords;
+  std::vector<Coordinate> coords;
   std::vector<unsigned> adjacentHits;
   std::vector<unsigned> adjacentFree;
   std::set<unsigned> frenzySquares;
@@ -61,7 +60,7 @@ public: // destructor
 public: // virtual methods
   virtual std::string newGame(const Configuration& gameConfig);
   virtual std::string getBestShot(Coordinate&);
-  virtual ScoredCoordinate getTargetCoordinate(const Board&);
+  virtual Coordinate getTargetCoordinate(const Board&);
   virtual void playerJoined(const std::string& player);
   virtual void startGame(const std::vector<std::string>& playerOrder);
   virtual void finishGame(const std::string& state,
@@ -117,14 +116,14 @@ public: // setters
 
 //-----------------------------------------------------------------------------
 protected: // virtual methods
-  virtual ScoredCoordinate bestShotOn(const Board&);
-  virtual void frenzyScore(const Board&, ScoredCoordinate&, const double weight);
-  virtual void searchScore(const Board&, ScoredCoordinate&, const double weight);
+  virtual Coordinate bestShotOn(const Board&);
+  virtual void frenzyScore(const Board&, Coordinate&, const double weight);
+  virtual void searchScore(const Board&, Coordinate&, const double weight);
 
 //-----------------------------------------------------------------------------
 protected: // methods
-  ScoredCoordinate& getBestCoord();
-  ScoredCoordinate& getRandomCoord();
+  Coordinate& getBestCoord();
+  Coordinate& getRandomCoord();
 };
 
 } // namespace xbs

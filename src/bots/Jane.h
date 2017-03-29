@@ -15,10 +15,12 @@ namespace xbs
 class Jane : public BotRunner {
 //-----------------------------------------------------------------------------
 private: // variables
-  std::vector<uint64_t> nodeCount;
-  std::vector<unsigned> legal;
   std::vector<Ship> shipStack;
-  unsigned shipCount = 0;
+  std::vector<unsigned> placed;
+  std::vector<uint64_t> possibleCount;
+  std::vector<uint64_t> searchedCount;
+  std::vector<double> legal;
+  unsigned unplaced = 0;
 
 //-----------------------------------------------------------------------------
 public: // constructors
@@ -30,37 +32,30 @@ public: // Bot implementation
 
 //-----------------------------------------------------------------------------
 protected: // Bot implementation
-  ScoredCoordinate getTargetCoordinate(const Board&) override;
-  ScoredCoordinate bestShotOn(const Board&) override;
-  void frenzyScore(const Board&, ScoredCoordinate&, const double) override;
-  void searchScore(const Board&, ScoredCoordinate&, const double) override;
+  Coordinate bestShotOn(const Board&) override;
+  void frenzyScore(const Board&, Coordinate&, const double) override;
+  void searchScore(const Board&, Coordinate&, const double) override;
+
+//-----------------------------------------------------------------------------
+private: // structs
+  struct Placement {
+    Coordinate coord;
+    Direction dir;
+    unsigned shipIndex;
+    bool operator<(const Placement& p) const noexcept {
+      return (coord.getScore() > p.coord.getScore());
+    }
+  };
 
 //-----------------------------------------------------------------------------
 private: // methods
+  std::vector<Placement> getPlacements(const std::string& desc, const Board&);
+  const Ship& popShip(const unsigned idx);
+  void pushShip(const unsigned idx);
   void legalPlacementSearch(const Board&);
-  void preSortCoords(const Board&, const std::string& desc);
-  Ship popShip(unsigned idx);
-  void pushShip(const unsigned idx, const Ship&);
-  bool placeNext(const unsigned ply,
-                 const std::string& desc,
-                 const Board&,
-                 const std::vector<ScoredCoordinate>::const_iterator&,
-                 const std::vector<ScoredCoordinate>::const_iterator&);
-  bool placeShip(const unsigned ply,
-                 const std::string& desc,
-                 const Board&,
-                 const Ship&,
-                 const std::vector<ScoredCoordinate>::const_iterator&,
-                 const std::vector<ScoredCoordinate>::const_iterator&);
-  bool placeShip(std::string& desc,
-                 const Board& board,
-                 const Ship& ship,
-                 ScoredCoordinate coord,
-                 const Direction dir);
-  void updateLegalMap(const Board& board,
-                      const Ship& ship,
-                      ScoredCoordinate coord,
-                      const Direction dir);
+  bool placeNext(const unsigned ply, const std::string& desc, const Board&);
+  void placeShip(std::string& desc, const Board&, const Ship&, const Placement&);
+  void updateLegalMap(const Board& board, const Ship& ship, const Placement&);
   void logLegalMap(const Board&) const;
 };
 

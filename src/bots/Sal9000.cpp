@@ -11,7 +11,7 @@ namespace xbs {
 
 //-----------------------------------------------------------------------------
 void Sal9000::frenzyScore(const Board& board,
-                          ScoredCoordinate& coord,
+                          Coordinate& coord,
                           const double weight)
 {
   const unsigned len = board.maxInlineHits(coord);
@@ -20,7 +20,7 @@ void Sal9000::frenzyScore(const Board& board,
 
 //-----------------------------------------------------------------------------
 void Sal9000::searchScore(const Board& board,
-                          ScoredCoordinate& coord,
+                          Coordinate& coord,
                           const double weight)
 {
   const double north = board.freeCount(coord, Direction::North);

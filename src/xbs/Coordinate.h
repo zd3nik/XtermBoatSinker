@@ -29,6 +29,7 @@ public: // Printable implementaion
 private: // variables
   unsigned x = 0;
   unsigned y = 0;
+  double score = 0;
 
 //-----------------------------------------------------------------------------
 public: // constructors
@@ -38,9 +39,12 @@ public: // constructors
   Coordinate& operator=(Coordinate&&) noexcept = default;
   Coordinate& operator=(const Coordinate&) noexcept = default;
 
-  explicit Coordinate(const unsigned x, const unsigned y) noexcept
+  explicit Coordinate(const unsigned x,
+                      const unsigned y,
+                      const double score = 0) noexcept
     : x(x),
-      y(y)
+      y(y),
+      score(score)
   { }
 
 //-----------------------------------------------------------------------------
@@ -48,10 +52,15 @@ public: // methods
   unsigned getX() const noexcept { return x; }
   unsigned getY() const noexcept { return y; }
   unsigned parity() const noexcept { return ((x & 1) == (y & 1)); }
+  double getScore() const noexcept { return score; }
 
-  Coordinate& set(const unsigned x, const unsigned y) noexcept {
+  Coordinate& set(const unsigned x,
+                  const unsigned y,
+                  const double score = 0) noexcept
+  {
     this->x = x;
     this->y = y;
+    this->score = score;
     return (*this);
   }
 
@@ -70,6 +79,11 @@ public: // methods
 
   Coordinate& setY(const unsigned y) noexcept {
     this->y = y;
+    return (*this);
+  }
+
+  Coordinate& setScore(const double score) noexcept {
+    this->score = score;
     return (*this);
   }
 
@@ -126,6 +140,10 @@ public: // methods
     return false;
   }
 
+  bool before(const Coordinate& other) const noexcept {
+    return ((y < other.y) || ((y == other.y) && (x < other.x)));
+  }
+
 //-----------------------------------------------------------------------------
 public: // operator overloads
   explicit operator bool() const noexcept { return (x && y); }
@@ -140,10 +158,6 @@ public: // operator overloads
 
   bool operator!=(const Coordinate& other) const noexcept {
     return !operator==(other);
-  }
-
-  bool operator<(const Coordinate& other) const noexcept {
-    return ((y < other.y) || ((y == other.y) && (x < other.x)));
   }
 };
 

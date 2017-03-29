@@ -19,7 +19,7 @@ public: // constructors
 
 //-----------------------------------------------------------------------------
 protected: // Bot implementation
-  ScoredCoordinate bestShotOn(const Board&) override;
+  Coordinate bestShotOn(const Board&) override;
 };
 
 } // namespace xbs

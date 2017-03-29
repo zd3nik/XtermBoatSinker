@@ -11,7 +11,7 @@ namespace xbs
 {
 
 //-----------------------------------------------------------------------------
-ScoredCoordinate RandomRufus::bestShotOn(const Board&) {
+Coordinate RandomRufus::bestShotOn(const Board&) {
   const double weight = floor(100 * std::log(remain + 1));
   return getRandomCoord().setScore(weight);
 }
