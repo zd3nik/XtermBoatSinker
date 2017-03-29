@@ -13,18 +13,28 @@ namespace xbs {
 std::string Jane::newGame(const Configuration& gameConfig) {
   const std::string desc = BotRunner::newGame(gameConfig);
 
-  shipStack.assign(gameConfig.begin(), gameConfig.end());
-  std::sort(shipStack.begin(), shipStack.end(),
+  playerShips.clear();
+  placed.resize(gameConfig.getShipCount());
+  placementOrder.resize(gameConfig.getShipCount());
+  possibleCount.resize(gameConfig.getShipCount());
+  searchedCount.resize(gameConfig.getShipCount());
+  legal.resize(boardSize);
+
+  return desc;
+}
+
+//-----------------------------------------------------------------------------
+void Jane::playerJoined(const std::string& player) {
+  BotRunner::playerJoined(player);
+
+  const Configuration& config = getGameConfig();
+  std::vector<Ship> ships(config.begin(), config.end());
+  std::sort(ships.begin(), ships.end(),
             [](const Ship& a, const Ship& b) -> bool {
               return (a.getLength() > b.getLength());
             });
 
-  placed.resize(shipStack.size());
-  possibleCount.resize(shipStack.size());
-  searchedCount.resize(shipStack.size());
-  legal.resize(boardSize);
-
-  return desc;
+  playerShips[player] = std::move(ships);
 }
 
 //-----------------------------------------------------------------------------
@@ -38,7 +48,6 @@ void Jane::frenzyScore(const Board& board,
                        Coordinate& coord,
                        const double weight)
 {
-  // TODO edgar frenzy scoring
   const unsigned i = board.getShipIndex(coord);
   const unsigned len = board.maxInlineHits(coord);
   const double score = (std::min<unsigned>(longShip, len) * weight * legal[i]);
@@ -67,24 +76,21 @@ void Jane::legalPlacementSearch(const Board& board) {
   std::string desc = board.getDescriptor();
   if (desc.size() != boardSize) {
     throw Error("Invalid board size");
-  } else if (shipStack.size() != getGameConfig().getShipCount()) {
+  }
+
+  if (!playerShips.count(board.getName())) {
+    throw Error("Unknown player: " + board.getName());
+  }
+
+  shipStack = playerShips[board.getName()];
+  if (shipStack.size() != getGameConfig().getShipCount()) {
     throw Error("Invalid ship stack size");
   }
 
-  for (unsigned i = 0; i < shipStack.size(); ++i) {
-    if (!shipStack[i].getID() || !shipStack[i].getLength()) {
-      throw Error("Corrupted ship stack");
-    } else if (i && (shipStack[i].getLength() > shipStack[i - 1].getLength())) {
-      throw Error("Ship stack is not sorted");
-    }
-  }
-
-  // reset counters
   placed.assign(shipStack.size(), 0);
+  placementOrder.assign(shipStack.size(), ~0U);
   possibleCount.assign(shipStack.size(), 0);
   searchedCount.assign(shipStack.size(), 0);
-
-  // reset legal placement flags, will get updated in placeNext call
   legal.assign(boardSize, 0);
 
   // number of squares yet to be covered by ships
@@ -94,14 +100,27 @@ void Jane::legalPlacementSearch(const Board& board) {
   }
 
   // try to place all the ships on the board, covering all hit squares
-  placeNext(0, desc, board);
+  if (placeNext(0, desc, board)) {
+    // update ship placement order for this board
+    std::vector<Ship> ships;
+    std::set<unsigned> seen;
+    for (unsigned idx : placementOrder) {
+      if (seen.count(idx) || (idx >= shipStack.size())) {
+        throw Error("Invalid placement order vector");
+      }
+      ships.push_back(shipStack[idx]);
+      seen.insert(idx);
+    }
+    playerShips[board.getName()] = std::move(ships);
+  }
 
   if (isDebugMode()) {
     logLegalMap(board);
+    auto& ships = playerShips[board.getName()];
     uint64_t totalPossible = 0;
     uint64_t totalSearched = 0;
     for (unsigned i = 0; i < possibleCount.size(); ++i) {
-      Logger::info() << "nodeCount[" << i << "]: "
+      Logger::info() << "searchCount[" << ships[i].getID() << "]: "
                      << searchedCount[i] << " / " << possibleCount[i];
       totalPossible += possibleCount[i];
       totalSearched += searchedCount[i];
@@ -183,8 +202,9 @@ std::vector<Jane::Placement> Jane::getPlacements(const std::string& desc,
         }
         const Ship& ship = shipStack[n];
         if ((len >= ship.getLength()) && (hits || !hitCount)) {
+          unsigned weight = (shipStack.size() - n + 1);
           unsigned len = std::min<unsigned>(hits, (ship.getLength() - 1));
-          double score = ((100 * len * ship.getLength()) + ship.getLength());
+          double score = ((100 * len * weight) + weight);
           placements.push_back(Placement());
           Placement& p = placements.back();
           (p.coord = c).setScore(score);
@@ -231,6 +251,7 @@ bool Jane::placeNext(const unsigned ply,
     if (placeNext((ply + 1), tmp, board)) {
       updateLegalMap(board, ship, p);
       pushShip(p.shipIndex);
+      placementOrder[ply] = p.shipIndex;
       return true;
     }
 

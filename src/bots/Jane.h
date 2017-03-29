@@ -15,8 +15,10 @@ namespace xbs
 class Jane : public BotRunner {
 //-----------------------------------------------------------------------------
 private: // variables
+  std::map<std::string, std::vector<Ship>> playerShips;
   std::vector<Ship> shipStack;
   std::vector<unsigned> placed;
+  std::vector<unsigned> placementOrder;
   std::vector<uint64_t> possibleCount;
   std::vector<uint64_t> searchedCount;
   std::vector<double> legal;
@@ -29,6 +31,7 @@ public: // constructors
 //-----------------------------------------------------------------------------
 public: // Bot implementation
   std::string newGame(const Configuration& gameConfig) override;
+  void playerJoined(const std::string& player) override;
 
 //-----------------------------------------------------------------------------
 protected: // Bot implementation
