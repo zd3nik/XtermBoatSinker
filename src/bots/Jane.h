@@ -16,6 +16,8 @@ class Jane : public BotRunner {
 //-----------------------------------------------------------------------------
 private: // variables
   std::map<std::string, std::vector<Ship>> playerShips;
+  std::map<std::string, std::set<std::string>> illegalRootPlacements;
+  std::set<std::string> illegal;
   std::vector<Ship> shipStack;
   std::vector<unsigned> placed;
   std::vector<unsigned> placementOrder;
@@ -45,6 +47,9 @@ private: // structs
     Coordinate coord;
     Direction dir;
     unsigned shipIndex;
+    std::string key(const Ship& ship) const {
+      return (coord.toString() + ship.getID() + toStr(dir));
+    }
     bool operator<(const Placement& p) const noexcept {
       return (coord.getScore() > p.coord.getScore());
     }
@@ -52,7 +57,8 @@ private: // structs
 
 //-----------------------------------------------------------------------------
 private: // methods
-  std::vector<Placement> getPlacements(const std::string& desc, const Board&);
+  void getPlacements(const unsigned ply, const std::string& desc, const Board&,
+                     std::vector<Placement>&) const;
   const Ship& popShip(const unsigned idx);
   void pushShip(const unsigned idx);
   void legalPlacementSearch(const Board&);
