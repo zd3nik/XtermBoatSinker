@@ -41,3 +41,8 @@ project(jane)
 include_directories(bots)
 add_executable(xbs-jane "bots/Jane.cpp")
 target_link_libraries(xbs-jane xbs)
+
+project(wopr)
+include_directories(bots)
+add_executable(xbs-wopr "bots/WOPR.cpp")
+target_link_libraries(xbs-wopr xbs)
