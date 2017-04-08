@@ -297,7 +297,7 @@ Example type `R` message:
     R|turkey|13|0|35|
 
     Player name = turkey
-    Score       = 15
+    Score       = 13
     Skips       = 0
     Turns       = 35
     Status      = (none)
