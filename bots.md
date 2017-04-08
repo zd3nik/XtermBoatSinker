@@ -145,7 +145,7 @@ In order to send *legal* shot messages when it's your bot's turn, not to mention
 
 ### Making your bot more advanced
 
-Your bot will function properly with no more logic than what's described above.  But if you want to track your bot's success/failure rate you should also make it watch for `G` (game finished) messages.  Whenever it receives a message of this kind it will be followed by one `R` (player result) message for each player in the game.  From these messages you can obtain the final score each player atained (including your bot's score) and do what you will with it (print it to the console, update a database, etc).
+Your bot will function properly with no more logic than what's described above.  But if you want to track your bot's success/failure rate you should also make it watch for `G` (game finished) messages.  Whenever it receives a message of this kind it will be followed by one `R` (player result) message for each player in the game.  From these messages you can obtain the final score each player attained (including your bot's score) and do what you will with it (print it to the console, update a database, etc).
 
 If you really want to get fancy you can also have your bot send periodic messages to taunt, encourage, annoy, or amuse its opponents.  It can also watch for user messages and respond to specific texts or you could even try to build advanced message interaction skills into your bot.
 
