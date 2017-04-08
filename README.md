@@ -7,7 +7,7 @@ Each player has one board and a set of ships to place on their board.  The board
 
 Once a game has started players take turns shooting at each other's boards (you are not allowed to shoot at your own board).  The game ends when at least one player has obtained the game's point goal and all players have had an equal number of turns.  By default the point goal is equal to the number of coordinates occupied by a single player's ships.  That is 17 in the default game configuration which has one 5 point ship, one 4 point ship, two 3 point ships, and one 2 point ship (5 + 4 + 3 + 3 + 2 = 17).  All players get the same number of turns so it is possible for more than one player to obtain the point goal.  In other words, it is possible for 2 or more players to tie for first place.
 
-The game doesn't end when all of a player's ships are fully hit.  Nor does having all of your ships fully hit eliminate you from the game.  The objective of the game is to get the point goal first, not to avoid getting hit.  Although, arranging your ships so they are less likely to get hit helps reduce the amount of points your opponents can get, so place you ships wisely.
+The game doesn't end when all of a player's ships are fully hit.  Nor does having all of your ships fully hit eliminate you from the game.  The objective of the game is to get the point goal first, not to avoid getting hit.  Although, arranging your ships so they are less likely to get hit helps reduce the amount of points your opponents can get, so place your ships wisely.
 
 How to build
 ------------
