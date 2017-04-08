@@ -61,13 +61,20 @@ void Jane::searchScore(const Board& board,
                        const double weight)
 {
   const unsigned i = board.getShipIndex(coord);
-  const double n = board.freeCount(coord, Direction::North);
-  const double s = board.freeCount(coord, Direction::South);
-  const double e = board.freeCount(coord, Direction::East);
-  const double w = board.freeCount(coord, Direction::West);
-  double score = (((weight * legal[i]) / 2) * (n + s + e + w) / (4 * maxLen));
-  if (coord.parity() != parity) {
-    score /= 4;
+  double score = ((weight * legal[i]) / 2);
+  if (score > 0) {
+    const double n = board.freeCount(coord, Direction::North);
+    const double s = board.freeCount(coord, Direction::South);
+    const double e = board.freeCount(coord, Direction::East);
+    const double w = board.freeCount(coord, Direction::West);
+    ASSERT(n < maxLen);
+    ASSERT(s < maxLen);
+    ASSERT(e < maxLen);
+    ASSERT(w < maxLen);
+    score *= ((n + s + e + w) / (4 * maxLen));
+    if (coord.parity() != parity) {
+      score /= 4;
+    }
   }
   coord.setScore(score);
 }

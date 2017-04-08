@@ -45,6 +45,22 @@ Coordinate WOPR::bestShotOn(const Board& board) {
 }
 
 //-----------------------------------------------------------------------------
+static inline double getSpace(const Board& board,
+                              const Coordinate& coord,
+                              const unsigned maxLen)
+{
+  const double n = board.freeCount(coord, Direction::North);
+  const double s = board.freeCount(coord, Direction::South);
+  const double e = board.freeCount(coord, Direction::East);
+  const double w = board.freeCount(coord, Direction::West);
+  ASSERT(n < maxLen);
+  ASSERT(s < maxLen);
+  ASSERT(e < maxLen);
+  ASSERT(w < maxLen);
+  return ((n + s + e + w) / (4 * maxLen));
+}
+
+//-----------------------------------------------------------------------------
 void WOPR::frenzyScore(const Board& board,
                        Coordinate& coord,
                        const double weight)
@@ -52,17 +68,22 @@ void WOPR::frenzyScore(const Board& board,
   unsigned i = board.getShipIndex(coord);
   double score = (weight * legal[i]);
   if (score > 0) {
-    const double n = board.freeCount(coord, Direction::North);
-    const double s = board.freeCount(coord, Direction::South);
-    const double e = board.freeCount(coord, Direction::East);
-    const double w = board.freeCount(coord, Direction::West);
-    const double space = ((n + s + e + w) / (4 * maxLen));
-    ASSERT(n < maxLen);
-    ASSERT(s < maxLen);
-    ASSERT(e < maxLen);
-    ASSERT(w < maxLen);
-    if (space) {
-      score *= space;
+    const unsigned len = board.maxInlineHits(coord);
+    if (playerShips.size() > 2) {
+      // use Jane logic in multi-player games
+      if (len) {
+        score *= std::min<unsigned>(longShip, len);
+      } else {
+        score /= 2;
+        score *= getSpace(board, coord, maxLen);
+      }
+    } else if (len > 1) {
+      score *= 10;
+    } else {
+      const double space = getSpace(board, coord, maxLen);
+      if (space) {
+        score *= space;
+      }
     }
   }
   coord.setScore(score);
