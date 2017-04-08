@@ -98,7 +98,7 @@ To run multiple matches between your bot and Skipper you can do the following (a
 
  * Run Skipper in another terminal:
 
-    `while ./xbs-skipper --host localhost --port 7948; do sleep 0.1; done`
+    `while ./xbs-skipper --host localhost; do sleep 0.1; done`
 
  * Run your bot in another terminal.  To run your bot 200 times in succession you can use:
 
