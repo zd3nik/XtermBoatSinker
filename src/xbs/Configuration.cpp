@@ -26,6 +26,15 @@ Configuration Configuration::getDefaultConfiguration() {
 }
 
 //-----------------------------------------------------------------------------
+unsigned Configuration::getShipTotal() const noexcept {
+  unsigned total = 0;
+  for (const Ship& ship : ships) {
+    total += ship.getLength();
+  }
+  return total;
+}
+
+//-----------------------------------------------------------------------------
 Configuration& Configuration::addShip(const Ship& newShip) {
   if (newShip) {
     ships.push_back(newShip);

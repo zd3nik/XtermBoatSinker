@@ -24,6 +24,7 @@ private: // variables
   std::vector<uint64_t> possibleCount;
   std::vector<uint64_t> searchedCount;
   std::vector<double> legal;
+  unsigned uncoveredHits = 0;
   unsigned unplaced = 0;
 
 //-----------------------------------------------------------------------------

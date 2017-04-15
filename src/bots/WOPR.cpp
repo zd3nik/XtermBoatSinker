@@ -69,20 +69,16 @@ void WOPR::frenzyScore(const Board& board,
   double score = (weight * legal[i]);
   if (score > 0) {
     const unsigned len = board.maxInlineHits(coord);
-    if (playerShips.size() > 2) {
-      // use Jane logic in multi-player games
-      if (len) {
-        score *= std::min<unsigned>(longShip, len);
-      } else {
-        score /= 2;
-        score *= getSpace(board, coord, maxLen);
-      }
-    } else if (len > 1) {
+    if (len > 1) {
       score *= 10;
     } else {
       const double space = getSpace(board, coord, maxLen);
       if (space) {
         score *= space;
+      }
+      if (frenzySquares.count(i)) {
+        double hitWeight = (static_cast<double>(hitCount) / shipTotal);
+        score *= (hitWeight + (playerShips.size() - 1));
       }
     }
   }
@@ -234,7 +230,7 @@ void WOPR::getPlacements(const unsigned ply,
         }
 
         const Ship& ship = shipStack[n];
-        if ((len < ship.getLength()) || (hitCount && !hits)) {
+        if ((len < ship.getLength()) || (uncoveredHits && !hits)) {
           continue;
         }
 
@@ -271,12 +267,12 @@ bool WOPR::placeNext(const unsigned ply,
                      const std::string& desc,
                      const Board& board)
 {
-  hitCount = 0;
+  uncoveredHits = 0;
   for (unsigned i = 0; i < desc.size(); ++i) {
-    hitCount += (desc[i] == Ship::HIT);
+    uncoveredHits += (desc[i] == Ship::HIT);
   }
 
-  if (unplaced < hitCount) {
+  if (unplaced < uncoveredHits) {
     return false; // can't cover remaining hits with remaining ships
   } else if (unplaced == 0) {
     return true;  // all the ships have been placed!

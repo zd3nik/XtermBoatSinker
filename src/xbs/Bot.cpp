@@ -32,6 +32,7 @@ std::string Bot::newGame(const Configuration& config) {
   boardSize = config.getShipArea().getSize();
   shortShip = config.getShortestShip().getLength();
   longShip = config.getLongestShip().getLength();
+  shipTotal = config.getShipTotal();
   maxLen = std::max<unsigned>(config.getBoardHeight(), config.getBoardWidth());
   coords.reserve(boardSize / 2);
   adjacentHits.resize(boardSize);
@@ -242,13 +243,16 @@ Coordinate Bot::getTargetCoordinate(const Board& board) {
     }
   }
 
+  ASSERT(shipTotal >= hitCount);
+  remain = (shipTotal - hitCount);
+
   if (coords.empty()) {
     Logger::warn() << "no coordinates available to shoot at on '"
                    << board.getName() << "' board";
     return Coordinate();
   }
 
-  if (!(remain = (getGameConfig().getPointGoal() - hitCount))) {
+  if (!remain) {
     return getRandomCoord().setScore(0);
   }
 

@@ -32,6 +32,7 @@ protected: // variables
   unsigned boardSize = 0;
   unsigned shortShip = 0;
   unsigned longShip = 0;
+  unsigned shipTotal = 0;
   unsigned maxLen = 0;
   unsigned splatCount = 0;
   unsigned hitCount = 0;

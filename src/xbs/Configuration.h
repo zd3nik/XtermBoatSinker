@@ -43,6 +43,7 @@ public: // methods
   unsigned getMinPlayers() const noexcept { return minPlayers; }
   unsigned getPointGoal() const noexcept { return pointGoal; }
   unsigned getShipCount() const noexcept { return ships.size(); }
+  unsigned getShipTotal() const noexcept;
 
   Configuration& addShip(const Ship&);
   Configuration& clearShips() noexcept;
