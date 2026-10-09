@@ -1,48 +1,47 @@
-cmake_minimum_required(VERSION 2.8)
-include(../init.cmake)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 add_subdirectory(xbs)
 include_directories(xbs)
 
-project(server)
+project(server CXX)
 add_executable(xbs-server "ServerMain.cpp")
 target_link_libraries(xbs-server xbs)
 
-project(client)
+project(client CXX)
 add_executable(xbs-client "UserClient.cpp")
 target_link_libraries(xbs-client xbs)
 
-project(skipper)
+project(skipper CXX)
 include_directories(bots)
 add_executable(xbs-skipper "bots/Skipper.cpp")
 target_link_libraries(xbs-skipper xbs)
 
-project(rufus)
+project(rufus CXX)
 include_directories(bots)
 add_executable(xbs-rufus "bots/RandomRufus.cpp")
 target_link_libraries(xbs-rufus xbs)
 
-project(hal)
+project(hal CXX)
 include_directories(bots)
 add_executable(xbs-hal "bots/Hal9000.cpp")
 target_link_libraries(xbs-hal xbs)
 
-project(sal)
+project(sal CXX)
 include_directories(bots)
 add_executable(xbs-sal "bots/Sal9000.cpp")
 target_link_libraries(xbs-sal xbs)
 
-project(edgar)
+project(edgar CXX)
 include_directories(bots)
 add_executable(xbs-edgar "bots/Edgar.cpp")
 target_link_libraries(xbs-edgar xbs)
 
-project(jane)
+project(jane CXX)
 include_directories(bots)
 add_executable(xbs-jane "bots/Jane.cpp")
 target_link_libraries(xbs-jane xbs)
 
-project(wopr)
+project(wopr CXX)
 include_directories(bots)
 add_executable(xbs-wopr "bots/WOPR.cpp")
 target_link_libraries(xbs-wopr xbs)
+
